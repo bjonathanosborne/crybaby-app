@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 
 // ============================================================
 // CRYBABY — Social Feed & Round Summary
@@ -894,6 +894,7 @@ export default function CrybabyFeed() {
       setSearchParams({ tab });
     }
   };
+  const navigate = useNavigate();
   const [feed, setFeed] = useState(MOCK_FEED);
 
   const handleReact = (postId, reactionKey) => {
@@ -915,7 +916,7 @@ export default function CrybabyFeed() {
     <div style={{
       maxWidth: 420, margin: "0 auto", minHeight: "100vh",
       background: "#F7F7F5", fontFamily: FONT,
-      paddingBottom: 80,
+      paddingBottom: 160,
     }}>
       {/* Header */}
       <div style={{
@@ -931,7 +932,7 @@ export default function CrybabyFeed() {
               background: "#F3F4F6", fontSize: 16,
               display: "flex", alignItems: "center", justifyContent: "center",
             }}>🔔</button>
-            <button style={{
+            <button onClick={() => navigate("/setup")} style={{
               padding: "8px 14px", borderRadius: 12, border: "none", cursor: "pointer",
               fontFamily: FONT, fontSize: 13, fontWeight: 700,
               background: "#16A34A", color: "#fff",

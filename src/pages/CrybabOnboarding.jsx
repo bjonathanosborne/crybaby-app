@@ -740,7 +740,7 @@ function ProfileSetupScreen({ userName, handicap, ghinVerified, onComplete }) {
 // ============================================================
 // STEP: WELCOME
 // ============================================================
-function WelcomeScreen({ userName, handicap, ghinVerified, homeCourse, onStart }) {
+function WelcomeScreen({ userName, handicap, ghinVerified, homeCourse, onStart, onBrowseFeed }) {
   const [visible, setVisible] = useState(false);
   useEffect(() => { setTimeout(() => setVisible(true), 100); }, []);
   const course = AUSTIN_COURSES.find(c => c.id === homeCourse);
@@ -818,7 +818,7 @@ function WelcomeScreen({ userName, handicap, ghinVerified, homeCourse, onStart }
           Start Your First Round 🏌️
         </button>
 
-        <button onClick={onStart} style={{
+        <button onClick={onBrowseFeed} style={{
           fontFamily: FONT, fontSize: 13, fontWeight: 600, color: "#6B7280",
           background: "none", border: "none", cursor: "pointer",
         }}>
@@ -911,6 +911,7 @@ export default function CrybabOnboarding() {
         ghinVerified={userData.ghinVerified}
         homeCourse={userData.homeCourse}
         onStart={() => setStep("done")}
+        onBrowseFeed={() => navigate("/feed")}
       />
     );
   }
