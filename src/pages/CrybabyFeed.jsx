@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 
 // ============================================================
 // CRYBABY — Social Feed & Round Summary
@@ -884,7 +885,15 @@ function LiveTab() {
 // MAIN COMPONENT
 // ============================================================
 export default function CrybabyFeed() {
-  const [activeTab, setActiveTab] = useState("feed");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "feed";
+  const setActiveTab = (tab) => {
+    if (tab === "feed") {
+      setSearchParams({});
+    } else {
+      setSearchParams({ tab });
+    }
+  };
   const [feed, setFeed] = useState(MOCK_FEED);
 
   const handleReact = (postId, reactionKey) => {
@@ -967,8 +976,6 @@ export default function CrybabyFeed() {
         {activeTab === "profile" && <ProfileTab />}
       </div>
 
-      {/* Nav Bar */}
-      <NavBar activeTab={activeTab} onTabChange={setActiveTab} />
     </div>
   );
 }

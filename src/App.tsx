@@ -7,6 +7,7 @@ import CrybabOnboarding from "./pages/CrybabOnboarding";
 import CrybabySetupWizard from "./pages/CrybabySetupWizard";
 import CrybabyActiveRound from "./pages/CrybabyActiveRound";
 import CrybabyFeed from "./pages/CrybabyFeed";
+import AppLayout from "./components/AppLayout";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -19,9 +20,11 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<CrybabOnboarding />} />
-          <Route path="/setup" element={<CrybabySetupWizard />} />
-          <Route path="/round" element={<CrybabyActiveRound />} />
-          <Route path="/feed" element={<CrybabyFeed />} />
+          <Route element={<AppLayout />}>
+            <Route path="/setup" element={<CrybabySetupWizard />} />
+            <Route path="/round" element={<CrybabyActiveRound />} />
+            <Route path="/feed" element={<CrybabyFeed />} />
+          </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
