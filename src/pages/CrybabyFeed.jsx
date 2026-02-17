@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { loadFeed, createPost, addComment, toggleReaction, loadGroups, createGroup, loadProfile, loadMyRounds } from "@/lib/db";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import crybabyLogo from "@/assets/crybaby-logo.png";
 
 // ============================================================
 // CRYBABY — Social Feed & Round Summary
@@ -974,7 +975,7 @@ export default function CrybabyFeed() {
         position: "sticky", top: 0, zIndex: 20,
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <img src="/images/logo-sm.png" alt="Crybaby Golf" style={{ height: 40 }} />
+          <img src={crybabyLogo} alt="Crybaby Golf" style={{ height: 40 }} />
           <div style={{ display: "flex", gap: 8 }}>
             <button style={{
               width: 36, height: 36, borderRadius: 18, border: "none", cursor: "pointer",
