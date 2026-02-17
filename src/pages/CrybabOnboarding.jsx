@@ -54,9 +54,32 @@ function LoadingDots() {
 // ============================================================
 function SplashScreen({ onContinue }) {
   const [visible, setVisible] = useState(false);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     setTimeout(() => setVisible(true), 100);
+    // 3-second loading screen
+    const timer = setTimeout(() => setLoading(false), 3000);
+    return () => clearTimeout(timer);
   }, []);
+
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: "100vh", display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center",
+        background: "#1A1A1A",
+        transition: "opacity 0.8s ease",
+        opacity: visible ? 1 : 0,
+      }}>
+        <img src={crybabyLogo} alt="Crybaby Golf" style={{
+          width: "90vw", maxWidth: 600,
+          transition: "transform 0.6s ease",
+          transform: visible ? "scale(1)" : "scale(0.5)",
+        }} />
+      </div>
+    );
+  }
 
   return (
     <div style={{
@@ -64,12 +87,10 @@ function SplashScreen({ onContinue }) {
       alignItems: "center", justifyContent: "center",
       background: "#1A1A1A", padding: "40px 32px",
       transition: "opacity 0.8s ease",
-      opacity: visible ? 1 : 0,
+      opacity: 1,
     }}>
       <img src={crybabyLogo} alt="Crybaby Golf" style={{
-        height: 180, marginBottom: 24,
-        transition: "transform 0.6s ease",
-        transform: visible ? "scale(1)" : "scale(0.5)",
+        width: "90vw", maxWidth: 600, marginBottom: 24,
       }} />
       <div style={{
         fontFamily: FONT, fontSize: 16, color: "rgba(255,255,255,0.5)",
