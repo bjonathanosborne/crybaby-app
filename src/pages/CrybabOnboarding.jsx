@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 
 // ============================================================
 // CRYBABY — Onboarding & Profile Setup
@@ -832,6 +833,7 @@ function WelcomeScreen({ userName, handicap, ghinVerified, homeCourse, onStart }
 // MAIN COMPONENT — ONBOARDING FLOW
 // ============================================================
 export default function CrybabOnboarding() {
+  const navigate = useNavigate();
   const [step, setStep] = useState("splash"); // splash, auth, ghin, profile, welcome, done
   const [userData, setUserData] = useState({
     name: "",
@@ -905,52 +907,12 @@ export default function CrybabOnboarding() {
     );
   }
 
-  // Done — show confirmation
-  return (
-    <div style={{
-      maxWidth: 420, margin: "0 auto", minHeight: "100vh",
-      background: "#F7F7F5", fontFamily: FONT,
-      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-      padding: "40px 24px", textAlign: "center",
-    }}>
-      <div style={{ fontSize: 64, marginBottom: 16 }}>✅</div>
-      <div style={{ fontSize: 24, fontWeight: 800, color: "#1A1A1A", marginBottom: 8 }}>
-        Onboarding Complete
-      </div>
-      <div style={{ fontSize: 14, color: "#6B7280", marginBottom: 24, lineHeight: 1.5 }}>
-        {userData.name} is all set up with a {userData.handicap} handicap{userData.ghinVerified ? " (verified ✅)" : " (unverified — 3-round trial)"}.
-        In production, this would land you on the home feed.
-      </div>
-      <div style={{
-        background: "#fff", borderRadius: 16, padding: 20, width: "100%",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.06)", textAlign: "left",
-      }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>
-          Your Profile
-        </div>
-        {[
-          ["Name", userData.name],
-          ["Email", userData.email],
-          ["GHIN", userData.ghin || "Manual entry"],
-          ["Handicap", `${userData.handicap} ${userData.ghinVerified ? "✅" : "⚠️"}`],
-          ["Home Course", AUSTIN_COURSES.find(c => c.id === userData.homeCourse)?.name || "Not set"],
-          ["City", userData.city || "Not set"],
-        ].map(([label, value]) => (
-          <div key={label} style={{
-            display: "flex", justifyContent: "space-between", padding: "8px 0",
-            borderBottom: "1px solid #F3F4F6",
-          }}>
-            <span style={{ fontFamily: FONT, fontSize: 13, color: "#6B7280" }}>{label}</span>
-            <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 600, color: "#1A1A1A" }}>{value}</span>
-          </div>
-        ))}
-      </div>
-      <button onClick={() => setStep("splash")} style={{
-        marginTop: 20, padding: "14px 28px", borderRadius: 12, border: "none", cursor: "pointer",
-        fontFamily: FONT, fontSize: 14, fontWeight: 700, background: "#1A1A1A", color: "#fff",
-      }}>
-        Restart Onboarding →
-      </button>
-    </div>
-  );
+  // Done — navigate to setup wizard
+  useEffect(() => {
+    if (step === "done") {
+      navigate("/setup");
+    }
+  }, [step, navigate]);
+
+  return null;
 }

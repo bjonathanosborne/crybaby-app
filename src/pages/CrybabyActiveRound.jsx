@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 
 // ============================================================
 // CRYBABY — Active Round / Score Entry
@@ -659,6 +660,7 @@ function CrybabSetupModal({ players, totals, onConfirm }) {
 // MAIN COMPONENT
 // ============================================================
 export default function CrybabActiveRound() {
+  const navigate = useNavigate();
   const round = DEMO_ROUND;
   const { players, course, settings } = round;
 
@@ -1079,6 +1081,15 @@ export default function CrybabActiveRound() {
           }}>
             📸 Round photos and full results will post to your feed
           </div>
+
+          <button onClick={() => navigate("/feed")} style={{
+            width: "100%", padding: "16px", borderRadius: 14, border: "none",
+            fontFamily: FONT, fontSize: 16, fontWeight: 700,
+            background: "#16A34A", color: "#fff", cursor: "pointer",
+            marginTop: 8,
+          }}>
+            Go to Feed →
+          </button>
         </div>
       </div>
     );
