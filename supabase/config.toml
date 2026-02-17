@@ -1,1 +1,4 @@
 project_id = "woimwxrrnkaruxblwvux"
+
+[functions.ai-commentary]
+verify_jwt = false

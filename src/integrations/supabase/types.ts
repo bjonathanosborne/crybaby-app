@@ -14,13 +14,405 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      ai_commentary: {
+        Row: {
+          commentary: string
+          context_type: string
+          created_at: string
+          id: string
+          post_id: string | null
+          round_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          commentary: string
+          context_type?: string
+          created_at?: string
+          id?: string
+          post_id?: string | null
+          round_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          commentary?: string
+          context_type?: string
+          created_at?: string
+          id?: string
+          post_id?: string | null
+          round_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_commentary_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_commentary_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "rounds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      friendships: {
+        Row: {
+          accepted_at: string | null
+          id: string
+          requested_at: string
+          status: string
+          user_id_a: string
+          user_id_b: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          id?: string
+          requested_at?: string
+          status?: string
+          user_id_a: string
+          user_id_b: string
+        }
+        Update: {
+          accepted_at?: string | null
+          id?: string
+          requested_at?: string
+          status?: string
+          user_id_a?: string
+          user_id_b?: string
+        }
+        Relationships: []
+      }
+      group_members: {
+        Row: {
+          group_id: string
+          id: string
+          joined_at: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          group_id: string
+          id?: string
+          joined_at?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          group_id?: string
+          id?: string
+          joined_at?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      groups: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          name: string
+          privacy_level: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          name: string
+          privacy_level?: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          name?: string
+          privacy_level?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      posts: {
+        Row: {
+          content: string
+          created_at: string
+          group_id: string | null
+          id: string
+          post_type: string
+          round_id: string | null
+          user_id: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          group_id?: string | null
+          id?: string
+          post_type?: string
+          round_id?: string | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          group_id?: string | null
+          id?: string
+          post_type?: string
+          round_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posts_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "rounds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          display_name: string
+          ghin: string | null
+          ghin_verified: boolean | null
+          handicap: number | null
+          home_course: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name?: string
+          ghin?: string | null
+          ghin_verified?: boolean | null
+          handicap?: number | null
+          home_course?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name?: string
+          ghin?: string | null
+          ghin_verified?: boolean | null
+          handicap?: number | null
+          home_course?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      reactions: {
+        Row: {
+          created_at: string
+          id: string
+          post_id: string
+          reaction_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          post_id: string
+          reaction_type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_id?: string
+          reaction_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reactions_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      round_players: {
+        Row: {
+          created_at: string
+          guest_name: string | null
+          hole_scores: Json | null
+          id: string
+          is_scorekeeper: boolean | null
+          round_id: string
+          total_score: number | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          guest_name?: string | null
+          hole_scores?: Json | null
+          id?: string
+          is_scorekeeper?: boolean | null
+          round_id: string
+          total_score?: number | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          guest_name?: string | null
+          hole_scores?: Json | null
+          id?: string
+          is_scorekeeper?: boolean | null
+          round_id?: string
+          total_score?: number | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "round_players_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "rounds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rounds: {
+        Row: {
+          course: string
+          course_details: Json | null
+          created_at: string
+          created_by: string
+          game_type: string
+          group_id: string | null
+          id: string
+          scorekeeper_mode: boolean
+          stakes: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          course?: string
+          course_details?: Json | null
+          created_at?: string
+          created_by: string
+          game_type?: string
+          group_id?: string | null
+          id?: string
+          scorekeeper_mode?: boolean
+          stakes?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          course?: string
+          course_details?: Json | null
+          created_at?: string
+          created_by?: string
+          game_type?: string
+          group_id?: string | null
+          id?: string
+          scorekeeper_mode?: boolean
+          stakes?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rounds_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_group_member: {
+        Args: { _group_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_group_owner_or_admin: {
+        Args: { _group_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_round_participant: {
+        Args: { _round_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
