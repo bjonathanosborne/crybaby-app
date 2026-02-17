@@ -835,6 +835,14 @@ function WelcomeScreen({ userName, handicap, ghinVerified, homeCourse, onStart }
 export default function CrybabOnboarding() {
   const navigate = useNavigate();
   const [step, setStep] = useState("splash"); // splash, auth, ghin, profile, welcome, done
+
+  // Must be called before any early returns to satisfy React hook rules
+  useEffect(() => {
+    if (step === "done") {
+      navigate("/setup");
+    }
+  }, [step, navigate]);
+
   const [userData, setUserData] = useState({
     name: "",
     email: "",
@@ -906,13 +914,6 @@ export default function CrybabOnboarding() {
       />
     );
   }
-
-  // Done — navigate to setup wizard
-  useEffect(() => {
-    if (step === "done") {
-      navigate("/setup");
-    }
-  }, [step, navigate]);
 
   return null;
 }
