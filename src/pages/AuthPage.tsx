@@ -75,7 +75,7 @@ export default function AuthPage() {
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <img src={crybabyLogo} alt="Crybaby" style={{ width: "70vw", maxWidth: 320, margin: "0 auto" }} />
-          <p style={{ color: "#6B7280", fontSize: 14, marginTop: -16 }}>
+          <p style={{ color: "#6B7280", fontSize: 14, marginTop: -32 }}>
             Golf's social scoring app
           </p>
         </div>
