@@ -700,7 +700,7 @@ export default function CrybabSetupWizard() {
     <div style={{
       maxWidth: 420, margin: "0 auto", minHeight: "100vh",
       background: "#F7F7F5", fontFamily: font,
-      paddingBottom: 100,
+      paddingBottom: 160,
     }}>
       {/* Header */}
       <div style={{
