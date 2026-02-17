@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 
 // ============================================================
 // CRYBABY — Game Setup Wizard
@@ -536,6 +537,7 @@ function ReviewSection({ label, value, icon }) {
 // MAIN COMPONENT
 // ============================================================
 export default function CrybabSetupWizard() {
+  const navigate = useNavigate();
   const font = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
   const mono = "'SF Mono', 'JetBrains Mono', monospace";
 
@@ -688,75 +690,11 @@ export default function CrybabSetupWizard() {
   const [quip, setQuip] = useState(getCommentatorQuip());
   useEffect(() => { setQuip(getCommentatorQuip()); }, [step, holeValue, enabledMechanics.size]);
 
-  if (roundStarted) {
-    const namedPlayers = players.filter(p => p.name.trim());
-    return (
-      <div style={{
-        maxWidth: 420, margin: "0 auto", minHeight: "100vh",
-        background: "#F7F7F5", fontFamily: font,
-      }}>
-        <div style={{
-          background: "#16A34A", padding: "60px 24px 32px", borderRadius: "0 0 32px 32px",
-          textAlign: "center",
-        }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>🏌️</div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: "#fff", marginBottom: 6 }}>Round is Live</div>
-          <div style={{ fontSize: 14, color: "rgba(255,255,255,0.8)" }}>
-            {format?.name} · {course?.name}
-          </div>
-          <div style={{
-            marginTop: 16, fontFamily: mono, fontSize: 24, fontWeight: 700, color: "#fff",
-          }}>
-            ${holeValue} / hole
-          </div>
-        </div>
-        <div style={{ padding: "24px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
-          {namedPlayers.map((p, i) => (
-            <div key={i} style={{
-              display: "flex", alignItems: "center", gap: 14, padding: "16px 18px",
-              background: "#fff", borderRadius: 14, boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-            }}>
-              <div style={{
-                width: 40, height: 40, borderRadius: 20,
-                background: ["#16A34A", "#3B82F6", "#F59E0B", "#DC2626", "#8B5CF6", "#EC4899"][i % 6],
-                display: "flex", alignItems: "center", justifyContent: "center",
-                color: "#fff", fontSize: 16, fontWeight: 700,
-              }}>{p.name[0].toUpperCase()}</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 15, fontWeight: 600, color: "#1A1A1A" }}>{p.name}</div>
-                {p.handicap !== null && (
-                  <div style={{ fontFamily: mono, fontSize: 12, color: "#16A34A", fontWeight: 600 }}>
-                    HCP {p.handicap}
-                  </div>
-                )}
-              </div>
-              <div style={{
-                fontFamily: mono, fontSize: 18, fontWeight: 700, color: "#16A34A",
-              }}>$0</div>
-            </div>
-          ))}
-        </div>
-        <div style={{ padding: "0 20px", textAlign: "center" }}>
-          <div style={{
-            padding: "14px 20px", background: "#fff", borderRadius: 14,
-            boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-            fontFamily: font, fontSize: 13, color: "#6B7280", fontStyle: "italic",
-          }}>
-            💬 "Tee it up. First hole is the most expensive hole you'll play all day — because you still think you're going to win."
-          </div>
-        </div>
-        <div style={{ padding: "24px 20px" }}>
-          <button onClick={() => setRoundStarted(false)} style={{
-            width: "100%", padding: "16px", borderRadius: 14, border: "none",
-            fontFamily: font, fontSize: 15, fontWeight: 600,
-            background: "#F3F4F6", color: "#6B7280", cursor: "pointer",
-          }}>
-            ← Back to Setup
-          </button>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (roundStarted) {
+      navigate("/round");
+    }
+  }, [roundStarted, navigate]);
 
   return (
     <div style={{
