@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { loadRound, updatePlayerScores, completeRound, createPost, saveAICommentary } from "@/lib/db";
+import { supabase } from "@/integrations/supabase/client";
 
 // ============================================================
 // CRYBABY — Active Round / Score Entry
@@ -661,8 +663,67 @@ function CrybabSetupModal({ players, totals, onConfirm }) {
 // ============================================================
 export default function CrybabActiveRound() {
   const navigate = useNavigate();
-  const round = DEMO_ROUND;
+  const [searchParams] = useSearchParams();
+  const roundId = searchParams.get("id");
+  const [dbRound, setDbRound] = useState(null);
+  const [dbPlayers, setDbPlayers] = useState([]);
+  const [loading, setLoading] = useState(!!roundId);
+
+  // Load round from DB if ID provided
+  useEffect(() => {
+    if (!roundId) { setLoading(false); return; }
+    loadRound(roundId).then(data => {
+      if (data) {
+        setDbRound(data.round);
+        setDbPlayers(data.players);
+      }
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, [roundId]);
+
+  // Build round object from DB or use demo
+  const round = dbRound ? {
+    gameMode: dbRound.game_type,
+    gameName: dbRound.game_type.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
+    course: {
+      name: dbRound.course,
+      pars: dbRound.course_details?.pars || DEMO_ROUND.course.pars,
+      handicaps: dbRound.course_details?.handicaps || DEMO_ROUND.course.handicaps,
+    },
+    holeValue: dbRound.course_details?.holeValue || 5,
+    players: dbPlayers.map((p, i) => ({
+      id: p.id,
+      name: p.guest_name || `Player ${i + 1}`,
+      handicap: 12,
+      cart: i < 2 ? "A" : "B",
+      position: i % 2 === 0 ? "driver" : "rider",
+      color: ["#16A34A", "#3B82F6", "#F59E0B", "#DC2626"][i % 4],
+    })),
+    settings: {
+      hammer: (dbRound.course_details?.mechanics || []).includes("hammer"),
+      hammerInitiator: dbRound.course_details?.mechanicSettings?.hammer?.initiator || "Either team",
+      hammerMaxDepth: "∞",
+      crybaby: (dbRound.course_details?.mechanics || []).includes("crybaby"),
+      crybabHoles: dbRound.course_details?.mechanicSettings?.crybaby?.holes || 3,
+      crybabHammerRule: "Only crybaby hammers",
+      birdieBonus: (dbRound.course_details?.mechanics || []).includes("birdie_bonus"),
+      birdieMultiplier: 2,
+      pops: (dbRound.course_details?.mechanics || []).includes("pops"),
+      noPopsParThree: false,
+    },
+  } : DEMO_ROUND;
   const { players, course, settings } = round;
+
+  if (loading) {
+    return (
+      <div style={{ maxWidth: 420, margin: "0 auto", minHeight: "100vh", background: "#F7F7F5", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONT }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>⛳</div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: "#6B7280" }}>Loading round...</div>
+        </div>
+      </div>
+    );
+  }
 
   const [currentHole, setCurrentHole] = useState(1);
   const [scores, setScores] = useState({}); // { holeNum: { playerId: score } }

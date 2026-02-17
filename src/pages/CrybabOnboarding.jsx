@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { updateProfile } from "@/lib/db";
+import { useAuth } from "@/contexts/AuthContext";
 
 // ============================================================
 // CRYBABY — Onboarding & Profile Setup
@@ -834,12 +836,33 @@ function WelcomeScreen({ userName, handicap, ghinVerified, homeCourse, onStart, 
 // ============================================================
 export default function CrybabOnboarding() {
   const navigate = useNavigate();
-  const [step, setStep] = useState("splash"); // splash, auth, ghin, profile, welcome, done
+  const { user } = useAuth();
+  const [step, setStep] = useState("splash");
+
+  // If user is already logged in, skip auth step
+  useEffect(() => {
+    if (user && step === "auth") {
+      setStep("ghin");
+    }
+  }, [user, step]);
 
   // Must be called before any early returns to satisfy React hook rules
   useEffect(() => {
     if (step === "done") {
-      navigate("/setup");
+      // Save profile data to DB
+      const saveProfile = async () => {
+        try {
+          await updateProfile({
+            display_name: userData.name || user?.email || "",
+            handicap: userData.handicap,
+            ghin: userData.ghin,
+            ghin_verified: userData.ghinVerified,
+            home_course: userData.homeCourse,
+          });
+        } catch (e) { console.error("Profile save error:", e); }
+      };
+      saveProfile();
+      navigate("/feed");
     }
   }, [step, navigate]);
 
@@ -855,22 +878,20 @@ export default function CrybabOnboarding() {
   });
 
   if (step === "splash") {
-    return <SplashScreen onContinue={() => setStep("auth")} />;
+    return <SplashScreen onContinue={() => {
+      if (user) {
+        setUserData(prev => ({ ...prev, name: user.user_metadata?.display_name || user.email || "", email: user.email || "" }));
+        setStep("ghin");
+      } else {
+        navigate("/auth");
+      }
+    }} />;
   }
 
   if (step === "auth") {
-    return (
-      <AuthScreen
-        onGoogleAuth={() => {
-          setUserData(prev => ({ ...prev, name: "Jonathan", email: "jonathan@email.com" }));
-          setStep("ghin");
-        }}
-        onEmailAuth={({ email, password, name }) => {
-          setUserData(prev => ({ ...prev, name: name || "Jonathan", email }));
-          setStep("ghin");
-        }}
-      />
-    );
+    // Redirect to real auth page
+    navigate("/auth");
+    return null;
   }
 
   if (step === "ghin") {
