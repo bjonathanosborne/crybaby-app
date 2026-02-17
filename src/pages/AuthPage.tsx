@@ -76,7 +76,7 @@ export default function AuthPage() {
         <div style={{ textAlign: "center", marginBottom: 28 }}>
           <img src={crybabyLogo} alt="Crybaby" style={{ width: "70vw", maxWidth: 320, margin: "0 auto" }} />
           <p style={{
-            color: "#1A1A1A", fontSize: 18, fontWeight: 700, marginTop: -64,
+            color: "#1A1A1A", fontSize: 18, fontWeight: 700, marginTop: -109,
             letterSpacing: "-0.02em",
             background: "linear-gradient(135deg, #16A34A, #059669)",
             WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
