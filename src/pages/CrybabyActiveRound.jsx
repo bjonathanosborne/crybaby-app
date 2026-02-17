@@ -1234,7 +1234,7 @@ export default function CrybabActiveRound() {
 
       {/* Bottom CTA */}
       <div style={{
-        position: "fixed", bottom: 0, left: 0, right: 0,
+        position: "fixed", bottom: 68, left: 0, right: 0,
         padding: "12px 20px", paddingBottom: "max(12px, env(safe-area-inset-bottom))",
         background: "rgba(247,247,245,0.95)", backdropFilter: "blur(12px)",
         borderTop: "1px solid #E5E7EB",
