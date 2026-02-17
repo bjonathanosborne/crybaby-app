@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { createRound } from "@/lib/db";
 
 // ============================================================
 // CRYBABY — Game Setup Wizard
@@ -690,11 +691,36 @@ export default function CrybabSetupWizard() {
   const [quip, setQuip] = useState(getCommentatorQuip());
   useEffect(() => { setQuip(getCommentatorQuip()); }, [step, holeValue, enabledMechanics.size]);
 
+  const [saving, setSaving] = useState(false);
+
+  const handleStartRound = async () => {
+    setSaving(true);
+    try {
+      const roundId = await createRound({
+        gameType: selectedFormat,
+        course,
+        courseDetails: course,
+        stakes: `$${holeValue}/hole`,
+        holeValue,
+        players,
+        mechanics: enabledMechanics,
+        mechanicSettings,
+        privacy,
+        scorekeeperMode: true,
+      });
+      navigate(`/round?id=${roundId}`);
+    } catch (err) {
+      console.error("Failed to create round:", err);
+      alert("Failed to start round. Please try again.");
+      setSaving(false);
+    }
+  };
+
   useEffect(() => {
     if (roundStarted) {
-      navigate("/round");
+      handleStartRound();
     }
-  }, [roundStarted, navigate]);
+  }, [roundStarted]);
 
   return (
     <div style={{

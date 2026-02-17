@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { loadFeed, createPost, addComment, toggleReaction, loadGroups, createGroup, loadProfile, loadMyRounds } from "@/lib/db";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 // ============================================================
 // CRYBABY — Social Feed & Round Summary
@@ -887,6 +890,7 @@ function LiveTab() {
 export default function CrybabyFeed() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") || "feed";
+  const { user, signOut } = useAuth();
   const setActiveTab = (tab) => {
     if (tab === "feed") {
       setSearchParams({});
@@ -896,8 +900,49 @@ export default function CrybabyFeed() {
   };
   const navigate = useNavigate();
   const [feed, setFeed] = useState(MOCK_FEED);
+  const [dbPosts, setDbPosts] = useState([]);
+  const [dbProfiles, setDbProfiles] = useState({});
+  const [dbComments, setDbComments] = useState([]);
+  const [dbReactions, setDbReactions] = useState([]);
+  const [myProfile, setMyProfile] = useState(null);
+  const [dbGroups, setDbGroups] = useState([]);
 
-  const handleReact = (postId, reactionKey) => {
+  // Load real data from DB
+  useEffect(() => {
+    loadFeed().then(data => {
+      if (data.posts.length > 0) {
+        setDbPosts(data.posts);
+        const profileMap = {};
+        data.profiles.forEach(p => { profileMap[p.user_id] = p; });
+        setDbProfiles(profileMap);
+        setDbComments(data.comments);
+        setDbReactions(data.reactions);
+      }
+    }).catch(console.error);
+
+    loadProfile().then(p => { if (p) setMyProfile(p); }).catch(console.error);
+    loadGroups().then(g => { if (g) setDbGroups(g); }).catch(console.error);
+
+    // Subscribe to new posts in realtime
+    const channel = supabase
+      .channel("feed-updates")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "posts" }, (payload) => {
+        setDbPosts(prev => [payload.new, ...prev]);
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "comments" }, (payload) => {
+        setDbComments(prev => [...prev, payload.new]);
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "reactions" }, () => {
+        // Reload reactions on any change
+        loadFeed().then(data => setDbReactions(data.reactions)).catch(console.error);
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
+  const handleReact = async (postId, reactionKey) => {
+    // Optimistic update for mock data
     setFeed(prev => prev.map(post => {
       if (post.id === postId && post.reactions) {
         return {
@@ -907,6 +952,10 @@ export default function CrybabyFeed() {
       }
       return post;
     }));
+    // DB reaction
+    try {
+      await toggleReaction(postId, reactionKey);
+    } catch (e) { console.error(e); }
   };
 
   const feedPosts = feed.filter(p => p.type !== "live_round");
@@ -946,7 +995,11 @@ export default function CrybabyFeed() {
         {activeTab === "feed" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {/* Composer */}
-            <NewPostComposer />
+            <NewPostComposer onPost={async (text) => {
+              try {
+                await createPost({ content: text, postType: "trash_talk" });
+              } catch (e) { console.error(e); }
+            }} />
 
             {/* Live rounds at top */}
             {livePosts.map(lr => <LiveRoundCard key={lr.id} data={lr} />)}
