@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { updateProfile } from "@/lib/db";
 import { useAuth } from "@/contexts/AuthContext";
+import crybabyLogo from "@/assets/crybaby-logo.png";
 
 // ============================================================
 // CRYBABY — Onboarding & Profile Setup
@@ -65,11 +66,10 @@ function SplashScreen({ onContinue }) {
       transition: "opacity 0.8s ease",
       opacity: visible ? 1 : 0,
     }}>
-      <img src="/images/crybaby-logo-transparent.png" alt="Crybaby Golf" style={{
+      <img src={crybabyLogo} alt="Crybaby Golf" style={{
         height: 180, marginBottom: 24,
         transition: "transform 0.6s ease",
         transform: visible ? "scale(1)" : "scale(0.5)",
-        filter: "brightness(0) invert(1) drop-shadow(0 4px 20px rgba(0,0,0,0.3))",
       }} />
       <div style={{
         fontFamily: FONT, fontSize: 16, color: "rgba(255,255,255,0.5)",
@@ -119,7 +119,7 @@ function AuthScreen({ onGoogleAuth, onEmailAuth }) {
           background: "#1A1A1A", padding: "60px 32px 40px",
           borderRadius: "0 0 36px 36px", textAlign: "center",
         }}>
-          <img src="/images/logo-sm.png" alt="Crybaby Golf" style={{ height: 56, marginBottom: 12, filter: "brightness(0) invert(1)" }} />
+          <img src={crybabyLogo} alt="Crybaby Golf" style={{ height: 56, marginBottom: 12 }} />
           <div style={{
             fontFamily: FONT, fontSize: 28, fontWeight: 800, color: "#fff",
             letterSpacing: "-0.03em", marginBottom: 6,
@@ -208,7 +208,7 @@ function AuthScreen({ onGoogleAuth, onEmailAuth }) {
         background: "#1A1A1A", padding: "60px 32px 32px",
         borderRadius: "0 0 36px 36px", textAlign: "center",
       }}>
-        <img src="/images/logo-sm.png" alt="Crybaby Golf" style={{ height: 48, marginBottom: 8, filter: "brightness(0) invert(1)" }} />
+        <img src={crybabyLogo} alt="Crybaby Golf" style={{ height: 48, marginBottom: 8 }} />
         <div style={{
           fontFamily: FONT, fontSize: 24, fontWeight: 800, color: "#fff",
           letterSpacing: "-0.03em",

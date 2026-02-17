@@ -1,4 +1,5 @@
 import { useState } from "react";
+import crybabyLogo from "@/assets/crybaby-logo.png";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
@@ -73,7 +74,7 @@ export default function AuthPage() {
       <div style={{ width: "100%", maxWidth: 380 }}>
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <img src="/images/crybaby-logo-transparent.png" alt="Crybaby" style={{ height: 80, margin: "0 auto" }} />
+          <img src={crybabyLogo} alt="Crybaby" style={{ height: 80, margin: "0 auto" }} />
           <p style={{ color: "#6B7280", fontSize: 14, marginTop: 8 }}>
             Golf's social scoring app
           </p>
