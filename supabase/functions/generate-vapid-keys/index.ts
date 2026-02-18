@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,8 +18,6 @@ async function generateVapidKeys() {
   const publicKeyJwk = await crypto.subtle.exportKey("jwk", keyPair.publicKey);
   const privateKeyJwk = await crypto.subtle.exportKey("jwk", keyPair.privateKey);
 
-  // Convert JWK to the URL-safe base64 format used by Web Push
-  // Public key: uncompressed point = 0x04 || x || y
   const x = base64UrlToBytes(publicKeyJwk.x!);
   const y = base64UrlToBytes(publicKeyJwk.y!);
   const publicKeyBytes = new Uint8Array(65);
@@ -27,7 +26,6 @@ async function generateVapidKeys() {
   publicKeyBytes.set(y, 33);
   const publicKey = bytesToBase64Url(publicKeyBytes);
 
-  // Private key: just the d parameter
   const privateKey = privateKeyJwk.d!;
 
   return { publicKey, privateKey };
@@ -58,12 +56,34 @@ serve(async (req) => {
   }
 
   try {
+    // Validate authentication
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: "Invalid authentication" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const keys = await generateVapidKeys();
     return new Response(JSON.stringify(keys), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: "Something went wrong" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
