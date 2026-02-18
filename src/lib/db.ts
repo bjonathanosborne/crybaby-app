@@ -165,16 +165,31 @@ export async function completeRound(roundId) {
   if (error) throw error;
 }
 
+// Validation constants
+const MAX_POST_LENGTH = 10000;
+const MAX_COMMENT_LENGTH = 2000;
+const MAX_GROUP_NAME_LENGTH = 100;
+const MAX_GROUP_DESC_LENGTH = 500;
+const MAX_DISPLAY_NAME_LENGTH = 50;
+const MAX_BIO_LENGTH = 300;
+
 // Create a post (round summary or trash talk)
 export async function createPost({ content, postType = "text", roundId = null, groupId = null }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
+  if (!content || typeof content !== "string" || content.trim().length === 0) {
+    throw new Error("Post content cannot be empty");
+  }
+  if (content.length > MAX_POST_LENGTH) {
+    throw new Error(`Post must be ${MAX_POST_LENGTH} characters or fewer`);
+  }
+
   const { data, error } = await supabase
     .from("posts")
     .insert({
       user_id: user.id,
-      content,
+      content: content.trim(),
       post_type: postType,
       round_id: roundId,
       group_id: groupId,
@@ -237,9 +252,16 @@ export async function addComment(postId, content) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
+  if (!content || typeof content !== "string" || content.trim().length === 0) {
+    throw new Error("Comment cannot be empty");
+  }
+  if (content.length > MAX_COMMENT_LENGTH) {
+    throw new Error(`Comment must be ${MAX_COMMENT_LENGTH} characters or fewer`);
+  }
+
   const { data, error } = await supabase
     .from("comments")
-    .insert({ post_id: postId, user_id: user.id, content })
+    .insert({ post_id: postId, user_id: user.id, content: content.trim() })
     .select()
     .single();
 
@@ -317,6 +339,19 @@ export async function updateProfile(updates) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
+  if (updates.display_name !== undefined) {
+    if (!updates.display_name || typeof updates.display_name !== "string" || updates.display_name.trim().length === 0) {
+      throw new Error("Display name cannot be empty");
+    }
+    if (updates.display_name.length > MAX_DISPLAY_NAME_LENGTH) {
+      throw new Error(`Display name must be ${MAX_DISPLAY_NAME_LENGTH} characters or fewer`);
+    }
+    updates.display_name = updates.display_name.trim();
+  }
+  if (updates.bio !== undefined && updates.bio && updates.bio.length > MAX_BIO_LENGTH) {
+    throw new Error(`Bio must be ${MAX_BIO_LENGTH} characters or fewer`);
+  }
+
   const { data, error } = await supabase
     .from("profiles")
     .update(updates)
@@ -372,9 +407,19 @@ export async function createGroup(name: string, description = "", privacyLevel =
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
+  if (!name || typeof name !== "string" || name.trim().length === 0) {
+    throw new Error("Group name cannot be empty");
+  }
+  if (name.length > MAX_GROUP_NAME_LENGTH) {
+    throw new Error(`Group name must be ${MAX_GROUP_NAME_LENGTH} characters or fewer`);
+  }
+  if (description && description.length > MAX_GROUP_DESC_LENGTH) {
+    throw new Error(`Group description must be ${MAX_GROUP_DESC_LENGTH} characters or fewer`);
+  }
+
   const { data, error } = await supabase
     .from("groups")
-    .insert({ name, description, created_by: user.id, privacy_level: privacyLevel })
+    .insert({ name: name.trim(), description: description?.trim() || "", created_by: user.id, privacy_level: privacyLevel })
     .select()
     .single();
 
@@ -476,6 +521,15 @@ export async function loadGroupLeaderboard(memberUserIds: string[]) {
 
 // Update group details (owner/admin)
 export async function updateGroup(groupId: string, updates: { name?: string; description?: string }) {
+  if (updates.name !== undefined) {
+    if (!updates.name || updates.name.trim().length === 0) throw new Error("Group name cannot be empty");
+    if (updates.name.length > 100) throw new Error("Group name must be 100 characters or fewer");
+    updates.name = updates.name.trim();
+  }
+  if (updates.description !== undefined && updates.description && updates.description.length > 500) {
+    throw new Error("Group description must be 500 characters or fewer");
+  }
+
   const { error } = await supabase
     .from("groups")
     .update(updates)
@@ -536,6 +590,18 @@ export async function loadMyGroups() {
 export async function uploadGroupAvatar(groupId: string, file: File) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
+
+  // Verify group ownership/admin status before attempting upload
+  const { data: membership } = await supabase
+    .from("group_members")
+    .select("role")
+    .eq("group_id", groupId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!membership || !['owner', 'admin'].includes(membership.role)) {
+    throw new Error("Only group owners/admins can update the avatar");
+  }
 
   const ext = file.name.split(".").pop() || "png";
   const path = `groups/${groupId}.${ext}`;
