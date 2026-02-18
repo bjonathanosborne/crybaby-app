@@ -132,19 +132,39 @@ export default function GroupsPage() {
     finally { setJoining(false); }
   };
 
+  const getInviteLink = () => `${APP_URL}/join/${selectedGroup?.invite_code}`;
+
   const handleCopyInvite = async () => {
     if (!selectedGroup) return;
-    const code = selectedGroup.invite_code;
-    const link = `${APP_URL}/join/${code}`;
     try {
-      await navigator.clipboard.writeText(link);
+      await navigator.clipboard.writeText(getInviteLink());
       setCodeCopied(true);
       setTimeout(() => setCodeCopied(false), 2000);
     } catch {
-      // Fallback: just copy the code
-      await navigator.clipboard.writeText(code);
+      await navigator.clipboard.writeText(selectedGroup.invite_code);
       setCodeCopied(true);
       setTimeout(() => setCodeCopied(false), 2000);
+    }
+  };
+
+  const handleShareInvite = async () => {
+    if (!selectedGroup) return;
+    const link = getInviteLink();
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Join ${selectedGroup.name} on Crybaby`,
+          text: `Use code ${selectedGroup.invite_code} or tap the link to join my group!`,
+          url: link,
+        });
+      } catch (e: any) {
+        // User cancelled or share failed — ignore AbortError
+        if (e.name !== "AbortError") {
+          handleCopyInvite();
+        }
+      }
+    } else {
+      handleCopyInvite();
     }
   };
 
@@ -430,6 +450,15 @@ export default function GroupsPage() {
                     whiteSpace: "nowrap",
                   }}>
                     {codeCopied ? "✓ Copied!" : "📋 Copy Link"}
+                  </button>
+                  <button onClick={handleShareInvite} style={{
+                    padding: "10px 14px", borderRadius: 10, border: "none",
+                    background: "#2563EB",
+                    color: "#fff", fontFamily: FONT, fontSize: 12, fontWeight: 700,
+                    cursor: "pointer", transition: "background 0.2s",
+                    whiteSpace: "nowrap",
+                  }}>
+                    📤 Share
                   </button>
                 </div>
                 <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 8, textAlign: "center" }}>
