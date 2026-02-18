@@ -143,13 +143,13 @@ const MECHANICS_CONFIG = {
 // --- STEP INDICATOR ---
 function StepIndicator({ steps, currentStep }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 0, padding: "0 24px", marginBottom: 32 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 0, padding: "0 8px", marginBottom: 10 }}>
       {steps.map((step, i) => (
         <div key={i} style={{ display: "flex", alignItems: "center", flex: i < steps.length - 1 ? 1 : "none" }}>
           <div style={{
-            width: 32, height: 32, borderRadius: 16,
+            width: 28, height: 28, borderRadius: 14,
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 13, fontWeight: 600,
+            fontSize: 11, fontWeight: 600,
             fontFamily: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
             background: i <= currentStep ? "#16A34A" : "#E5E7EB",
             color: i <= currentStep ? "#fff" : "#9CA3AF",
@@ -159,7 +159,7 @@ function StepIndicator({ steps, currentStep }) {
           </div>
           {i < steps.length - 1 && (
             <div style={{
-              flex: 1, height: 2, margin: "0 8px",
+              flex: 1, height: 2, margin: "0 4px",
               background: i < currentStep ? "#16A34A" : "#E5E7EB",
               transition: "background 0.3s ease",
             }} />
@@ -242,46 +242,48 @@ function PlayerRow({ player, index, onUpdate, onRemove, showCarts, cartOptions, 
   const mono = "'SF Mono', 'JetBrains Mono', monospace";
   return (
     <div style={{
-      display: "flex", alignItems: "center", gap: 12, padding: "14px 16px",
-      background: "#fff", borderRadius: 14,
+      display: "flex", alignItems: "center", gap: 10, padding: "12px 14px",
+      background: "#fff", borderRadius: 12,
       boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
       transition: "all 0.2s ease",
     }}>
       <div style={{
-        width: 36, height: 36, borderRadius: 18,
+        width: 32, height: 32, borderRadius: 16,
         background: ["#16A34A", "#3B82F6", "#F59E0B", "#DC2626", "#8B5CF6", "#EC4899"][index % 6],
         display: "flex", alignItems: "center", justifyContent: "center",
-        color: "#fff", fontSize: 14, fontWeight: 700, fontFamily: font, flexShrink: 0,
+        color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: font, flexShrink: 0,
       }}>
         {player.name ? player.name[0].toUpperCase() : (index + 1)}
       </div>
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
         <input
           value={player.name}
           onChange={e => onUpdate(index, { ...player, name: e.target.value })}
           placeholder={`Player ${index + 1}`}
           style={{
-            fontFamily: font, fontSize: 15, fontWeight: 500, color: "#1A1A1A",
+            fontFamily: font, fontSize: 16, fontWeight: 500, color: "#1A1A1A",
             border: "1px solid #E5E7EB", background: "#F9FAFB", borderRadius: 8,
-            outline: "none", padding: "6px 10px", width: "100%",
+            outline: "none", padding: "10px 12px", width: "100%",
+            minHeight: 44, boxSizing: "border-box",
           }}
         />
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
           <input
             value={player.ghin}
             onChange={e => onUpdate(index, { ...player, ghin: e.target.value })}
             placeholder="GHIN #"
             style={{
-              fontFamily: mono, fontSize: 12, color: "#6B7280",
-              border: "1px solid #E5E7EB", borderRadius: 6, padding: "3px 8px",
+              fontFamily: mono, fontSize: 13, color: "#6B7280",
+              border: "1px solid #E5E7EB", borderRadius: 6, padding: "8px 10px",
               width: 90, background: "#F9FAFB", outline: "none",
+              minHeight: 36, boxSizing: "border-box",
             }}
           />
           {player.handicap !== null && (
             <span style={{
               fontFamily: mono, fontSize: 12, fontWeight: 600,
               color: "#16A34A", background: "#F0FDF4",
-              padding: "3px 8px", borderRadius: 6,
+              padding: "4px 8px", borderRadius: 6,
             }}>
               HCP {player.handicap}
             </span>
@@ -292,8 +294,10 @@ function PlayerRow({ player, index, onUpdate, onRemove, showCarts, cartOptions, 
               onChange={e => onUpdate(index, { ...player, cart: e.target.value })}
               style={{
                 fontFamily: font, fontSize: 12, color: "#6B7280",
-                border: "1px solid #E5E7EB", borderRadius: 6, padding: "3px 8px",
+                border: "1px solid #E5E7EB", borderRadius: 6, padding: "8px 10px",
                 background: "#F9FAFB", outline: "none",
+                minHeight: 36, boxSizing: "border-box",
+                flex: 1, minWidth: 80,
               }}
             >
               <option value="">Cart...</option>
@@ -308,7 +312,7 @@ function PlayerRow({ player, index, onUpdate, onRemove, showCarts, cartOptions, 
         <button
           onClick={() => onRemove(index)}
           style={{
-            width: 28, height: 28, borderRadius: 14, border: "none",
+            width: 32, height: 32, borderRadius: 16, border: "none",
             background: "#FEE2E2", color: "#DC2626", cursor: "pointer",
             fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center",
             justifyContent: "center", flexShrink: 0,
@@ -728,26 +732,26 @@ export default function CrybabSetupWizard() {
     <div style={{
       maxWidth: 420, margin: "0 auto", minHeight: "100vh",
       background: "#F7F7F5", fontFamily: font,
-      paddingBottom: 160,
+      paddingBottom: 140,
     }}>
-      {/* Header */}
+      {/* Header — sticky below AppLayout top bar */}
       <div style={{
-        padding: "52px 24px 20px",
-        background: "#fff",
+        padding: "12px 16px 12px",
+        background: "rgba(255,255,255,0.95)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
         borderBottom: "1px solid #E5E7EB",
         position: "sticky", top: 0, zIndex: 10,
       }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <img src={crybabyLogo} alt="Crybaby" style={{ height: 100, marginLeft: -16, marginTop: -24, marginBottom: -24 }} />
-            <span style={{ fontSize: 14, fontWeight: 600, color: "#9CA3AF" }}>/ New Round</span>
-          </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: "#9CA3AF" }}>New Round</span>
           {step > 0 && (
             <button
               onClick={() => setStep(step - 1)}
               style={{
                 fontFamily: font, fontSize: 14, fontWeight: 600, color: "#16A34A",
                 background: "none", border: "none", cursor: "pointer",
+                padding: "6px 12px", margin: "-6px -12px",
               }}
             >
               ← Back
@@ -757,8 +761,8 @@ export default function CrybabSetupWizard() {
         <StepIndicator steps={steps} currentStep={step} />
         {/* Commentator */}
         <div style={{
-          padding: "10px 14px", background: "#F7F7F5", borderRadius: 10,
-          fontFamily: font, fontSize: 13, color: "#6B7280", fontStyle: "italic",
+          padding: "8px 12px", background: "#F7F7F5", borderRadius: 8,
+          fontFamily: font, fontSize: 12, color: "#6B7280", fontStyle: "italic",
           borderLeft: "3px solid #F59E0B",
         }}>
           💬 {quip}
@@ -766,7 +770,7 @@ export default function CrybabSetupWizard() {
       </div>
 
       {/* Content */}
-      <div style={{ padding: "20px 20px" }}>
+      <div style={{ padding: "16px 16px" }}>
         {/* STEP 0: FORMAT */}
         {step === 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -1161,9 +1165,10 @@ export default function CrybabSetupWizard() {
 
       {/* Bottom CTA */}
       <div style={{
-        position: "fixed", bottom: 68, left: 0, right: 0,
-        padding: "16px 20px", paddingBottom: "max(16px, env(safe-area-inset-bottom))",
+        position: "fixed", bottom: 64, left: 0, right: 0,
+        padding: "12px 16px", paddingBottom: "max(12px, env(safe-area-inset-bottom))",
         background: "rgba(247,247,245,0.95)", backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
         borderTop: "1px solid #E5E7EB",
         display: "flex", justifyContent: "center",
       }}>
@@ -1174,17 +1179,21 @@ export default function CrybabSetupWizard() {
             else setRoundStarted(true);
           }}
           style={{
-            width: "100%", maxWidth: 380, padding: "16px 32px", borderRadius: 14,
+            width: "100%", maxWidth: 380, padding: "14px 24px", borderRadius: 12,
             border: "none", cursor: canProceed() ? "pointer" : "not-allowed",
             fontFamily: font, fontSize: 16, fontWeight: 700, letterSpacing: "-0.01em",
             background: canProceed() ? "#1A1A1A" : "#D1D5DB",
             color: canProceed() ? "#fff" : "#9CA3AF",
             transition: "all 0.2s ease",
-            transform: canProceed() ? "scale(1)" : "scale(0.98)",
+            minHeight: 48,
           }}
         >
           {step < 4 ? "Continue" : "Start Round 🏌️"}
         </button>
+      </div>
+    </div>
+  );
+}
       </div>
     </div>
   );
