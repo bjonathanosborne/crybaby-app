@@ -312,20 +312,11 @@ function GHINScreen({ userName, onVerified, onSkip }) {
   const checkGHIN = () => {
     if (ghin.length < 7) return;
     setStatus("checking");
-    // Simulate API call
+    // GHIN API integration coming soon — for now, show manual entry
     setTimeout(() => {
-      // Simulate success for demo
-      const fakeHandicap = Math.round((parseInt(ghin.slice(-2)) / 100) * 28 * 10) / 10;
-      setHandicap(fakeHandicap);
-      setScoringHistory([
-        { date: "Feb 10", course: "Westlake CC", score: 84, diff: 12.1 },
-        { date: "Feb 3", course: "Lions Municipal", score: 88, diff: 16.2 },
-        { date: "Jan 27", course: "Barton Creek", score: 82, diff: 10.8 },
-        { date: "Jan 20", course: "Grey Rock", score: 86, diff: 13.4 },
-        { date: "Jan 14", course: "Avery Ranch", score: 90, diff: 17.3 },
-      ]);
-      setStatus("verified");
-    }, 2000);
+      setTrialCount(prev => prev + 1);
+      setStatus("not_found");
+    }, 1500);
   };
 
   return (
@@ -463,8 +454,24 @@ function GHINScreen({ userName, onVerified, onSkip }) {
           </div>
         )}
 
-        {/* Don't have GHIN */}
-        {status === "idle" && (
+        {/* Not Found / Coming Soon State */}
+        {status === "not_found" && (
+          <div style={{
+            padding: "20px", background: "#FEF3C7", borderRadius: 16, textAlign: "center",
+            border: "1px solid #FDE68A",
+          }}>
+            <div style={{ fontSize: 32, marginBottom: 8 }}>🚧</div>
+            <div style={{ fontFamily: FONT, fontSize: 14, fontWeight: 700, color: "#92400E", marginBottom: 4 }}>
+              GHIN Verification Coming Soon
+            </div>
+            <div style={{ fontFamily: FONT, fontSize: 13, color: "#92400E", lineHeight: 1.5 }}>
+              Automatic handicap lookup isn't available yet. Enter your handicap manually below to get started.
+            </div>
+          </div>
+        )}
+
+        {/* Don't have GHIN / Manual entry */}
+        {(status === "idle" || status === "not_found") && (
           <div style={{
             background: "#fff", borderRadius: 16, padding: "18px 20px",
             boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
@@ -857,15 +864,15 @@ function WelcomeScreen({ userName, handicap, ghinVerified, homeCourse, onStart, 
 // ============================================================
 export default function CrybabOnboarding() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [step, setStep] = useState("splash");
 
-  // If user is already logged in, skip auth step
+  // If user is already logged in, redirect to feed (they've already onboarded)
   useEffect(() => {
-    if (user && step === "auth") {
-      setStep("ghin");
+    if (!authLoading && user) {
+      navigate("/feed", { replace: true });
     }
-  }, [user, step]);
+  }, [user, authLoading, navigate]);
 
   // Must be called before any early returns to satisfy React hook rules
   useEffect(() => {
