@@ -159,22 +159,38 @@ export default function NotificationBell() {
             >
               Notifications
             </span>
-            {unread > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {unread > 0 && (
+                <button
+                  onClick={handleMarkAllRead}
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: "hsl(var(--muted-foreground))",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    fontFamily: FONT,
+                  }}
+                >
+                  Mark all read
+                </button>
+              )}
               <button
-                onClick={handleMarkAllRead}
+                onClick={() => { setOpen(false); navigate("/notifications/settings"); }}
                 style={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: "hsl(var(--muted-foreground))",
+                  fontSize: 16,
                   background: "none",
                   border: "none",
                   cursor: "pointer",
-                  fontFamily: FONT,
+                  padding: 0,
+                  lineHeight: 1,
                 }}
+                aria-label="Notification settings"
               >
-                Mark all read
+                ⚙️
               </button>
-            )}
+            </div>
           </div>
 
           {/* List */}
