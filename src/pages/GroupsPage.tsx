@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import crybabyLogo from "@/assets/crybaby-logo.png";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   loadGroups, createGroup, loadGroup, loadGroupMembers,
@@ -215,44 +214,30 @@ export default function GroupsPage() {
   };
 
   return (
-    <div style={{
-      maxWidth: 420, margin: "0 auto", minHeight: "100vh",
-      background: "#F7F7F5", fontFamily: FONT, paddingBottom: 100,
-    }}>
-      {/* Header */}
-      <div style={{
-        padding: "52px 20px 16px", background: "#fff",
-        borderBottom: "1px solid #E5E7EB",
-      }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <img src={crybabyLogo} alt="Crybaby" style={{ height: 100, marginLeft: -16, marginTop: -24, marginBottom: -24 }} />
-            <span style={{ fontSize: 14, fontWeight: 600, color: "#9CA3AF" }}>
-              / {view === "create" ? "New Group" : view === "detail" ? (selectedGroup?.name || "Group") : view === "join" ? "Join" : "Groups"}
-            </span>
+    <div className="max-w-[420px] mx-auto min-h-screen bg-background pb-24">
+      {/* Page header */}
+      <div className="px-4 pt-4 pb-2 flex justify-between items-center">
+        <h1 className="text-2xl font-extrabold text-foreground tracking-tight">
+          {view === "create" ? "New Group" : view === "detail" ? (selectedGroup?.name || "Group") : view === "join" ? "Join Group" : "Groups"}
+        </h1>
+        {view === "list" && (
+          <div className="flex gap-2">
+            <button onClick={() => setView("join")}
+              className="px-3 py-2 rounded-xl border border-border bg-card text-foreground text-xs font-semibold cursor-pointer hover:border-primary/30 transition-colors">
+              🔗 Join
+            </button>
+            <button onClick={() => setView("create")}
+              className="px-3 py-2 rounded-xl border-none bg-primary text-primary-foreground text-xs font-bold cursor-pointer hover:opacity-90 transition-opacity">
+              + New
+            </button>
           </div>
-          {view === "list" && (
-            <div style={{ display: "flex", gap: 6 }}>
-              <button onClick={() => setView("join")} style={{
-                padding: "8px 12px", borderRadius: 10, border: "1px solid #E5E7EB",
-                background: "#fff", fontFamily: FONT, fontSize: 12, fontWeight: 600,
-                color: "#6B7280", cursor: "pointer",
-              }}>🔗 Join</button>
-              <button onClick={() => setView("create")} style={{
-                padding: "8px 12px", borderRadius: 10, border: "none",
-                background: "#1A1A1A", fontFamily: FONT, fontSize: 12, fontWeight: 700,
-                color: "#fff", cursor: "pointer",
-              }}>+ New</button>
-            </div>
-          )}
-          {(view !== "list") && (
-            <button onClick={goBack} style={{
-              padding: "8px 14px", borderRadius: 10, border: "1px solid #E5E7EB",
-              background: "#fff", fontFamily: FONT, fontSize: 12, fontWeight: 600,
-              color: "#6B7280", cursor: "pointer",
-            }}>← Back</button>
-          )}
-        </div>
+        )}
+        {view !== "list" && (
+          <button onClick={goBack}
+            className="px-3 py-2 rounded-xl border border-border bg-card text-foreground text-xs font-semibold cursor-pointer hover:border-primary/30 transition-colors">
+            ← Back
+          </button>
+        )}
       </div>
 
       <div style={{ padding: "16px 16px", display: "flex", flexDirection: "column", gap: 16 }}>

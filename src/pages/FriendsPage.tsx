@@ -267,11 +267,11 @@ export default function FriendsPage() {
 
   return (
     <div className="max-w-[420px] mx-auto min-h-screen bg-background pb-24">
-      {/* Sub-header */}
-      <div className="px-4 py-3 flex justify-between items-center">
-        <div className="text-sm font-semibold text-muted-foreground">
+      {/* Page header */}
+      <div className="px-4 pt-4 pb-2 flex justify-between items-center">
+        <h1 className="text-2xl font-extrabold text-foreground tracking-tight">
           {view === "ledger" ? "Ledger" : view === "find" ? "Find Friends" : view === "search" ? "Search" : "Friends"}
-        </div>
+        </h1>
         <div className="flex gap-2">
           {view === "list" && (
             <>

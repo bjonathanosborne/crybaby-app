@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import crybabyLogo from "@/assets/crybaby-logo.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { loadProfile, updateProfile, loadMyRounds, loadSettlements, uploadUserAvatar } from "@/lib/db";
 import { supabase } from "@/integrations/supabase/client";
@@ -121,26 +120,14 @@ export default function ProfilePage() {
   const totalWinnings = ledgerData.total;
 
   return (
-    <div style={{
-      maxWidth: 420, margin: "0 auto", minHeight: "100vh",
-      background: "#F7F7F5", fontFamily: FONT, paddingBottom: 100,
-    }}>
-      {/* Header */}
-      <div style={{
-        padding: "52px 20px 20px", background: "#fff",
-        borderBottom: "1px solid #E5E7EB",
-      }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <img src={crybabyLogo} alt="Crybaby" style={{ height: 100, marginLeft: -16, marginTop: -24, marginBottom: -24 }} />
-            <span style={{ fontSize: 14, fontWeight: 600, color: "#9CA3AF" }}>/ Profile</span>
-          </div>
-          <button onClick={signOut} style={{
-            padding: "6px 12px", borderRadius: 8, border: "1px solid #E5E7EB",
-            background: "#fff", fontFamily: FONT, fontSize: 12, fontWeight: 600,
-            color: "#DC2626", cursor: "pointer",
-          }}>Sign Out</button>
-        </div>
+    <div className="max-w-[420px] mx-auto min-h-screen bg-background pb-24">
+      {/* Page header */}
+      <div className="px-4 pt-4 pb-2 flex justify-between items-center">
+        <h1 className="text-2xl font-extrabold text-foreground tracking-tight">Profile</h1>
+        <button onClick={signOut}
+          className="px-3 py-2 rounded-xl border border-border bg-card text-destructive text-xs font-semibold cursor-pointer hover:bg-destructive/10 transition-colors">
+          Sign Out
+        </button>
       </div>
 
       <div style={{ padding: "16px 16px", display: "flex", flexDirection: "column", gap: 16 }}>
