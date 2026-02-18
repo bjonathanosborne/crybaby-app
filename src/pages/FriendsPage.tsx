@@ -10,6 +10,24 @@ import { format, parseISO } from "date-fns";
 const FONT = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 const MONO = "'SF Mono', 'JetBrains Mono', monospace";
 
+function UserAvatar({ profile, size = 40, bg = "#16A34A" }: { profile: any; size?: number; bg?: string }) {
+  const name = profile?.display_name || "?";
+  const initial = name[0]?.toUpperCase() || "?";
+  if (profile?.avatar_url) {
+    return (
+      <img src={profile.avatar_url} alt={name}
+        style={{ width: size, height: size, borderRadius: size / 2, objectFit: "cover", flexShrink: 0 }} />
+    );
+  }
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: size / 2, background: bg,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      color: "#fff", fontSize: size * 0.4, fontWeight: 700, fontFamily: FONT, flexShrink: 0,
+    }}>{initial}</div>
+  );
+}
+
 type View = "list" | "search" | "ledger";
 
 export default function FriendsPage() {
@@ -213,11 +231,7 @@ export default function FriendsPage() {
                       padding: "14px 16px",
                       borderBottom: i < searchResults.length - 1 ? "1px solid #F3F4F6" : "none",
                     }}>
-                      <div style={{
-                        width: 40, height: 40, borderRadius: 20, background: "#16A34A",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        color: "#fff", fontSize: 16, fontWeight: 700, fontFamily: FONT, flexShrink: 0,
-                      }}>{(p.display_name || "?")[0].toUpperCase()}</div>
+                      <UserAvatar profile={p} size={40} />
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 14, fontWeight: 600, color: "#1A1A1A" }}>{p.display_name}</div>
                         {p.handicap != null && (
@@ -257,12 +271,7 @@ export default function FriendsPage() {
               background: "#fff", borderRadius: 20, padding: "20px",
               boxShadow: "0 2px 8px rgba(0,0,0,0.06)", textAlign: "center",
             }}>
-              <div style={{
-                width: 56, height: 56, borderRadius: 28, background: "#3B82F6",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                color: "#fff", fontSize: 22, fontWeight: 700, fontFamily: FONT,
-                margin: "0 auto",
-              }}>{(friendProfile.display_name || "?")[0].toUpperCase()}</div>
+              <UserAvatar profile={friendProfile} size={56} bg="#3B82F6" />
               <div style={{ fontSize: 18, fontWeight: 800, color: "#1A1A1A", marginTop: 10 }}>
                 {friendProfile.display_name}
               </div>
@@ -347,11 +356,7 @@ export default function FriendsPage() {
                       display: "flex", alignItems: "center", gap: 12,
                       padding: "12px 0", borderBottom: "1px solid #F3F4F6",
                     }}>
-                      <div style={{
-                        width: 40, height: 40, borderRadius: 20, background: "#F59E0B",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        color: "#fff", fontSize: 16, fontWeight: 700, fontFamily: FONT,
-                      }}>{(profile?.display_name || "?")[0].toUpperCase()}</div>
+                      <UserAvatar profile={profile} size={40} bg="#F59E0B" />
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 14, fontWeight: 600, color: "#1A1A1A" }}>
                           {profile?.display_name || "Unknown"}
@@ -395,11 +400,7 @@ export default function FriendsPage() {
                       display: "flex", alignItems: "center", gap: 12,
                       padding: "12px 0", borderBottom: "1px solid #F3F4F6",
                     }}>
-                      <div style={{
-                        width: 36, height: 36, borderRadius: 18, background: "#9CA3AF",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        color: "#fff", fontSize: 14, fontWeight: 700, fontFamily: FONT,
-                      }}>{(profile?.display_name || "?")[0].toUpperCase()}</div>
+                      <UserAvatar profile={profile} size={36} bg="#9CA3AF" />
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 13, fontWeight: 600, color: "#6B7280" }}>
                           {profile?.display_name || "Unknown"}
@@ -443,11 +444,7 @@ export default function FriendsPage() {
                       padding: "12px 0", borderBottom: "1px solid #F3F4F6",
                       cursor: "pointer",
                     }} onClick={() => handleViewLedger(friendId)}>
-                      <div style={{
-                        width: 44, height: 44, borderRadius: 22, background: "#16A34A",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        color: "#fff", fontSize: 17, fontWeight: 700, fontFamily: FONT,
-                      }}>{(profile?.display_name || "?")[0].toUpperCase()}</div>
+                      <UserAvatar profile={profile} size={44} />
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 15, fontWeight: 600, color: "#1A1A1A" }}>
                           {profile?.display_name || "Unknown"}
