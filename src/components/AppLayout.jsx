@@ -14,7 +14,7 @@ export default function AppLayout() {
           paddingBottom: "6px",
         }}>
         <HamburgerMenu />
-        <img src={crybabyLogo} alt="Crybaby" className="h-10 -my-1" />
+        <img src={crybabyLogo} alt="Crybaby" className="h-[100px] -my-[24px] object-contain" />
         <NotificationBell />
       </div>
       <div style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 52px)" }}>
