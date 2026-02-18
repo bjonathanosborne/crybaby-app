@@ -504,6 +504,36 @@ export async function loadMyGroups() {
   return groups || [];
 }
 
+// Upload group avatar
+export async function uploadGroupAvatar(groupId: string, file: File) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const ext = file.name.split(".").pop() || "png";
+  const path = `groups/${groupId}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("avatars")
+    .upload(path, file, { upsert: true });
+
+  if (uploadError) throw uploadError;
+
+  const { data: { publicUrl } } = supabase.storage
+    .from("avatars")
+    .getPublicUrl(path);
+
+  // Add cache-busting timestamp
+  const avatarUrl = `${publicUrl}?t=${Date.now()}`;
+
+  const { error: updateError } = await supabase
+    .from("groups")
+    .update({ avatar_url: avatarUrl })
+    .eq("id", groupId);
+
+  if (updateError) throw updateError;
+  return avatarUrl;
+}
+
 // Friends
 export async function loadFriends() {
   const { data: { user } } = await supabase.auth.getUser();

@@ -4,9 +4,11 @@ import {
   loadGroups, createGroup, loadGroup, loadGroupMembers,
   joinGroup, leaveGroup, removeMember, loadGroupLeaderboard,
   findGroupByInviteCode, regenerateInviteCode, loadMyGroups,
+  uploadGroupAvatar,
 } from "@/lib/db";
 import { toast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
+import { useRef } from "react";
 
 const FONT = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 const MONO = "'SF Mono', 'JetBrains Mono', monospace";
@@ -38,7 +40,8 @@ export default function GroupsPage() {
   const [isMember, setIsMember] = useState(false);
   const [myRole, setMyRole] = useState<string | null>(null);
   const [codeCopied, setCodeCopied] = useState(false);
-
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const loadAll = async () => {
     setLoading(true);
     try {
@@ -186,6 +189,30 @@ export default function GroupsPage() {
     setJoinCode("");
   };
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedGroup) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: "Too large", description: "Max 2MB", variant: "destructive" });
+      return;
+    }
+    setUploadingAvatar(true);
+    try {
+      const url = await uploadGroupAvatar(selectedGroup.id, file);
+      setSelectedGroup((prev: any) => ({ ...prev, avatar_url: url }));
+      // Update in lists too
+      setMyGroups(prev => prev.map(g => g.id === selectedGroup.id ? { ...g, avatar_url: url } : g));
+      setPublicGroups(prev => prev.map(g => g.id === selectedGroup.id ? { ...g, avatar_url: url } : g));
+      toast({ title: "Avatar updated!" });
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Upload failed", variant: "destructive" });
+    } finally {
+      setUploadingAvatar(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
+    }
+  };
+
   return (
     <div style={{
       maxWidth: 420, margin: "0 auto", minHeight: "100vh",
@@ -268,10 +295,15 @@ export default function GroupsPage() {
                 boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                  <div style={{
-                    width: 48, height: 48, borderRadius: 14, background: "#F0FDF4",
-                    display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24,
-                  }}>🏌️</div>
+                  {foundGroup.avatar_url ? (
+                    <img src={foundGroup.avatar_url} alt={foundGroup.name}
+                      style={{ width: 48, height: 48, borderRadius: 14, objectFit: "cover" }} />
+                  ) : (
+                    <div style={{
+                      width: 48, height: 48, borderRadius: 14, background: "#F0FDF4",
+                      display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24,
+                    }}>🏌️</div>
+                  )}
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 16, fontWeight: 700, color: "#1A1A1A" }}>{foundGroup.name}</div>
                     <div style={{ fontSize: 12, color: "#9CA3AF" }}>
@@ -377,11 +409,36 @@ export default function GroupsPage() {
               background: "#fff", borderRadius: 20, padding: "24px 20px", textAlign: "center",
               boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
             }}>
-              <div style={{
-                width: 64, height: 64, borderRadius: 20, background: "#F3F4F6",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 32, margin: "0 auto",
-              }}>🏌️</div>
+              <div style={{ position: "relative", display: "inline-block" }}>
+                {selectedGroup.avatar_url ? (
+                  <img src={selectedGroup.avatar_url} alt={selectedGroup.name}
+                    style={{ width: 64, height: 64, borderRadius: 20, objectFit: "cover", display: "block", margin: "0 auto" }} />
+                ) : (
+                  <div style={{
+                    width: 64, height: 64, borderRadius: 20, background: "#F3F4F6",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 32, margin: "0 auto",
+                  }}>🏌️</div>
+                )}
+                {(myRole === "owner" || myRole === "admin") && (
+                  <>
+                    <input ref={avatarInputRef} type="file" accept="image/*"
+                      onChange={handleAvatarUpload} style={{ display: "none" }} />
+                    <button onClick={() => avatarInputRef.current?.click()}
+                      disabled={uploadingAvatar}
+                      style={{
+                        position: "absolute", bottom: -4, right: -4,
+                        width: 26, height: 26, borderRadius: 13,
+                        background: "#1A1A1A", border: "2px solid #fff",
+                        color: "#fff", fontSize: 12, cursor: "pointer",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        opacity: uploadingAvatar ? 0.5 : 1,
+                      }}>
+                      {uploadingAvatar ? "…" : "📷"}
+                    </button>
+                  </>
+                )}
+              </div>
               <div style={{ fontSize: 20, fontWeight: 800, color: "#1A1A1A", marginTop: 12 }}>
                 {selectedGroup.name}
               </div>
@@ -604,10 +661,15 @@ function GroupCard({ group, onClick }: { group: any; onClick: () => void }) {
       boxShadow: "0 2px 8px rgba(0,0,0,0.06)", border: "1px solid #E5E7EB",
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-        <div style={{
-          width: 48, height: 48, borderRadius: 14, background: "#F3F4F6",
-          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24,
-        }}>🏌️</div>
+        {group.avatar_url ? (
+          <img src={group.avatar_url} alt={group.name}
+            style={{ width: 48, height: 48, borderRadius: 14, objectFit: "cover" }} />
+        ) : (
+          <div style={{
+            width: 48, height: 48, borderRadius: 14, background: "#F3F4F6",
+            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24,
+          }}>🏌️</div>
+        )}
         <div style={{ flex: 1 }}>
           <div style={{
             fontFamily: "'SF Pro Display', -apple-system, sans-serif",
