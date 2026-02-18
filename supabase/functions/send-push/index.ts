@@ -13,6 +13,32 @@ serve(async (req) => {
   }
 
   try {
+    // Validate authentication
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const authSupabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await authSupabase.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(
+        JSON.stringify({ error: "Invalid authentication" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const callerUserId = claimsData.claims.sub;
+
     const { user_id, title, body, data } = await req.json();
 
     if (!user_id || !title) {
@@ -22,6 +48,7 @@ serve(async (req) => {
       );
     }
 
+    // Use service role client for push subscription lookup
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -42,13 +69,6 @@ serve(async (req) => {
       );
     }
 
-    // Note: Sending actual web push requires the web-push library with VAPID keys.
-    // For now, this function is a placeholder that logs the push intent.
-    // To fully enable browser push, you'll need to:
-    // 1. Generate VAPID keys (npx web-push generate-vapid-keys)
-    // 2. Store VAPID_PRIVATE_KEY and VAPID_PUBLIC_KEY as secrets
-    // 3. Use the web-push npm package here to send actual pushes
-
     console.log(`Would send push to ${subscriptions.length} device(s) for user ${user_id}:`, {
       title,
       body,
@@ -65,7 +85,7 @@ serve(async (req) => {
   } catch (err) {
     console.error("send-push error:", err);
     return new Response(
-      JSON.stringify({ error: err.message }),
+      JSON.stringify({ error: "Something went wrong" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
