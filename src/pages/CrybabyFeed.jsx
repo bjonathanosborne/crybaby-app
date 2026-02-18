@@ -350,8 +350,9 @@ export default function CrybabyFeed() {
 
   return (
     <div className="max-w-[420px] mx-auto min-h-screen bg-background pb-24">
-      {/* Sub-header with New Round button */}
-      <div className="px-4 py-3 flex justify-end">
+      {/* Page header */}
+      <div className="px-4 pt-4 pb-2 flex justify-between items-center">
+        <h1 className="text-2xl font-extrabold text-foreground tracking-tight">Feed</h1>
         <button onClick={() => navigate("/setup")}
           className="px-4 py-2 rounded-xl border-none cursor-pointer text-[13px] font-bold bg-primary text-primary-foreground hover:opacity-90 transition-opacity">
           + New Round

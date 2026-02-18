@@ -17,7 +17,7 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (user) navigate("/feed");
+    if (user) navigate("/home");
   }, [user, navigate]);
 
   const handleEmailAuth = async (e: React.FormEvent) => {
@@ -41,7 +41,7 @@ export default function AuthPage() {
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        navigate("/feed");
+        navigate("/home");
       }
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
