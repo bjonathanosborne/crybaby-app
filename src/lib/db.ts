@@ -328,6 +328,35 @@ export async function updateProfile(updates) {
   return data;
 }
 
+// Upload user profile avatar
+export async function uploadUserAvatar(file: File) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const ext = file.name.split(".").pop() || "png";
+  const path = `users/${user.id}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("avatars")
+    .upload(path, file, { upsert: true });
+
+  if (uploadError) throw uploadError;
+
+  const { data: { publicUrl } } = supabase.storage
+    .from("avatars")
+    .getPublicUrl(path);
+
+  const avatarUrl = `${publicUrl}?t=${Date.now()}`;
+
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update({ avatar_url: avatarUrl })
+    .eq("user_id", user.id);
+
+  if (updateError) throw updateError;
+  return avatarUrl;
+}
+
 // Groups
 export async function loadGroups() {
   const { data, error } = await supabase

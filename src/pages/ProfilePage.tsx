@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { loadProfile, updateProfile, loadMyRounds, loadSettlements } from "@/lib/db";
+import { loadProfile, updateProfile, loadMyRounds, loadSettlements, uploadUserAvatar } from "@/lib/db";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 import { format, startOfMonth, startOfYear, parseISO } from "date-fns";
 
 const FONT = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
@@ -18,6 +19,29 @@ export default function ProfilePage() {
   const [ledgerPeriod, setLedgerPeriod] = useState<LedgerPeriod>("monthly");
   const [editingProfile, setEditingProfile] = useState(false);
   const [editForm, setEditForm] = useState({ display_name: "", handicap: "", home_course: "", bio: "" });
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: "Too large", description: "Max 2MB", variant: "destructive" });
+      return;
+    }
+    setUploadingAvatar(true);
+    try {
+      const url = await uploadUserAvatar(file);
+      setProfile((prev: any) => ({ ...prev, avatar_url: url }));
+      toast({ title: "Avatar updated!" });
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Upload failed", variant: "destructive" });
+    } finally {
+      setUploadingAvatar(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -121,13 +145,34 @@ export default function ProfilePage() {
           background: "#fff", borderRadius: 20, padding: "24px 20px", textAlign: "center",
           boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
         }}>
-          <div style={{
-            width: 72, height: 72, borderRadius: 36, background: "#16A34A",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: "#fff", fontSize: 28, fontWeight: 700, fontFamily: FONT,
-            margin: "0 auto",
-          }}>
-            {(profile?.display_name || "?")[0].toUpperCase()}
+          <div style={{ position: "relative", display: "inline-block" }}>
+            {profile?.avatar_url ? (
+              <img src={profile.avatar_url} alt={profile.display_name}
+                style={{ width: 72, height: 72, borderRadius: 36, objectFit: "cover", display: "block", margin: "0 auto" }} />
+            ) : (
+              <div style={{
+                width: 72, height: 72, borderRadius: 36, background: "#16A34A",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: "#fff", fontSize: 28, fontWeight: 700, fontFamily: FONT,
+                margin: "0 auto",
+              }}>
+                {(profile?.display_name || "?")[0].toUpperCase()}
+              </div>
+            )}
+            <input ref={avatarInputRef} type="file" accept="image/*"
+              onChange={handleAvatarUpload} style={{ display: "none" }} />
+            <button onClick={() => avatarInputRef.current?.click()}
+              disabled={uploadingAvatar}
+              style={{
+                position: "absolute", bottom: -4, right: -4,
+                width: 26, height: 26, borderRadius: 13,
+                background: "#1A1A1A", border: "2px solid #fff",
+                color: "#fff", fontSize: 12, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                opacity: uploadingAvatar ? 0.5 : 1,
+              }}>
+              {uploadingAvatar ? "…" : "📷"}
+            </button>
           </div>
 
           {editingProfile ? (
