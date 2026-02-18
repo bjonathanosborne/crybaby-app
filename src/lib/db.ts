@@ -312,3 +312,61 @@ export async function loadMyRounds(limit = 10) {
   if (error) throw error;
   return data;
 }
+
+// Load settlements for a user (for ledger)
+export async function loadSettlements(userId?: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const targetId = userId || user.id;
+
+  const { data, error } = await supabase
+    .from("round_settlements")
+    .select("*, rounds(course, game_type, created_at)")
+    .eq("user_id", targetId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+// Insert settlements after a round completes
+export async function insertSettlements(roundId: string, settlements: { userId?: string; guestName?: string; amount: number }[]) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const inserts = settlements.map(s => ({
+    round_id: roundId,
+    user_id: s.userId || null,
+    guest_name: s.guestName || null,
+    amount: s.amount,
+  }));
+
+  const { error } = await supabase.from("round_settlements").insert(inserts);
+  if (error) throw error;
+}
+
+// Add manual adjustment
+export async function addManualAdjustment(roundId: string, amount: number, notes: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { error } = await supabase.from("round_settlements").insert({
+    round_id: roundId,
+    user_id: user.id,
+    amount,
+    is_manual_adjustment: true,
+    notes,
+  });
+
+  if (error) throw error;
+}
+
+// Load another user's profile
+export async function loadUserProfile(userId: string) {
+  const { data } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return data;
+}

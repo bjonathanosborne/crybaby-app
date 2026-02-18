@@ -346,6 +346,47 @@ export type Database = {
           },
         ]
       }
+      round_settlements: {
+        Row: {
+          amount: number
+          created_at: string
+          guest_name: string | null
+          id: string
+          is_manual_adjustment: boolean
+          notes: string | null
+          round_id: string
+          user_id: string | null
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          guest_name?: string | null
+          id?: string
+          is_manual_adjustment?: boolean
+          notes?: string | null
+          round_id: string
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          guest_name?: string | null
+          id?: string
+          is_manual_adjustment?: boolean
+          notes?: string | null
+          round_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "round_settlements_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "rounds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rounds: {
         Row: {
           course: string
