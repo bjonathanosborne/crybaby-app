@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import crybabyLogo from "@/assets/crybaby-logo.png";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { loadRound, updatePlayerScores, completeRound, createPost, saveAICommentary, insertSettlements } from "@/lib/db";
+import { loadRound, updatePlayerScores, completeRound, createPost, saveAICommentary, insertSettlements, createRoundEvent } from "@/lib/db";
 import { supabase } from "@/integrations/supabase/client";
+import RoundLiveFeed from "@/components/RoundLiveFeed";
 
 // ============================================================
 // CRYBABY — Active Round / Score Entry
@@ -768,6 +769,7 @@ export default function CrybabActiveRound() {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [pendingSync, setPendingSync] = useState(0);
+  const [showLiveFeed, setShowLiveFeed] = useState(false);
 
   const par = course.pars[currentHole - 1];
   const holeHandicap = course.handicaps[currentHole - 1];
@@ -849,8 +851,21 @@ export default function CrybabActiveRound() {
     setHammerDepth(d => d + 1);
     setHammerPending(false);
     setShowHammer(false);
-    // After accept, the accepting team can now hammer back
-    // lastHammerBy stays set so we know who threw last
+
+    // Emit hammer event to live feed
+    if (roundId && teams) {
+      const acceptingTeam = lastHammerBy === "A" ? teams.teamB : teams.teamA;
+      createRoundEvent({
+        roundId,
+        holeNumber: currentHole,
+        eventType: "hammer",
+        eventData: {
+          message: `${acceptingTeam.name} accepted the hammer!`,
+          quip: getQuip("hammer_accepted"),
+          amount: round.holeValue * Math.pow(2, hammerDepth + 1) + carryOver,
+        },
+      }).catch(err => console.error("Failed to emit hammer event:", err));
+    }
   };
 
   const handleHammerFold = () => {
@@ -1049,6 +1064,55 @@ export default function CrybabActiveRound() {
       setShowResult(null);
       setPendingSync(ps => ps + 1);
 
+      // Emit live feed event
+      if (roundId) {
+        const cs = scores[currentHole] || {};
+        const eventType = showResult.push ? "push"
+          : showResult.folded ? "hammer_fold"
+          : "team_win";
+
+        // Emit a summary event for the hole
+        createRoundEvent({
+          roundId,
+          holeNumber: currentHole,
+          par,
+          eventType,
+          eventData: {
+            message: showResult.push
+              ? `Hole ${currentHole} is a push`
+              : showResult.folded
+              ? `${showResult.winnerName} wins — opponent folded`
+              : `${showResult.winnerName} takes Hole ${currentHole}`,
+            amount: showResult.push ? 0 : showResult.amount,
+            quip: showResult.quip,
+            winnerName: showResult.winnerName,
+          },
+        }).catch(err => console.error("Failed to emit round event:", err));
+
+        // Emit individual player score events for notable scores
+        players.forEach(p => {
+          const score = cs[p.id];
+          if (score == null) return;
+          const diff = score - par;
+          if (diff <= -2 || diff === -1) {
+            const scoreType = diff <= -2 ? "eagle" : "birdie";
+            createRoundEvent({
+              roundId,
+              roundPlayerId: p.id,
+              holeNumber: currentHole,
+              grossScore: score,
+              par,
+              eventType: scoreType,
+              eventData: {
+                playerName: p.name,
+                message: `${scoreType === "eagle" ? "Eagle" : "Birdie"} on Hole ${currentHole}!`,
+                score,
+              },
+            }).catch(err => console.error("Failed to emit score event:", err));
+          }
+        });
+      }
+
       if (currentHole < 18) {
         setCurrentHole(currentHole + 1);
       }
@@ -1238,17 +1302,34 @@ export default function CrybabActiveRound() {
               width: 8, height: 8, borderRadius: 4,
               background: pendingSync > 0 ? "#F59E0B" : "#16A34A",
             }} />
-            <button
-              onClick={() => setShowLeaderboard(!showLeaderboard)}
-              style={{
-                padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer",
-                fontFamily: FONT, fontSize: 12, fontWeight: 700,
-                background: showLeaderboard ? "#1A1A1A" : "#F3F4F6",
-                color: showLeaderboard ? "#fff" : "#6B7280",
-              }}
-            >
-              📊
-            </button>
+              <button
+                onClick={() => setShowLiveFeed(true)}
+                style={{
+                  padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer",
+                  fontFamily: FONT, fontSize: 12, fontWeight: 700,
+                  background: "#FEF2F2",
+                  color: "#DC2626",
+                  position: "relative",
+                }}
+              >
+                📡
+                <div style={{
+                  position: "absolute", top: 2, right: 2, width: 6, height: 6,
+                  borderRadius: 3, background: "#DC2626",
+                  animation: "pulse 2s infinite",
+                }} />
+              </button>
+              <button
+                onClick={() => setShowLeaderboard(!showLeaderboard)}
+                style={{
+                  padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer",
+                  fontFamily: FONT, fontSize: 12, fontWeight: 700,
+                  background: showLeaderboard ? "#1A1A1A" : "#F3F4F6",
+                  color: showLeaderboard ? "#fff" : "#6B7280",
+                }}
+              >
+                📊
+              </button>
           </div>
         </div>
 
@@ -1397,6 +1478,13 @@ export default function CrybabActiveRound() {
           players={players}
           totals={totals}
           onConfirm={handleCrybabConfirm}
+        />
+      )}
+      {roundId && (
+        <RoundLiveFeed
+          roundId={roundId}
+          isOpen={showLiveFeed}
+          onClose={() => setShowLiveFeed(false)}
         />
       )}
     </div>

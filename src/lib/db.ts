@@ -816,3 +816,96 @@ export async function sendInviteEmails(emails: string[], inviterName: string) {
   if (error) throw error;
   return data;
 }
+
+// ─── Round Events (Live Feed) ───
+
+export async function createRoundEvent({
+  roundId,
+  roundPlayerId,
+  holeNumber,
+  grossScore,
+  par,
+  eventType,
+  eventData = {},
+}: {
+  roundId: string;
+  roundPlayerId?: string | null;
+  holeNumber: number;
+  grossScore?: number | null;
+  par?: number | null;
+  eventType: string;
+  eventData?: Record<string, any>;
+}) {
+  const { data, error } = await supabase
+    .from("round_events")
+    .insert({
+      round_id: roundId,
+      round_player_id: roundPlayerId || null,
+      hole_number: holeNumber,
+      gross_score: grossScore ?? null,
+      par: par ?? null,
+      event_type: eventType,
+      event_data: eventData,
+    } as any)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function loadRoundEvents(roundId: string) {
+  const { data, error } = await supabase
+    .from("round_events")
+    .select("*")
+    .eq("round_id", roundId)
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function loadEventReactions(eventIds: string[]) {
+  if (!eventIds.length) return [];
+  const { data, error } = await supabase
+    .from("round_event_reactions")
+    .select("*")
+    .in("event_id", eventIds);
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function toggleEventReaction(eventId: string, reactionType: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data: existing } = await supabase
+    .from("round_event_reactions")
+    .select("*")
+    .eq("event_id", eventId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (existing) {
+    if (existing.reaction_type === reactionType) {
+      await supabase.from("round_event_reactions").delete().eq("id", existing.id);
+      return null;
+    } else {
+      const { data } = await supabase
+        .from("round_event_reactions")
+        .update({ reaction_type: reactionType })
+        .eq("id", existing.id)
+        .select()
+        .single();
+      return data;
+    }
+  } else {
+    const { data } = await supabase
+      .from("round_event_reactions")
+      .insert({ event_id: eventId, user_id: user.id, reaction_type: reactionType })
+      .select()
+      .single();
+    return data;
+  }
+}
