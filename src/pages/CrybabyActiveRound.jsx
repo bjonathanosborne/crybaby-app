@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { loadRound, updatePlayerScores, completeRound, createPost, saveAICommentary } from "@/lib/db";
+import { loadRound, updatePlayerScores, completeRound, createPost, saveAICommentary, insertSettlements } from "@/lib/db";
 import { supabase } from "@/integrations/supabase/client";
 
 // ============================================================
@@ -693,6 +693,7 @@ export default function CrybabActiveRound() {
     holeValue: dbRound.course_details?.holeValue || 5,
     players: dbPlayers.map((p, i) => ({
       id: p.id,
+      userId: p.user_id || null,
       name: p.guest_name || `Player ${i + 1}`,
       handicap: 12,
       cart: i < 2 ? "A" : "B",
@@ -763,6 +764,32 @@ export default function CrybabActiveRound() {
       setShowCrybabSetup(true);
     }
   }, [currentHole]);
+
+  // Auto-save settlements when round completes
+  const [settlementsSaved, setSettlementsSaved] = useState(false);
+  useEffect(() => {
+    const isComplete = currentHole >= 18 && holeResults.length >= 17;
+    if (!isComplete || settlementsSaved) return;
+
+    const saveRoundSettlements = async () => {
+      try {
+        if (roundId) {
+          await completeRound(roundId);
+          const settlementData = players.map(p => ({
+            userId: p.userId || null,
+            guestName: p.userId ? null : p.name,
+            amount: totals[p.id] || 0,
+          }));
+          await insertSettlements(roundId, settlementData);
+        }
+        setSettlementsSaved(true);
+        console.log("✅ Settlements saved");
+      } catch (err) {
+        console.error("Failed to save settlements:", err);
+      }
+    };
+    saveRoundSettlements();
+  }, [currentHole, holeResults.length, settlementsSaved]);
 
   const handleScoreChange = (playerId, score) => {
     setScores(prev => ({
