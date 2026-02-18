@@ -1227,7 +1227,7 @@ export default function CrybabActiveRound() {
           display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8,
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <img src={crybabyLogo} alt="Crybaby" style={{ height: 64, marginLeft: -8, marginTop: -12, marginBottom: -12 }} />
+            <img src={crybabyLogo} alt="Crybaby" style={{ height: 128, marginLeft: -16, marginTop: -28, marginBottom: -28 }} />
             <span style={{ fontSize: 12, fontWeight: 600, color: "#9CA3AF" }}>
               {course.name} · {round.gameName}
             </span>
