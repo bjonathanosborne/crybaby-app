@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { Bell, Settings } from "lucide-react";
 import {
   loadNotifications,
   getUnreadCount,
@@ -97,7 +98,7 @@ export default function NotificationBell() {
         }}
         aria-label="Notifications"
       >
-        🔔
+        <Bell size={18} className="text-foreground" />
         {unread > 0 && (
           <span
             style={{
@@ -186,10 +187,10 @@ export default function NotificationBell() {
                   padding: 0,
                   lineHeight: 1,
                 }}
-                aria-label="Notification settings"
-              >
-                ⚙️
-              </button>
+                 aria-label="Notification settings"
+               >
+                 <Settings size={14} className="text-muted-foreground" />
+               </button>
             </div>
           </div>
 
@@ -239,7 +240,7 @@ export default function NotificationBell() {
                     flexShrink: 0,
                   }}
                 >
-                  {notif.type === "group_join" ? "👥" : "🔔"}
+                  <Bell size={16} className="text-primary" />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div
