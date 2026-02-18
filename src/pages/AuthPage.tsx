@@ -81,8 +81,17 @@ export default function AuthPage() {
             background: "linear-gradient(135deg, #16A34A, #059669)",
             WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
           }}>
-            Golf's social scoring app
+           Golf's social scoring app
           </p>
+          <span style={{
+            display: "inline-block", marginTop: 8,
+            padding: "4px 14px", borderRadius: 20,
+            background: "linear-gradient(135deg, #16A34A, #059669)",
+            color: "#fff", fontSize: 11, fontWeight: 700,
+            letterSpacing: "0.08em", textTransform: "uppercase",
+          }}>
+            Beta
+          </span>
         </div>
 
         {/* Google Button */}
