@@ -189,7 +189,8 @@ export default function ProfilePage() {
             </div>
           ) : (
             <>
-              <div style={{ fontSize: 22, fontWeight: 800, color: "#1A1A1A", marginTop: 12 }}>
+              <div style={{ fontSize: (profile?.display_name || "").length > 20 ? 16 : 22, fontWeight: 800, color: "#1A1A1A", marginTop: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%", padding: "0 8px" }}
+                title={profile?.display_name || "Player"}>
                 {profile?.display_name || "Player"}
               </div>
               {profile?.handicap != null && (
