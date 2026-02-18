@@ -3,19 +3,22 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   loadGroups, createGroup, loadGroup, loadGroupMembers,
   joinGroup, leaveGroup, removeMember, loadGroupLeaderboard,
-  searchProfiles, loadSettlements,
+  findGroupByInviteCode, regenerateInviteCode, loadMyGroups,
 } from "@/lib/db";
+import { toast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
 
 const FONT = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 const MONO = "'SF Mono', 'JetBrains Mono', monospace";
+const APP_URL = window.location.origin;
 
-type View = "list" | "create" | "detail";
+type View = "list" | "create" | "detail" | "join";
 
 export default function GroupsPage() {
   const { user } = useAuth();
   const [view, setView] = useState<View>("list");
-  const [groups, setGroups] = useState<any[]>([]);
+  const [myGroups, setMyGroups] = useState<any[]>([]);
+  const [publicGroups, setPublicGroups] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Create form
@@ -23,23 +26,32 @@ export default function GroupsPage() {
   const [newDesc, setNewDesc] = useState("");
   const [creating, setCreating] = useState(false);
 
+  // Join by code
+  const [joinCode, setJoinCode] = useState("");
+  const [joining, setJoining] = useState(false);
+  const [foundGroup, setFoundGroup] = useState<any>(null);
+
   // Detail view
   const [selectedGroup, setSelectedGroup] = useState<any>(null);
   const [members, setMembers] = useState<any[]>([]);
   const [leaderboard, setLeaderboard] = useState<Record<string, number>>({});
   const [isMember, setIsMember] = useState(false);
   const [myRole, setMyRole] = useState<string | null>(null);
+  const [codeCopied, setCodeCopied] = useState(false);
 
-  const loadAllGroups = async () => {
+  const loadAll = async () => {
     setLoading(true);
     try {
-      const data = await loadGroups();
-      setGroups(data || []);
+      const [mine, all] = await Promise.all([loadMyGroups(), loadGroups()]);
+      setMyGroups(mine || []);
+      // Public groups the user hasn't joined
+      const myIds = new Set((mine || []).map((g: any) => g.id));
+      setPublicGroups((all || []).filter((g: any) => !myIds.has(g.id)));
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
 
-  useEffect(() => { loadAllGroups(); }, []);
+  useEffect(() => { loadAll(); }, []);
 
   const handleCreate = async () => {
     if (!newName.trim()) return;
@@ -49,8 +61,7 @@ export default function GroupsPage() {
       setNewName("");
       setNewDesc("");
       setView("list");
-      await loadAllGroups();
-      // Auto-open the new group
+      await loadAll();
       handleOpenGroup(group);
     } catch (e) { console.error(e); }
     finally { setCreating(false); }
@@ -65,8 +76,6 @@ export default function GroupsPage() {
       const me = m.find((mem: any) => mem.user_id === user?.id);
       setIsMember(!!me);
       setMyRole(me?.role || null);
-
-      // Load leaderboard
       const memberIds = m.map((mem: any) => mem.user_id);
       if (memberIds.length > 0) {
         const lb = await loadGroupLeaderboard(memberIds);
@@ -75,12 +84,17 @@ export default function GroupsPage() {
     } catch (e) { console.error(e); }
   };
 
-  const handleJoin = async () => {
-    if (!selectedGroup) return;
+  const handleJoin = async (groupToJoin?: any) => {
+    const g = groupToJoin || selectedGroup;
+    if (!g) return;
     try {
-      await joinGroup(selectedGroup.id);
-      await handleOpenGroup(selectedGroup);
-    } catch (e) { console.error(e); }
+      await joinGroup(g.id);
+      toast({ title: "Joined!", description: `You're now a member of ${g.name}` });
+      await handleOpenGroup(g);
+      await loadAll();
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
   };
 
   const handleLeave = async () => {
@@ -89,7 +103,9 @@ export default function GroupsPage() {
       await leaveGroup(selectedGroup.id);
       setIsMember(false);
       setMyRole(null);
-      await handleOpenGroup(selectedGroup);
+      toast({ title: "Left group" });
+      await loadAll();
+      goBack();
     } catch (e) { console.error(e); }
   };
 
@@ -101,12 +117,53 @@ export default function GroupsPage() {
     } catch (e) { console.error(e); }
   };
 
+  const handleLookupCode = async () => {
+    if (!joinCode.trim()) return;
+    setJoining(true);
+    setFoundGroup(null);
+    try {
+      const group = await findGroupByInviteCode(joinCode.trim());
+      if (group) {
+        setFoundGroup(group);
+      } else {
+        toast({ title: "Not found", description: "No group matches that invite code.", variant: "destructive" });
+      }
+    } catch (e) { console.error(e); }
+    finally { setJoining(false); }
+  };
+
+  const handleCopyInvite = async () => {
+    if (!selectedGroup) return;
+    const code = selectedGroup.invite_code;
+    const link = `${APP_URL}/join/${code}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 2000);
+    } catch {
+      // Fallback: just copy the code
+      await navigator.clipboard.writeText(code);
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 2000);
+    }
+  };
+
+  const handleRegenCode = async () => {
+    if (!selectedGroup) return;
+    try {
+      const updated = await regenerateInviteCode(selectedGroup.id);
+      setSelectedGroup(updated);
+      toast({ title: "Code regenerated" });
+    } catch (e) { console.error(e); }
+  };
+
   const goBack = () => {
     setView("list");
     setSelectedGroup(null);
     setMembers([]);
     setLeaderboard({});
-    loadAllGroups();
+    setFoundGroup(null);
+    setJoinCode("");
   };
 
   return (
@@ -121,16 +178,23 @@ export default function GroupsPage() {
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: 18, fontWeight: 800, color: "#1A1A1A" }}>
-            {view === "create" ? "New Group" : view === "detail" ? (selectedGroup?.name || "Group") : "Groups"}
+            {view === "create" ? "New Group" : view === "detail" ? (selectedGroup?.name || "Group") : view === "join" ? "Join Group" : "Groups"}
           </span>
           {view === "list" && (
-            <button onClick={() => setView("create")} style={{
-              padding: "8px 14px", borderRadius: 10, border: "none", cursor: "pointer",
-              fontFamily: FONT, fontSize: 12, fontWeight: 700,
-              background: "#1A1A1A", color: "#fff",
-            }}>+ New Group</button>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button onClick={() => setView("join")} style={{
+                padding: "8px 12px", borderRadius: 10, border: "1px solid #E5E7EB",
+                background: "#fff", fontFamily: FONT, fontSize: 12, fontWeight: 600,
+                color: "#6B7280", cursor: "pointer",
+              }}>🔗 Join</button>
+              <button onClick={() => setView("create")} style={{
+                padding: "8px 12px", borderRadius: 10, border: "none",
+                background: "#1A1A1A", fontFamily: FONT, fontSize: 12, fontWeight: 700,
+                color: "#fff", cursor: "pointer",
+              }}>+ New</button>
+            </div>
           )}
-          {(view === "create" || view === "detail") && (
+          {(view !== "list") && (
             <button onClick={goBack} style={{
               padding: "8px 14px", borderRadius: 10, border: "1px solid #E5E7EB",
               background: "#fff", fontFamily: FONT, fontSize: 12, fontWeight: 600,
@@ -142,51 +206,110 @@ export default function GroupsPage() {
 
       <div style={{ padding: "16px 16px", display: "flex", flexDirection: "column", gap: 16 }}>
 
+        {/* ==================== JOIN BY CODE ==================== */}
+        {view === "join" && (
+          <>
+            <div style={{
+              background: "#fff", borderRadius: 20, padding: "24px 20px",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+            }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#1A1A1A", marginBottom: 12 }}>
+                Enter an invite code
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  value={joinCode}
+                  onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                  onKeyDown={e => e.key === "Enter" && handleLookupCode()}
+                  placeholder="e.g. ABC123"
+                  maxLength={8}
+                  style={{
+                    flex: 1, padding: "14px 16px", borderRadius: 12,
+                    border: "1px solid #E5E7EB", background: "#F9FAFB",
+                    fontFamily: MONO, fontSize: 18, fontWeight: 800,
+                    textAlign: "center", letterSpacing: "0.15em",
+                    outline: "none", textTransform: "uppercase",
+                  }}
+                />
+                <button onClick={handleLookupCode} disabled={joining || !joinCode.trim()} style={{
+                  padding: "14px 18px", borderRadius: 12, border: "none",
+                  background: joinCode.trim() ? "#16A34A" : "#D1D5DB",
+                  color: "#fff", fontFamily: FONT, fontSize: 14, fontWeight: 700,
+                  cursor: joinCode.trim() ? "pointer" : "not-allowed",
+                }}>
+                  {joining ? "..." : "Find"}
+                </button>
+              </div>
+            </div>
+
+            {foundGroup && (
+              <div style={{
+                background: "#fff", borderRadius: 20, padding: "20px",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                  <div style={{
+                    width: 48, height: 48, borderRadius: 14, background: "#F0FDF4",
+                    display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24,
+                  }}>🏌️</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: "#1A1A1A" }}>{foundGroup.name}</div>
+                    <div style={{ fontSize: 12, color: "#9CA3AF" }}>
+                      {foundGroup.group_members?.[0]?.count || 0} members · {foundGroup.privacy_level}
+                    </div>
+                    {foundGroup.description && (
+                      <div style={{ fontSize: 12, color: "#6B7280", marginTop: 2 }}>{foundGroup.description}</div>
+                    )}
+                  </div>
+                </div>
+                <button onClick={() => handleJoin(foundGroup)} style={{
+                  width: "100%", marginTop: 14, padding: "14px", borderRadius: 12, border: "none",
+                  background: "#16A34A", color: "#fff", fontFamily: FONT,
+                  fontSize: 15, fontWeight: 700, cursor: "pointer",
+                }}>
+                  Join {foundGroup.name}
+                </button>
+              </div>
+            )}
+          </>
+        )}
+
         {/* ==================== LIST VIEW ==================== */}
         {view === "list" && (
           <>
             {loading ? (
               <div style={{ textAlign: "center", padding: 40, color: "#9CA3AF" }}>Loading...</div>
-            ) : groups.length === 0 ? (
-              <div style={{
-                background: "#fff", borderRadius: 20, padding: "40px 20px", textAlign: "center",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-              }}>
-                <div style={{ fontSize: 40, marginBottom: 12 }}>👥</div>
-                <div style={{ fontSize: 15, fontWeight: 600, color: "#6B7280" }}>No groups yet</div>
-                <div style={{ fontSize: 13, color: "#9CA3AF", marginTop: 4 }}>
-                  Create a group and invite your golf buddies
-                </div>
-              </div>
             ) : (
-              groups.map((g: any) => {
-                const memberCount = g.group_members?.[0]?.count || 0;
-                return (
-                  <div key={g.id} onClick={() => handleOpenGroup(g)} style={{
-                    background: "#fff", borderRadius: 16, padding: "16px 18px", cursor: "pointer",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.06)", border: "1px solid #E5E7EB",
-                    transition: "transform 0.1s ease",
+              <>
+                {/* My Groups */}
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#6B7280", marginBottom: -8 }}>Your Groups</div>
+                {myGroups.length === 0 ? (
+                  <div style={{
+                    background: "#fff", borderRadius: 20, padding: "32px 20px", textAlign: "center",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
                   }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                      <div style={{
-                        width: 48, height: 48, borderRadius: 14, background: "#F3F4F6",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 24,
-                      }}>🏌️</div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: "#1A1A1A" }}>{g.name}</div>
-                        <div style={{ fontSize: 12, color: "#9CA3AF" }}>
-                          {memberCount} member{memberCount !== 1 ? "s" : ""} · {g.privacy_level}
-                        </div>
-                        {g.description && (
-                          <div style={{ fontSize: 12, color: "#6B7280", marginTop: 2 }}>{g.description}</div>
-                        )}
-                      </div>
-                      <span style={{ fontSize: 12, color: "#9CA3AF" }}>→</span>
+                    <div style={{ fontSize: 36, marginBottom: 8 }}>👥</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: "#6B7280" }}>No groups yet</div>
+                    <div style={{ fontSize: 12, color: "#9CA3AF", marginTop: 4 }}>
+                      Create one or join with an invite code
                     </div>
                   </div>
-                );
-              })
+                ) : (
+                  myGroups.map((g: any) => (
+                    <GroupCard key={g.id} group={g} onClick={() => handleOpenGroup(g)} />
+                  ))
+                )}
+
+                {/* Public Groups */}
+                {publicGroups.length > 0 && (
+                  <>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#6B7280", marginTop: 8, marginBottom: -8 }}>Discover</div>
+                    {publicGroups.map((g: any) => (
+                      <GroupCard key={g.id} group={g} onClick={() => handleOpenGroup(g)} />
+                    ))}
+                  </>
+                )}
+              </>
             )}
           </>
         )}
@@ -229,7 +352,7 @@ export default function GroupsPage() {
         {/* ==================== DETAIL VIEW ==================== */}
         {view === "detail" && selectedGroup && (
           <>
-            {/* Group Info Card */}
+            {/* Group Info */}
             <div style={{
               background: "#fff", borderRadius: 20, padding: "24px 20px", textAlign: "center",
               boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
@@ -245,28 +368,20 @@ export default function GroupsPage() {
               {selectedGroup.description && (
                 <div style={{ fontSize: 13, color: "#6B7280", marginTop: 6 }}>{selectedGroup.description}</div>
               )}
-              <div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: 16 }}>
+              <div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: 14 }}>
                 <div style={{ textAlign: "center" }}>
-                  <div style={{ fontFamily: MONO, fontSize: 18, fontWeight: 800, color: "#1A1A1A" }}>
-                    {members.length}
-                  </div>
+                  <div style={{ fontFamily: MONO, fontSize: 18, fontWeight: 800 }}>{members.length}</div>
                   <div style={{ fontSize: 11, color: "#9CA3AF" }}>Members</div>
-                </div>
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ fontFamily: MONO, fontSize: 18, fontWeight: 800, color: "#1A1A1A" }}>
-                    {selectedGroup.privacy_level}
-                  </div>
-                  <div style={{ fontSize: 11, color: "#9CA3AF" }}>Privacy</div>
                 </div>
               </div>
 
               {/* Join/Leave */}
-              <div style={{ marginTop: 16 }}>
+              <div style={{ marginTop: 14 }}>
                 {isMember ? (
                   myRole !== "owner" ? (
                     <button onClick={handleLeave} style={{
-                      padding: "10px 20px", borderRadius: 10, border: "1px solid #E5E7EB",
-                      background: "#fff", color: "#DC2626", fontFamily: FONT,
+                      padding: "8px 16px", borderRadius: 8, border: "1px solid #FCA5A5",
+                      background: "#FEF2F2", color: "#DC2626", fontFamily: FONT,
                       fontSize: 12, fontWeight: 600, cursor: "pointer",
                     }}>Leave Group</button>
                   ) : (
@@ -275,7 +390,7 @@ export default function GroupsPage() {
                     </span>
                   )
                 ) : (
-                  <button onClick={handleJoin} style={{
+                  <button onClick={() => handleJoin()} style={{
                     padding: "10px 20px", borderRadius: 10, border: "none",
                     background: "#16A34A", color: "#fff", fontFamily: FONT,
                     fontSize: 13, fontWeight: 700, cursor: "pointer",
@@ -283,6 +398,53 @@ export default function GroupsPage() {
                 )}
               </div>
             </div>
+
+            {/* Invite Code Card */}
+            {isMember && (
+              <div style={{
+                background: "#fff", borderRadius: 20, padding: "18px 20px",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>
+                  Invite Friends
+                </div>
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  padding: "14px 16px", background: "#F9FAFB", borderRadius: 14,
+                  border: "1px dashed #D1D5DB",
+                }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 4 }}>Invite Code</div>
+                    <div style={{
+                      fontFamily: MONO, fontSize: 24, fontWeight: 800, color: "#1A1A1A",
+                      letterSpacing: "0.15em",
+                    }}>
+                      {selectedGroup.invite_code}
+                    </div>
+                  </div>
+                  <button onClick={handleCopyInvite} style={{
+                    padding: "10px 14px", borderRadius: 10, border: "none",
+                    background: codeCopied ? "#16A34A" : "#1A1A1A",
+                    color: "#fff", fontFamily: FONT, fontSize: 12, fontWeight: 700,
+                    cursor: "pointer", transition: "background 0.2s",
+                    whiteSpace: "nowrap",
+                  }}>
+                    {codeCopied ? "✓ Copied!" : "📋 Copy Link"}
+                  </button>
+                </div>
+                <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 8, textAlign: "center" }}>
+                  Share this code or link so others can join
+                </div>
+                {(myRole === "owner" || myRole === "admin") && (
+                  <button onClick={handleRegenCode} style={{
+                    display: "block", margin: "10px auto 0", padding: "6px 12px",
+                    borderRadius: 6, border: "1px solid #E5E7EB", background: "#fff",
+                    fontFamily: FONT, fontSize: 11, fontWeight: 600, color: "#9CA3AF",
+                    cursor: "pointer",
+                  }}>🔄 Regenerate code</button>
+                )}
+              </div>
+            )}
 
             {/* Leaderboard */}
             <div style={{
@@ -293,9 +455,7 @@ export default function GroupsPage() {
                 Leaderboard
               </div>
               {members.length === 0 ? (
-                <div style={{ textAlign: "center", padding: 16, fontSize: 13, color: "#9CA3AF" }}>
-                  No members yet
-                </div>
+                <div style={{ textAlign: "center", padding: 16, fontSize: 13, color: "#9CA3AF" }}>No members yet</div>
               ) : (
                 [...members]
                   .sort((a, b) => (leaderboard[b.user_id] || 0) - (leaderboard[a.user_id] || 0))
@@ -402,6 +562,33 @@ export default function GroupsPage() {
             </div>
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+function GroupCard({ group, onClick }: { group: any; onClick: () => void }) {
+  const memberCount = group.group_members?.[0]?.count || 0;
+  return (
+    <div onClick={onClick} style={{
+      background: "#fff", borderRadius: 16, padding: "16px 18px", cursor: "pointer",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.06)", border: "1px solid #E5E7EB",
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+        <div style={{
+          width: 48, height: 48, borderRadius: 14, background: "#F3F4F6",
+          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24,
+        }}>🏌️</div>
+        <div style={{ flex: 1 }}>
+          <div style={{
+            fontFamily: "'SF Pro Display', -apple-system, sans-serif",
+            fontSize: 15, fontWeight: 700, color: "#1A1A1A",
+          }}>{group.name}</div>
+          <div style={{ fontSize: 12, color: "#9CA3AF" }}>
+            {memberCount} member{memberCount !== 1 ? "s" : ""} · {group.privacy_level}
+          </div>
+        </div>
+        <span style={{ fontSize: 12, color: "#9CA3AF" }}>→</span>
       </div>
     </div>
   );

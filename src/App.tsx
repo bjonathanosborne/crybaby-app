@@ -14,6 +14,7 @@ import ProfilePage from "./pages/ProfilePage";
 import FriendsPage from "./pages/FriendsPage";
 import GroupsPage from "./pages/GroupsPage";
 import AppLayout from "./components/AppLayout";
+import JoinGroupPage from "./pages/JoinGroupPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const AppRoutes = () => (
       <Route path="/groups" element={<GroupsPage />} />
       <Route path="/profile" element={<ProfilePage />} />
     </Route>
+    <Route path="/join/:code" element={<ProtectedRoute><JoinGroupPage /></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />
   </Routes>
 );

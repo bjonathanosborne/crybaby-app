@@ -384,6 +384,55 @@ export async function updateGroup(groupId: string, updates: { name?: string; des
   if (error) throw error;
 }
 
+// Look up a group by invite code
+export async function findGroupByInviteCode(code: string) {
+  const { data, error } = await supabase
+    .from("groups")
+    .select("*, group_members(count)")
+    .eq("invite_code", code.toUpperCase().trim())
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+// Regenerate invite code (owner/admin only)
+export async function regenerateInviteCode(groupId: string) {
+  const newCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+  const { data, error } = await supabase
+    .from("groups")
+    .update({ invite_code: newCode } as any)
+    .eq("id", groupId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+// Load user's groups (groups they're a member of)
+export async function loadMyGroups() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data: memberships, error } = await supabase
+    .from("group_members")
+    .select("group_id")
+    .eq("user_id", user.id);
+
+  if (error) throw error;
+  if (!memberships?.length) return [];
+
+  const groupIds = memberships.map(m => m.group_id);
+  const { data: groups } = await supabase
+    .from("groups")
+    .select("*, group_members(count)")
+    .in("id", groupIds)
+    .order("created_at", { ascending: false });
+
+  return groups || [];
+}
+
 // Friends
 export async function loadFriends() {
   const { data: { user } } = await supabase.auth.getUser();
