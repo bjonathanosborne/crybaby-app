@@ -11,35 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 const FONT = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 const MONO = "'SF Mono', 'JetBrains Mono', monospace";
 
-// --- DEMO DATA (would come from setup wizard) ---
-const DEMO_ROUND = {
-  gameMode: "drivers_others_carts",
-  gameName: "Drivers / Others / Carts",
-  course: {
-    name: "Westlake Country Club",
-    pars: [5,4,4,3,4,4,4,3,4,3,5,4,4,4,4,5,4,3],
-    handicaps: [3,7,11,15,5,9,13,17,1,16,18,8,6,12,14,2,4,10],
-  },
-  holeValue: 5,
-  players: [
-    { id: "p1", name: "Jonathan", handicap: 12, cart: "A", position: "driver", color: "#16A34A" },
-    { id: "p2", name: "Mike", handicap: 18, cart: "A", position: "rider", color: "#3B82F6" },
-    { id: "p3", name: "Dave", handicap: 8, cart: "B", position: "driver", color: "#F59E0B" },
-    { id: "p4", name: "Chris", handicap: 22, cart: "B", position: "rider", color: "#DC2626" },
-  ],
-  settings: {
-    hammer: true,
-    hammerInitiator: "Either team",
-    hammerMaxDepth: "∞",
-    crybaby: true,
-    crybabHoles: 3,
-    crybabHammerRule: "Only crybaby hammers",
-    birdieBonus: true,
-    birdieMultiplier: 2,
-    pops: true,
-    noPopsParThree: false,
-  },
-};
+const PLAYER_COLORS = ["#16A34A", "#3B82F6", "#F59E0B", "#DC2626", "#8B5CF6", "#EC4899"];
 
 // --- TEAM LOGIC ---
 function getTeams(holeNumber, players) {
@@ -667,39 +639,74 @@ export default function CrybabActiveRound() {
   const roundId = searchParams.get("id");
   const [dbRound, setDbRound] = useState(null);
   const [dbPlayers, setDbPlayers] = useState([]);
-  const [loading, setLoading] = useState(!!roundId);
+  const [playerProfiles, setPlayerProfiles] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Load round from DB if ID provided
+  // Redirect if no round ID
   useEffect(() => {
-    if (!roundId) { setLoading(false); return; }
-    loadRound(roundId).then(data => {
-      if (data) {
+    if (!roundId) {
+      navigate("/setup", { replace: true });
+    }
+  }, [roundId, navigate]);
+
+  // Load round from DB
+  useEffect(() => {
+    if (!roundId) return;
+    const load = async () => {
+      try {
+        const data = await loadRound(roundId);
+        if (!data) {
+          setError("Round not found");
+          setLoading(false);
+          return;
+        }
         setDbRound(data.round);
         setDbPlayers(data.players);
+
+        // Load profiles for players with user_ids
+        const userIds = data.players.map(p => p.user_id).filter(Boolean);
+        if (userIds.length) {
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("user_id, display_name, avatar_url, handicap")
+            .in("user_id", userIds);
+          const map = {};
+          (profiles || []).forEach(p => { map[p.user_id] = p; });
+          setPlayerProfiles(map);
+        }
+        setLoading(false);
+      } catch (err) {
+        console.error("Failed to load round:", err);
+        setError("Failed to load round");
+        setLoading(false);
       }
-      setLoading(false);
-    }).catch(() => setLoading(false));
+    };
+    load();
   }, [roundId]);
 
-  // Build round object from DB or use demo
+  // Build round object from DB
   const round = dbRound ? {
     gameMode: dbRound.game_type,
     gameName: dbRound.game_type.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
     course: {
       name: dbRound.course,
-      pars: dbRound.course_details?.pars || DEMO_ROUND.course.pars,
-      handicaps: dbRound.course_details?.handicaps || DEMO_ROUND.course.handicaps,
+      pars: dbRound.course_details?.pars || [],
+      handicaps: dbRound.course_details?.handicaps || [],
     },
     holeValue: dbRound.course_details?.holeValue || 5,
-    players: dbPlayers.map((p, i) => ({
-      id: p.id,
-      userId: p.user_id || null,
-      name: p.guest_name || `Player ${i + 1}`,
-      handicap: 12,
-      cart: i < 2 ? "A" : "B",
-      position: i % 2 === 0 ? "driver" : "rider",
-      color: ["#16A34A", "#3B82F6", "#F59E0B", "#DC2626"][i % 4],
-    })),
+    players: dbPlayers.map((p, i) => {
+      const profile = p.user_id ? playerProfiles[p.user_id] : null;
+      return {
+        id: p.id,
+        userId: p.user_id || null,
+        name: p.guest_name || profile?.display_name || `Player ${i + 1}`,
+        handicap: profile?.handicap || 12,
+        cart: i < 2 ? "A" : "B",
+        position: i % 2 === 0 ? "driver" : "rider",
+        color: PLAYER_COLORS[i % PLAYER_COLORS.length],
+      };
+    }),
     settings: {
       hammer: (dbRound.course_details?.mechanics || []).includes("hammer"),
       hammerInitiator: dbRound.course_details?.mechanicSettings?.hammer?.initiator || "Either team",
@@ -712,8 +719,7 @@ export default function CrybabActiveRound() {
       pops: (dbRound.course_details?.mechanics || []).includes("pops"),
       noPopsParThree: false,
     },
-  } : DEMO_ROUND;
-  const { players, course, settings } = round;
+  } : null;
 
   if (loading) {
     return (
@@ -725,6 +731,26 @@ export default function CrybabActiveRound() {
       </div>
     );
   }
+
+  if (error || !round) {
+    return (
+      <div style={{ maxWidth: 420, margin: "0 auto", minHeight: "100vh", background: "#F7F7F5", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONT }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>😬</div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: "#6B7280", marginBottom: 16 }}>{error || "Round not found"}</div>
+          <button onClick={() => navigate("/setup")} style={{
+            padding: "12px 24px", borderRadius: 12, border: "none", cursor: "pointer",
+            fontFamily: FONT, fontSize: 14, fontWeight: 700,
+            background: "#1A1A1A", color: "#fff",
+          }}>
+            Start New Round
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const { players, course, settings } = round;
 
   const [currentHole, setCurrentHole] = useState(1);
   const [scores, setScores] = useState({}); // { holeNum: { playerId: score } }
@@ -1348,7 +1374,7 @@ export default function CrybabActiveRound() {
             transition: "all 0.2s ease",
           }}
         >
-          {allScored ? `Submit Hole ${currentHole} →` : `Enter all scores (${Object.keys(currentScores).length}/4)`}
+          {allScored ? `Submit Hole ${currentHole} →` : `Enter all scores (${Object.keys(currentScores).length}/${players.length})`}
         </button>
       </div>
 
