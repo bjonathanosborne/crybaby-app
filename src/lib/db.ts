@@ -268,7 +268,7 @@ export async function loadGroups() {
   return data;
 }
 
-export async function createGroup(name, description = "", privacyLevel = "public") {
+export async function createGroup(name: string, description = "", privacyLevel = "public") {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
@@ -280,6 +280,108 @@ export async function createGroup(name, description = "", privacyLevel = "public
 
   if (error) throw error;
   return data;
+}
+
+// Load a single group
+export async function loadGroup(groupId: string) {
+  const { data, error } = await supabase
+    .from("groups")
+    .select("*, group_members(count)")
+    .eq("id", groupId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+// Load group members with profiles
+export async function loadGroupMembers(groupId: string) {
+  const { data, error } = await supabase
+    .from("group_members")
+    .select("*")
+    .eq("group_id", groupId)
+    .order("joined_at");
+
+  if (error) throw error;
+  if (!data || data.length === 0) return [];
+
+  // Load profiles for members
+  const userIds = data.map(m => m.user_id);
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("*")
+    .in("user_id", userIds);
+
+  const profileMap: Record<string, any> = {};
+  (profiles || []).forEach((p: any) => { profileMap[p.user_id] = p; });
+
+  return data.map(m => ({ ...m, profile: profileMap[m.user_id] || null }));
+}
+
+// Join a group
+export async function joinGroup(groupId: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { error } = await supabase
+    .from("group_members")
+    .insert({ group_id: groupId, user_id: user.id, role: "member" });
+
+  if (error) throw error;
+}
+
+// Leave a group
+export async function leaveGroup(groupId: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { error } = await supabase
+    .from("group_members")
+    .delete()
+    .eq("group_id", groupId)
+    .eq("user_id", user.id);
+
+  if (error) throw error;
+}
+
+// Remove member (admin/owner only)
+export async function removeMember(groupId: string, userId: string) {
+  const { error } = await supabase
+    .from("group_members")
+    .delete()
+    .eq("group_id", groupId)
+    .eq("user_id", userId);
+
+  if (error) throw error;
+}
+
+// Load leaderboard for a group (settlements for all members)
+export async function loadGroupLeaderboard(memberUserIds: string[]) {
+  if (!memberUserIds.length) return {};
+
+  const { data, error } = await supabase
+    .from("round_settlements")
+    .select("user_id, amount")
+    .in("user_id", memberUserIds);
+
+  if (error) throw error;
+
+  // Aggregate totals per user
+  const totals: Record<string, number> = {};
+  (data || []).forEach((s: any) => {
+    totals[s.user_id] = (totals[s.user_id] || 0) + Number(s.amount);
+  });
+  return totals;
+}
+
+// Update group details (owner/admin)
+export async function updateGroup(groupId: string, updates: { name?: string; description?: string }) {
+  const { error } = await supabase
+    .from("groups")
+    .update(updates)
+    .eq("id", groupId);
+
+  if (error) throw error;
 }
 
 // Friends
