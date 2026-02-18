@@ -68,9 +68,7 @@ export default function AuthPage() {
       <div className="w-full max-w-[380px]">
         {/* Logo */}
         <div className="text-center mb-2">
-          <div className="overflow-hidden max-h-[100px] mx-auto w-fit">
-            <img src={crybabyLogo} alt="Crybaby" className="w-[90vw] max-w-[390px] -mb-12" />
-          </div>
+          <img src={crybabyLogo} alt="Crybaby" className="w-[90vw] max-w-[390px] mx-auto -mb-6" />
           <p className="text-base font-bold -mt-1 tracking-tight text-primary">
             Golf's social scoring app
           </p>
