@@ -48,6 +48,20 @@ serve(async (req) => {
       );
     }
 
+    // Authorization: caller must have a relationship with the target user
+    if (callerUserId !== user_id) {
+      const { data: canNotify } = await authSupabase.rpc("can_view_profile", {
+        _viewer_id: callerUserId,
+        _target_user_id: user_id,
+      });
+      if (!canNotify) {
+        return new Response(
+          JSON.stringify({ error: "You don't have permission to notify this user" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     // Use service role client for push subscription lookup
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
