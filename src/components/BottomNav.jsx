@@ -4,9 +4,9 @@ const FONT = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', s
 
 const tabs = [
   { key: "feed", path: "/feed", label: "Feed", icon: "🏠" },
-  { key: "live", path: "/feed?tab=live", label: "Live", icon: "📡" },
+  { key: "friends", path: "/friends", label: "Friends", icon: "🤝" },
   { key: "new", path: "/setup", label: "", icon: "+" },
-  { key: "friends", path: "/friends", label: "Friends", icon: "👥" },
+  { key: "groups", path: "/groups", label: "Groups", icon: "👥" },
   { key: "profile", path: "/profile", label: "Profile", icon: "👤" },
 ];
 
@@ -17,8 +17,8 @@ export default function BottomNav() {
   const isActive = (tab) => {
     if (tab.key === "new") return location.pathname === "/setup";
     if (tab.key === "feed") return location.pathname === "/feed" && !location.search;
-    if (tab.key === "live") return location.search.includes("tab=live");
     if (tab.key === "friends") return location.pathname === "/friends";
+    if (tab.key === "groups") return location.pathname === "/groups";
     if (tab.key === "profile") return location.pathname === "/profile";
     return false;
   };
