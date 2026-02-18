@@ -1,5 +1,76 @@
 import { supabase } from "@/integrations/supabase/client";
 
+// ─── Notifications ───
+
+export async function loadNotifications(limit = 30) {
+  const { data, error } = await supabase
+    .from("notifications")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function getUnreadCount() {
+  const { count, error } = await supabase
+    .from("notifications")
+    .select("*", { count: "exact", head: true })
+    .eq("read", false);
+
+  if (error) throw error;
+  return count || 0;
+}
+
+export async function markNotificationRead(id: string) {
+  const { error } = await supabase
+    .from("notifications")
+    .update({ read: true })
+    .eq("id", id);
+
+  if (error) throw error;
+}
+
+export async function markAllNotificationsRead() {
+  const { error } = await supabase
+    .from("notifications")
+    .update({ read: true })
+    .eq("read", false);
+
+  if (error) throw error;
+}
+
+// ─── Push Subscriptions ───
+
+export async function savePushSubscription(subscription: PushSubscription) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const sub = subscription.toJSON();
+  const { error } = await supabase
+    .from("push_subscriptions")
+    .upsert({
+      user_id: user.id,
+      endpoint: sub.endpoint!,
+      p256dh: sub.keys!.p256dh,
+      auth: sub.keys!.auth,
+    }, { onConflict: "user_id,endpoint" });
+
+  if (error) throw error;
+}
+
+export async function removePushSubscription(endpoint: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await supabase
+    .from("push_subscriptions")
+    .delete()
+    .eq("user_id", user.id)
+    .eq("endpoint", endpoint);
+}
+
 // Create a round in the database and return its ID
 export async function createRound({ gameType, course, courseDetails, stakes, holeValue, players, mechanics, mechanicSettings, privacy, scorekeeperMode }) {
   const { data: { user } } = await supabase.auth.getUser();
