@@ -2,21 +2,24 @@ import { Outlet } from "react-router-dom";
 import BottomNav from "./BottomNav";
 import NotificationBell from "./NotificationBell";
 import HamburgerMenu from "./HamburgerMenu";
+import crybabyLogo from "@/assets/crybaby-logo.png";
 
 export default function AppLayout() {
   return (
     <>
-      {/* Global top bar: hamburger left, notification bell right */}
-      <div style={{
-        position: "fixed", top: 0, left: 0, right: 0, zIndex: 60,
-        display: "flex", justifyContent: "space-between", alignItems: "center",
-        padding: "0 16px",
-        paddingTop: "calc(env(safe-area-inset-top, 0px) + 8px)",
-      }}>
+      {/* Global top bar: hamburger left, logo center, notification bell right */}
+      <div className="fixed top-0 left-0 right-0 z-60 flex items-center justify-between px-3 bg-card/90 backdrop-blur-xl border-b border-border"
+        style={{
+          paddingTop: "calc(env(safe-area-inset-top, 0px) + 6px)",
+          paddingBottom: "6px",
+        }}>
         <HamburgerMenu />
+        <img src={crybabyLogo} alt="Crybaby" className="h-10 -my-1" />
         <NotificationBell />
       </div>
-      <Outlet />
+      <div style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 52px)" }}>
+        <Outlet />
+      </div>
       <BottomNav />
     </>
   );

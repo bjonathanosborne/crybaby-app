@@ -3,8 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { loadFeed, createPost, addComment, toggleReaction, loadProfile } from "@/lib/db";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import crybabyLogo from "@/assets/crybaby-logo.png";
-import { Trophy, Baby, MessageCircle, ArrowUp, Flame, Hammer, Skull, Bird, Send } from "lucide-react";
+import { MessageCircle, ArrowUp } from "lucide-react";
 
 const REACTION_EMOJIS = {
   "🔥": "🔥", "🔨": "🔨", "🍼": "🍼", "💀": "💀", "🐔": "🐔",
@@ -351,15 +350,12 @@ export default function CrybabyFeed() {
 
   return (
     <div className="max-w-[420px] mx-auto min-h-screen bg-background pb-24">
-      {/* Header */}
-      <div className="px-5 pt-[52px] pb-4 bg-card border-b border-border sticky top-0 z-20">
-        <div className="flex justify-between items-center">
-          <img src={crybabyLogo} alt="Crybaby Golf" style={{ height: 100, marginLeft: -16, marginTop: -24, marginBottom: -24 }} />
-          <button onClick={() => navigate("/setup")}
-            className="px-4 py-2 rounded-xl border-none cursor-pointer text-[13px] font-bold bg-foreground text-background hover:opacity-90 transition-opacity">
-            + New Round
-          </button>
-        </div>
+      {/* Sub-header with New Round button */}
+      <div className="px-4 py-3 flex justify-end">
+        <button onClick={() => navigate("/setup")}
+          className="px-4 py-2 rounded-xl border-none cursor-pointer text-[13px] font-bold bg-primary text-primary-foreground hover:opacity-90 transition-opacity">
+          + New Round
+        </button>
       </div>
 
       {/* Content */}
