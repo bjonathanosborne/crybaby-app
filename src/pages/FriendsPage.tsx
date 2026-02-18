@@ -174,7 +174,7 @@ export default function FriendsPage() {
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <img src={crybabyLogo} alt="Crybaby" style={{ height: 128, marginLeft: -16, marginTop: -28, marginBottom: -28 }} />
+            <img src={crybabyLogo} alt="Crybaby" style={{ height: 100, marginLeft: -16, marginTop: -24, marginBottom: -24 }} />
             <span style={{ fontSize: 14, fontWeight: 600, color: "#9CA3AF" }}>
               {view === "ledger" ? "/ Ledger" : "/ Friends"}
             </span>
