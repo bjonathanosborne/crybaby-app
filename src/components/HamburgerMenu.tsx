@@ -28,7 +28,7 @@ export default function HamburgerMenu() {
   const handleSignOut = async () => {
     setOpen(false);
     await signOut();
-    navigate("/auth");
+    // Navigation handled by AuthContext/ProtectedRoute after session clears
   };
 
   return (
