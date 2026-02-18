@@ -67,7 +67,7 @@ export default function AuthPage() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6">
       <div className="w-full max-w-[380px]">
         {/* Logo */}
-        <div className="text-center mb-4">
+        <div className="text-center mb-2">
           <img src={crybabyLogo} alt="Crybaby" className="w-[60vw] max-w-[260px] mx-auto -mb-3" />
           <p className="text-base font-bold -mt-1 tracking-tight text-primary">
             Golf's social scoring app
