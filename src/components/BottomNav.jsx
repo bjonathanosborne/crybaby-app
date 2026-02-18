@@ -6,7 +6,7 @@ const tabs = [
   { key: "feed", path: "/feed", label: "Feed", icon: "🏠" },
   { key: "live", path: "/feed?tab=live", label: "Live", icon: "📡" },
   { key: "new", path: "/setup", label: "", icon: "+" },
-  { key: "groups", path: "/feed?tab=groups", label: "Groups", icon: "👥" },
+  { key: "friends", path: "/friends", label: "Friends", icon: "👥" },
   { key: "profile", path: "/profile", label: "Profile", icon: "👤" },
 ];
 
@@ -18,7 +18,7 @@ export default function BottomNav() {
     if (tab.key === "new") return location.pathname === "/setup";
     if (tab.key === "feed") return location.pathname === "/feed" && !location.search;
     if (tab.key === "live") return location.search.includes("tab=live");
-    if (tab.key === "groups") return location.search.includes("tab=groups");
+    if (tab.key === "friends") return location.pathname === "/friends";
     if (tab.key === "profile") return location.pathname === "/profile";
     return false;
   };
