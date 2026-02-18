@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import crybabyLogo from "@/assets/crybaby-logo.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { loadProfile, updateProfile, loadMyRounds, loadSettlements, uploadUserAvatar } from "@/lib/db";
 import { supabase } from "@/integrations/supabase/client";
@@ -130,7 +131,10 @@ export default function ProfilePage() {
         borderBottom: "1px solid #E5E7EB",
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: 18, fontWeight: 800, color: "#1A1A1A" }}>Profile</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <img src={crybabyLogo} alt="Crybaby" style={{ height: 64, marginLeft: -8, marginTop: -12, marginBottom: -12 }} />
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#9CA3AF" }}>/ Profile</span>
+          </div>
           <button onClick={signOut} style={{
             padding: "6px 12px", borderRadius: 8, border: "1px solid #E5E7EB",
             background: "#fff", fontFamily: FONT, fontSize: 12, fontWeight: 600,

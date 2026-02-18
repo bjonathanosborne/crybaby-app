@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import crybabyLogo from "@/assets/crybaby-logo.png";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   loadFriends, loadPendingRequests, loadSentRequests,
@@ -172,9 +173,12 @@ export default function FriendsPage() {
         borderBottom: "1px solid #E5E7EB",
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: 18, fontWeight: 800, color: "#1A1A1A" }}>
-            {view === "ledger" ? "Friend Ledger" : "Friends"}
-          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <img src={crybabyLogo} alt="Crybaby" style={{ height: 64, marginLeft: -8, marginTop: -12, marginBottom: -12 }} />
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#9CA3AF" }}>
+              {view === "ledger" ? "/ Ledger" : "/ Friends"}
+            </span>
+          </div>
           {view === "list" && (
             <button onClick={() => setView("search")} style={{
               padding: "8px 14px", borderRadius: 10, border: "none", cursor: "pointer",
