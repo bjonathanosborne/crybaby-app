@@ -707,15 +707,8 @@ export async function removeFriendship(friendshipId: string) {
 
 // Search profiles by display name
 export async function searchProfiles(query: string) {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return [];
-
   const { data, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .ilike("display_name", `%${query}%`)
-    .neq("user_id", user.id)
-    .limit(20);
+    .rpc("search_users_by_name", { _query: query });
 
   if (error) throw error;
   return data || [];

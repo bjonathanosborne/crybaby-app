@@ -629,6 +629,16 @@ export type Database = {
           updated_at: string
         }[]
       }
+      search_users_by_name: {
+        Args: { _query: string }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          handicap: number
+          home_course: string
+          user_id: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
