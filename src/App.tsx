@@ -11,6 +11,7 @@ import CrybabySetupWizard from "./pages/CrybabySetupWizard";
 import CrybabyActiveRound from "./pages/CrybabyActiveRound";
 import CrybabyFeed from "./pages/CrybabyFeed";
 import ProfilePage from "./pages/ProfilePage";
+import FriendsPage from "./pages/FriendsPage";
 import AppLayout from "./components/AppLayout";
 import NotFound from "./pages/NotFound";
 
@@ -32,6 +33,7 @@ const AppRoutes = () => (
       <Route path="/setup" element={<CrybabySetupWizard />} />
       <Route path="/round" element={<CrybabyActiveRound />} />
       <Route path="/feed" element={<CrybabyFeed />} />
+      <Route path="/friends" element={<FriendsPage />} />
       <Route path="/profile" element={<ProfilePage />} />
     </Route>
     <Route path="*" element={<NotFound />} />

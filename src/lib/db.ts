@@ -294,7 +294,85 @@ export async function loadFriends() {
     .eq("status", "accepted");
 
   if (error) throw error;
-  return data;
+  return data || [];
+}
+
+// Load pending friend requests (received)
+export async function loadPendingRequests() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from("friendships")
+    .select("*")
+    .eq("user_id_b", user.id)
+    .eq("status", "pending");
+
+  if (error) throw error;
+  return data || [];
+}
+
+// Load sent friend requests
+export async function loadSentRequests() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from("friendships")
+    .select("*")
+    .eq("user_id_a", user.id)
+    .eq("status", "pending");
+
+  if (error) throw error;
+  return data || [];
+}
+
+// Send friend request
+export async function sendFriendRequest(targetUserId: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { error } = await supabase
+    .from("friendships")
+    .insert({ user_id_a: user.id, user_id_b: targetUserId, status: "pending" });
+
+  if (error) throw error;
+}
+
+// Accept friend request
+export async function acceptFriendRequest(friendshipId: string) {
+  const { error } = await supabase
+    .from("friendships")
+    .update({ status: "accepted", accepted_at: new Date().toISOString() })
+    .eq("id", friendshipId);
+
+  if (error) throw error;
+}
+
+// Decline / remove friend
+export async function removeFriendship(friendshipId: string) {
+  const { error } = await supabase
+    .from("friendships")
+    .delete()
+    .eq("id", friendshipId);
+
+  if (error) throw error;
+}
+
+// Search profiles by display name
+export async function searchProfiles(query: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .ilike("display_name", `%${query}%`)
+    .neq("user_id", user.id)
+    .limit(20);
+
+  if (error) throw error;
+  return data || [];
 }
 
 // Load user's rounds
