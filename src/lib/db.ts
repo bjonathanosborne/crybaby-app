@@ -794,3 +794,25 @@ export async function loadUserProfile(userId: string) {
     .maybeSingle();
   return data;
 }
+
+// Find existing users by email addresses
+export async function findUsersByEmails(emails: string[]) {
+  const { data, error } = await supabase
+    .rpc("find_users_by_emails", { _emails: emails });
+
+  if (error) throw error;
+  return data || [];
+}
+
+// Send invite emails to non-users
+export async function sendInviteEmails(emails: string[], inviterName: string) {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("Not authenticated");
+
+  const { data, error } = await supabase.functions.invoke("send-invite", {
+    body: { emails, inviter_name: inviterName },
+  });
+
+  if (error) throw error;
+  return data;
+}

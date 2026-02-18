@@ -509,6 +509,17 @@ export type Database = {
         Args: { _target_user_id: string; _viewer_id: string }
         Returns: boolean
       }
+      find_users_by_emails: {
+        Args: { _emails: string[] }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          email: string
+          handicap: number
+          home_course: string
+          user_id: string
+        }[]
+      }
       is_group_member: {
         Args: { _group_id: string; _user_id: string }
         Returns: boolean
