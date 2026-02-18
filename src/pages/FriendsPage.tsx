@@ -1,35 +1,34 @@
 import { useState, useEffect, useMemo } from "react";
-import crybabyLogo from "@/assets/crybaby-logo.png";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   loadFriends, loadPendingRequests, loadSentRequests,
   sendFriendRequest, acceptFriendRequest, removeFriendship,
   searchProfiles, loadSettlements, loadUserProfile,
+  findUsersByEmails, sendInviteEmails, loadProfile,
 } from "@/lib/db";
 import { format, parseISO } from "date-fns";
+import { UserPlus, Search, Mail, Contact, ArrowLeft, ChevronRight, Loader2, CheckCircle2, Send } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
-const FONT = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
-const MONO = "'SF Mono', 'JetBrains Mono', monospace";
-
-function UserAvatar({ profile, size = 40, bg = "#16A34A" }: { profile: any; size?: number; bg?: string }) {
+function UserAvatar({ profile, size = 40 }: { profile: any; size?: number }) {
   const name = profile?.display_name || "?";
   const initial = name[0]?.toUpperCase() || "?";
   if (profile?.avatar_url) {
     return (
       <img src={profile.avatar_url} alt={name}
-        style={{ width: size, height: size, borderRadius: size / 2, objectFit: "cover", flexShrink: 0 }} />
+        className="rounded-full object-cover flex-shrink-0"
+        style={{ width: size, height: size }} />
     );
   }
   return (
-    <div style={{
-      width: size, height: size, borderRadius: size / 2, background: bg,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      color: "#fff", fontSize: size * 0.4, fontWeight: 700, fontFamily: FONT, flexShrink: 0,
-    }}>{initial}</div>
+    <div className="rounded-full bg-primary flex items-center justify-center text-primary-foreground flex-shrink-0 font-bold"
+      style={{ width: size, height: size, fontSize: size * 0.4 }}>
+      {initial}
+    </div>
   );
 }
 
-type View = "list" | "search" | "ledger";
+type View = "list" | "search" | "ledger" | "find";
 
 export default function FriendsPage() {
   const { user } = useAuth();
@@ -50,20 +49,32 @@ export default function FriendsPage() {
   const [friendLedger, setFriendLedger] = useState<any[]>([]);
   const [friendProfile, setFriendProfile] = useState<any>(null);
 
+  // Find friends
+  const [findMode, setFindMode] = useState<"menu" | "contacts" | "email">("menu");
+  const [emailInput, setEmailInput] = useState("");
+  const [contactEmails, setContactEmails] = useState<string[]>([]);
+  const [matchedUsers, setMatchedUsers] = useState<any[]>([]);
+  const [unmatchedEmails, setUnmatchedEmails] = useState<string[]>([]);
+  const [findLoading, setFindLoading] = useState(false);
+  const [inviteSending, setInviteSending] = useState<Set<string>>(new Set());
+  const [inviteSent, setInviteSent] = useState<Set<string>>(new Set());
+  const [myProfile, setMyProfile] = useState<any>(null);
+
   const loadAll = async () => {
     if (!user) return;
     setLoading(true);
     try {
-      const [f, p, s] = await Promise.all([
+      const [f, p, s, mp] = await Promise.all([
         loadFriends(),
         loadPendingRequests(),
         loadSentRequests(),
+        loadProfile(),
       ]);
       setFriends(f);
       setPending(p);
       setSent(s);
+      setMyProfile(mp);
 
-      // Load profiles for all friend user IDs
       const allUserIds = new Set<string>();
       [...f, ...p, ...s].forEach((fr: any) => {
         allUserIds.add(fr.user_id_a);
@@ -107,9 +118,12 @@ export default function FriendsPage() {
     try {
       await sendFriendRequest(targetUserId);
       setSearchResults(prev => prev.filter(p => p.user_id !== targetUserId));
+      setMatchedUsers(prev => prev.map(u => u.user_id === targetUserId ? { ...u, requestSent: true } : u));
       await loadAll();
+      toast({ title: "Friend request sent!" });
     } catch (e: any) {
       console.error(e);
+      toast({ title: "Error", description: e.message, variant: "destructive" });
     }
   };
 
@@ -140,7 +154,6 @@ export default function FriendsPage() {
     } catch (e) { console.error(e); }
   };
 
-  // Check if a user is already a friend or has a pending request
   const existingRelationships = useMemo(() => {
     const map = new Set<string>();
     [...friends, ...pending, ...sent].forEach((f: any) => {
@@ -154,232 +167,420 @@ export default function FriendsPage() {
     return friendLedger.reduce((sum, s) => sum + Number(s.amount), 0);
   }, [friendLedger]);
 
+  // ─── Contacts API ───
+  const handleAccessContacts = async () => {
+    try {
+      if (!("contacts" in navigator)) {
+        toast({ title: "Not supported", description: "Contacts API isn't available on this device. Try entering emails manually.", variant: "destructive" });
+        setFindMode("email");
+        return;
+      }
+      const contacts = await (navigator as any).contacts.select(["email"], { multiple: true });
+      const emails: string[] = [];
+      contacts.forEach((c: any) => {
+        if (c.email) c.email.forEach((e: string) => emails.push(e.toLowerCase().trim()));
+      });
+      if (emails.length === 0) {
+        toast({ title: "No emails found", description: "None of your contacts had email addresses." });
+        return;
+      }
+      setContactEmails(emails);
+      await matchEmails(emails);
+    } catch (e: any) {
+      if (e.name !== "TypeError") {
+        console.error(e);
+      }
+      toast({ title: "Contacts access denied", description: "You can enter emails manually instead." });
+      setFindMode("email");
+    }
+  };
+
+  const matchEmails = async (emails: string[]) => {
+    setFindLoading(true);
+    try {
+      const uniqueEmails = [...new Set(emails.map(e => e.toLowerCase().trim()))];
+      const matched = await findUsersByEmails(uniqueEmails);
+      const matchedEmailSet = new Set(matched.map((m: any) => m.email.toLowerCase()));
+      const unmatched = uniqueEmails.filter(e => !matchedEmailSet.has(e));
+      setMatchedUsers(matched);
+      setUnmatchedEmails(unmatched);
+      setFindMode("contacts");
+    } catch (e) {
+      console.error(e);
+      toast({ title: "Error", description: "Failed to look up contacts", variant: "destructive" });
+    } finally {
+      setFindLoading(false);
+    }
+  };
+
+  const handleEmailSubmit = async () => {
+    const emails = emailInput
+      .split(/[,\n]+/)
+      .map(e => e.trim().toLowerCase())
+      .filter(e => e.includes("@"));
+    if (emails.length === 0) {
+      toast({ title: "Enter valid emails", description: "Separate multiple emails with commas." });
+      return;
+    }
+    setContactEmails(emails);
+    await matchEmails(emails);
+  };
+
+  const handleSendInvite = async (email: string) => {
+    setInviteSending(prev => new Set(prev).add(email));
+    try {
+      await sendInviteEmails([email], myProfile?.display_name || "A friend");
+      setInviteSent(prev => new Set(prev).add(email));
+      toast({ title: "Invite sent!", description: `Email invite sent to ${email}` });
+    } catch (e: any) {
+      toast({ title: "Failed to send", description: e.message, variant: "destructive" });
+    } finally {
+      setInviteSending(prev => {
+        const next = new Set(prev);
+        next.delete(email);
+        return next;
+      });
+    }
+  };
+
+  const goBack = () => {
+    if (view === "find") {
+      setFindMode("menu");
+      setMatchedUsers([]);
+      setUnmatchedEmails([]);
+      setContactEmails([]);
+      setEmailInput("");
+      setInviteSent(new Set());
+    }
+    setView("list");
+    setSearchQuery("");
+    setSearchResults([]);
+  };
+
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONT }}>
-        Loading...
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
-    <div style={{
-      maxWidth: 420, margin: "0 auto", minHeight: "100vh",
-      background: "#F7F7F5", fontFamily: FONT, paddingBottom: 100,
-    }}>
-      {/* Header */}
-      <div style={{
-        padding: "52px 20px 16px", background: "#fff",
-        borderBottom: "1px solid #E5E7EB",
-      }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <img src={crybabyLogo} alt="Crybaby" style={{ height: 100, marginLeft: -16, marginTop: -24, marginBottom: -24 }} />
-            <span style={{ fontSize: 14, fontWeight: 600, color: "#9CA3AF" }}>
-              {view === "ledger" ? "/ Ledger" : "/ Friends"}
-            </span>
-          </div>
+    <div className="max-w-[420px] mx-auto min-h-screen bg-background pb-24">
+      {/* Sub-header */}
+      <div className="px-4 py-3 flex justify-between items-center">
+        <div className="text-sm font-semibold text-muted-foreground">
+          {view === "ledger" ? "Ledger" : view === "find" ? "Find Friends" : view === "search" ? "Search" : "Friends"}
+        </div>
+        <div className="flex gap-2">
           {view === "list" && (
-            <button onClick={() => setView("search")} style={{
-              padding: "8px 14px", borderRadius: 10, border: "none", cursor: "pointer",
-              fontFamily: FONT, fontSize: 12, fontWeight: 700,
-              background: "#1A1A1A", color: "#fff",
-            }}>+ Add Friend</button>
+            <>
+              <button onClick={() => { setView("find"); setFindMode("menu"); }}
+                className="px-3 py-2 rounded-xl border border-border bg-card text-foreground text-xs font-semibold cursor-pointer hover:border-primary/30 transition-colors flex items-center gap-1.5">
+                <UserPlus size={14} /> Find Friends
+              </button>
+              <button onClick={() => setView("search")}
+                className="px-3 py-2 rounded-xl border-none bg-primary text-primary-foreground text-xs font-bold cursor-pointer hover:opacity-90 transition-opacity flex items-center gap-1.5">
+                <Search size={14} /> Search
+              </button>
+            </>
           )}
-          {(view === "search" || view === "ledger") && (
-            <button onClick={() => { setView("list"); setSearchQuery(""); setSearchResults([]); }} style={{
-              padding: "8px 14px", borderRadius: 10, border: "1px solid #E5E7EB",
-              background: "#fff", fontFamily: FONT, fontSize: 12, fontWeight: 600,
-              color: "#6B7280", cursor: "pointer",
-            }}>← Back</button>
+          {view !== "list" && (
+            <button onClick={goBack}
+              className="px-3 py-2 rounded-xl border border-border bg-card text-foreground text-xs font-semibold cursor-pointer hover:border-primary/30 transition-colors flex items-center gap-1.5">
+              <ArrowLeft size={14} /> Back
+            </button>
           )}
         </div>
       </div>
 
-      <div style={{ padding: "16px 16px", display: "flex", flexDirection: "column", gap: 16 }}>
-        {/* SEARCH VIEW */}
-        {view === "search" && (
-          <>
-            <div style={{ display: "flex", gap: 8 }}>
-              <input
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && handleSearch()}
-                placeholder="Search by name..."
-                style={{
-                  flex: 1, padding: "12px 14px", borderRadius: 12,
-                  border: "1px solid #E5E7EB", background: "#fff",
-                  fontFamily: FONT, fontSize: 14, outline: "none",
-                }}
-              />
-              <button onClick={handleSearch} disabled={searching} style={{
-                padding: "12px 16px", borderRadius: 12, border: "none",
-                background: "#16A34A", color: "#fff", fontFamily: FONT,
-                fontSize: 14, fontWeight: 700, cursor: "pointer",
-                opacity: searching ? 0.6 : 1,
-              }}>
-                {searching ? "..." : "🔍"}
-              </button>
+      <div className="px-4 flex flex-col gap-4">
+        {/* ─── FIND FRIENDS VIEW ─── */}
+        {view === "find" && findMode === "menu" && (
+          <div className="flex flex-col gap-3">
+            <div className="bg-card rounded-2xl p-5 border border-border text-center">
+              <UserPlus size={32} className="mx-auto text-primary mb-3" />
+              <h3 className="text-base font-bold text-foreground mb-1">Find your golf buddies</h3>
+              <p className="text-sm text-muted-foreground">
+                Check your contacts or enter emails to find friends already on Crybaby — or invite them to join.
+              </p>
             </div>
 
-            {searchResults.length > 0 ? (
-              <div style={{
-                background: "#fff", borderRadius: 16, overflow: "hidden",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-              }}>
-                {searchResults.map((p, i) => {
-                  const alreadyConnected = existingRelationships.has(p.user_id);
+            <button onClick={handleAccessContacts}
+              className="w-full p-4 rounded-2xl border border-border bg-card cursor-pointer text-left hover:border-primary/30 hover:shadow-sm transition-all flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Contact size={20} className="text-primary" />
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-semibold text-foreground">Check Contacts</div>
+                <div className="text-xs text-muted-foreground">Match your phone contacts with Crybaby</div>
+              </div>
+              <ChevronRight size={16} className="text-muted-foreground" />
+            </button>
+
+            <button onClick={() => setFindMode("email")}
+              className="w-full p-4 rounded-2xl border border-border bg-card cursor-pointer text-left hover:border-primary/30 hover:shadow-sm transition-all flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center">
+                <Mail size={20} className="text-accent-foreground" />
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-semibold text-foreground">Enter Emails</div>
+                <div className="text-xs text-muted-foreground">Type or paste email addresses to find friends</div>
+              </div>
+              <ChevronRight size={16} className="text-muted-foreground" />
+            </button>
+          </div>
+        )}
+
+        {view === "find" && findMode === "email" && matchedUsers.length === 0 && unmatchedEmails.length === 0 && (
+          <div className="flex flex-col gap-3">
+            <div className="bg-card rounded-2xl p-4 border border-border">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">
+                Enter email addresses
+              </label>
+              <textarea
+                value={emailInput}
+                onChange={e => setEmailInput(e.target.value)}
+                placeholder={"john@example.com\njane@example.com"}
+                rows={4}
+                className="w-full border border-border rounded-xl p-3 bg-background text-sm text-foreground outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 resize-none placeholder:text-muted-foreground"
+              />
+              <p className="text-xs text-muted-foreground mt-1.5">Separate multiple emails with commas or new lines</p>
+              <button
+                onClick={handleEmailSubmit}
+                disabled={findLoading || !emailInput.trim()}
+                className="w-full mt-3 p-3 rounded-xl border-none bg-primary text-primary-foreground text-sm font-bold cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {findLoading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+                {findLoading ? "Searching..." : "Find Friends"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Results (shared for contacts + email) */}
+        {view === "find" && (matchedUsers.length > 0 || unmatchedEmails.length > 0) && (
+          <div className="flex flex-col gap-4">
+            {/* Matched users */}
+            {matchedUsers.length > 0 && (
+              <div className="bg-card rounded-2xl border border-border overflow-hidden">
+                <div className="px-4 py-3 border-b border-border">
+                  <span className="text-xs font-bold text-primary uppercase tracking-wider">
+                    Already on Crybaby ({matchedUsers.length})
+                  </span>
+                </div>
+                {matchedUsers.map((u: any, i: number) => {
+                  const alreadyConnected = existingRelationships.has(u.user_id);
                   return (
-                    <div key={p.id} style={{
-                      display: "flex", alignItems: "center", gap: 12,
-                      padding: "14px 16px",
-                      borderBottom: i < searchResults.length - 1 ? "1px solid #F3F4F6" : "none",
-                    }}>
-                      <UserAvatar profile={p} size={40} />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: "#1A1A1A" }}>{p.display_name}</div>
-                        {p.handicap != null && (
-                          <span style={{ fontFamily: MONO, fontSize: 11, color: "#16A34A" }}>HCP {p.handicap}</span>
-                        )}
-                        {p.home_course && (
-                          <span style={{ fontSize: 11, color: "#9CA3AF", marginLeft: 6 }}>{p.home_course}</span>
+                    <div key={u.user_id} className={`flex items-center gap-3 px-4 py-3 ${i < matchedUsers.length - 1 ? "border-b border-border" : ""}`}>
+                      <UserAvatar profile={u} size={40} />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold text-foreground truncate">{u.display_name}</div>
+                        {u.handicap != null && (
+                          <span className="text-xs font-mono text-primary font-semibold">HCP {u.handicap}</span>
                         )}
                       </div>
-                      {alreadyConnected ? (
-                        <span style={{ fontSize: 11, fontWeight: 600, color: "#9CA3AF", padding: "6px 10px" }}>
-                          Connected
+                      {alreadyConnected || u.requestSent ? (
+                        <span className="flex items-center gap-1 text-xs font-semibold text-muted-foreground">
+                          <CheckCircle2 size={14} /> {u.requestSent ? "Sent" : "Connected"}
                         </span>
                       ) : (
-                        <button onClick={() => handleSendRequest(p.user_id)} style={{
-                          padding: "8px 14px", borderRadius: 8, border: "none",
-                          background: "#16A34A", color: "#fff", fontFamily: FONT,
-                          fontSize: 12, fontWeight: 700, cursor: "pointer",
-                        }}>Follow</button>
+                        <button onClick={() => handleSendRequest(u.user_id)}
+                          className="px-3 py-1.5 rounded-lg border-none bg-primary text-primary-foreground text-xs font-bold cursor-pointer hover:opacity-90 transition-opacity">
+                          Add
+                        </button>
                       )}
                     </div>
                   );
                 })}
               </div>
-            ) : searchQuery && !searching ? (
-              <div style={{ textAlign: "center", padding: 20, fontSize: 13, color: "#9CA3AF" }}>
+            )}
+
+            {/* Unmatched emails — invite */}
+            {unmatchedEmails.length > 0 && (
+              <div className="bg-card rounded-2xl border border-border overflow-hidden">
+                <div className="px-4 py-3 border-b border-border">
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                    Not on Crybaby yet ({unmatchedEmails.length})
+                  </span>
+                </div>
+                {unmatchedEmails.map((email, i) => (
+                  <div key={email} className={`flex items-center gap-3 px-4 py-3 ${i < unmatchedEmails.length - 1 ? "border-b border-border" : ""}`}>
+                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                      <Mail size={16} className="text-muted-foreground" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm text-foreground truncate">{email}</div>
+                    </div>
+                    {inviteSent.has(email) ? (
+                      <span className="flex items-center gap-1 text-xs font-semibold text-primary">
+                        <CheckCircle2 size={14} /> Invited
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handleSendInvite(email)}
+                        disabled={inviteSending.has(email)}
+                        className="px-3 py-1.5 rounded-lg border border-primary text-primary bg-transparent text-xs font-bold cursor-pointer hover:bg-primary/5 transition-colors disabled:opacity-50 flex items-center gap-1"
+                      >
+                        {inviteSending.has(email) ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+                        Invite
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <button onClick={() => { setMatchedUsers([]); setUnmatchedEmails([]); setFindMode("menu"); }}
+              className="text-sm text-primary font-semibold bg-transparent border-none cursor-pointer hover:underline self-center">
+              Search more contacts
+            </button>
+          </div>
+        )}
+
+        {/* ─── SEARCH VIEW ─── */}
+        {view === "search" && (
+          <>
+            <div className="flex gap-2">
+              <input
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleSearch()}
+                placeholder="Search by name..."
+                className="flex-1 p-3 rounded-2xl border border-border bg-card text-sm text-foreground outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 placeholder:text-muted-foreground"
+              />
+              <button onClick={handleSearch} disabled={searching}
+                className="px-4 rounded-2xl border-none bg-primary text-primary-foreground text-sm font-bold cursor-pointer disabled:opacity-50">
+                {searching ? "..." : "🔍"}
+              </button>
+            </div>
+
+            {searchResults.length > 0 && (
+              <div className="bg-card rounded-2xl overflow-hidden border border-border">
+                {searchResults.map((p, i) => {
+                  const alreadyConnected = existingRelationships.has(p.user_id);
+                  return (
+                    <div key={p.id} className={`flex items-center gap-3 px-4 py-3 ${i < searchResults.length - 1 ? "border-b border-border" : ""}`}>
+                      <UserAvatar profile={p} size={40} />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold text-foreground">{p.display_name}</div>
+                        <div className="flex gap-2 items-center">
+                          {p.handicap != null && (
+                            <span className="text-xs font-mono text-primary font-semibold">HCP {p.handicap}</span>
+                          )}
+                          {p.home_course && (
+                            <span className="text-xs text-muted-foreground">{p.home_course}</span>
+                          )}
+                        </div>
+                      </div>
+                      {alreadyConnected ? (
+                        <span className="text-xs font-semibold text-muted-foreground">Connected</span>
+                      ) : (
+                        <button onClick={() => handleSendRequest(p.user_id)}
+                          className="px-3 py-1.5 rounded-lg border-none bg-primary text-primary-foreground text-xs font-bold cursor-pointer hover:opacity-90">
+                          Follow
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {searchQuery && !searching && searchResults.length === 0 && (
+              <div className="text-center py-5 text-sm text-muted-foreground">
                 No players found for "{searchQuery}"
               </div>
-            ) : null}
+            )}
           </>
         )}
 
-        {/* FRIEND LEDGER VIEW */}
+        {/* ─── LEDGER VIEW ─── */}
         {view === "ledger" && friendProfile && (
           <>
-            <div style={{
-              background: "#fff", borderRadius: 20, padding: "20px",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.06)", textAlign: "center",
-            }}>
-              <UserAvatar profile={friendProfile} size={56} bg="#3B82F6" />
-              <div style={{ fontSize: 18, fontWeight: 800, color: "#1A1A1A", marginTop: 10 }}>
+            <div className="bg-card rounded-2xl p-5 border border-border text-center">
+              <UserAvatar profile={friendProfile} size={56} />
+              <div className="text-lg font-extrabold text-foreground mt-3">
                 {friendProfile.display_name}
               </div>
               {friendProfile.handicap != null && (
-                <span style={{
-                  fontFamily: MONO, fontSize: 12, fontWeight: 700, color: "#16A34A",
-                  background: "#F0FDF4", padding: "2px 8px", borderRadius: 5, display: "inline-block", marginTop: 6,
-                }}>HCP {friendProfile.handicap}</span>
+                <span className="inline-block mt-1.5 px-2 py-0.5 rounded bg-accent text-accent-foreground text-xs font-mono font-bold">
+                  HCP {friendProfile.handicap}
+                </span>
               )}
-              <div style={{
-                marginTop: 16, padding: "14px", background: "#F9FAFB", borderRadius: 12,
-              }}>
-                <div style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 600, textTransform: "uppercase" }}>Total P&L</div>
-                <div style={{
-                  fontFamily: MONO, fontSize: 28, fontWeight: 800, marginTop: 4,
-                  color: friendLedgerTotal >= 0 ? "#16A34A" : "#DC2626",
-                }}>
+              <div className="mt-4 p-3.5 bg-muted rounded-xl">
+                <div className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Total P&L</div>
+                <div className={`font-mono text-2xl font-extrabold mt-1 ${friendLedgerTotal >= 0 ? "text-primary" : "text-destructive"}`}>
                   {friendLedgerTotal >= 0 ? "+" : ""}${friendLedgerTotal.toFixed(0)}
                 </div>
               </div>
             </div>
 
             {friendLedger.length === 0 ? (
-              <div style={{ textAlign: "center", padding: 20, fontSize: 13, color: "#9CA3AF" }}>
+              <div className="text-center py-5 text-sm text-muted-foreground">
                 No settlement data yet for this player.
               </div>
             ) : (
-              <div style={{
-                background: "#fff", borderRadius: 20, padding: "18px 20px",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-              }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>
+              <div className="bg-card rounded-2xl p-4 border border-border">
+                <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-3">
                   Round Results
                 </div>
-                {friendLedger.map((s: any, i: number) => (
-                  <div key={i} style={{
-                    display: "flex", justifyContent: "space-between", alignItems: "center",
-                    padding: "10px 12px", background: "#F9FAFB", borderRadius: 8, marginBottom: 4,
-                    fontSize: 12,
-                  }}>
-                    <div>
-                      <span style={{ fontWeight: 600, color: "#1A1A1A" }}>
-                        {s.rounds?.course || "Round"}
-                      </span>
-                      {s.is_manual_adjustment && (
-                        <span style={{ marginLeft: 6, fontSize: 10, color: "#F59E0B", fontWeight: 700 }}>ADJ</span>
-                      )}
-                      <div style={{ fontSize: 10, color: "#9CA3AF" }}>
-                        {format(parseISO(s.created_at), "MMM d, yyyy")}
+                <div className="flex flex-col gap-1">
+                  {friendLedger.map((s: any, i: number) => (
+                    <div key={i} className="flex justify-between items-center p-3 bg-muted rounded-lg text-xs">
+                      <div>
+                        <span className="font-semibold text-foreground">
+                          {s.rounds?.course || "Round"}
+                        </span>
+                        {s.is_manual_adjustment && (
+                          <span className="ml-1.5 text-[10px] text-accent-foreground font-bold">ADJ</span>
+                        )}
+                        <div className="text-[10px] text-muted-foreground mt-0.5">
+                          {format(parseISO(s.created_at), "MMM d, yyyy")}
+                        </div>
                       </div>
+                      <span className={`font-mono font-bold text-sm ${Number(s.amount) >= 0 ? "text-primary" : "text-destructive"}`}>
+                        {Number(s.amount) >= 0 ? "+" : ""}${Number(s.amount).toFixed(0)}
+                      </span>
                     </div>
-                    <span style={{
-                      fontFamily: MONO, fontWeight: 700, fontSize: 13,
-                      color: Number(s.amount) >= 0 ? "#16A34A" : "#DC2626",
-                    }}>
-                      {Number(s.amount) >= 0 ? "+" : ""}${Number(s.amount).toFixed(0)}
-                    </span>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
           </>
         )}
 
-        {/* FRIENDS LIST VIEW */}
+        {/* ─── FRIENDS LIST VIEW ─── */}
         {view === "list" && (
           <>
             {/* Pending Requests */}
             {pending.length > 0 && (
-              <div style={{
-                background: "#fff", borderRadius: 20, padding: "18px 20px",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-              }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#F59E0B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>
+              <div className="bg-card rounded-2xl p-4 border border-border">
+                <div className="text-[10px] font-bold text-destructive uppercase tracking-wider mb-3">
                   Pending Requests ({pending.length})
                 </div>
                 {pending.map((req: any) => {
                   const senderId = req.user_id_a;
                   const profile = profiles[senderId];
                   return (
-                    <div key={req.id} style={{
-                      display: "flex", alignItems: "center", gap: 12,
-                      padding: "12px 0", borderBottom: "1px solid #F3F4F6",
-                    }}>
-                      <UserAvatar profile={profile} size={40} bg="#F59E0B" />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: "#1A1A1A" }}>
+                    <div key={req.id} className="flex items-center gap-3 py-3 border-b border-border last:border-none">
+                      <UserAvatar profile={profile} size={40} />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold text-foreground">
                           {profile?.display_name || "Unknown"}
                         </div>
                         {profile?.handicap != null && (
-                          <span style={{ fontFamily: MONO, fontSize: 11, color: "#9CA3AF" }}>HCP {profile.handicap}</span>
+                          <span className="text-xs font-mono text-muted-foreground">HCP {profile.handicap}</span>
                         )}
                       </div>
-                      <div style={{ display: "flex", gap: 6 }}>
-                        <button onClick={() => handleAccept(req.id)} style={{
-                          padding: "8px 12px", borderRadius: 8, border: "none",
-                          background: "#16A34A", color: "#fff", fontFamily: FONT,
-                          fontSize: 12, fontWeight: 700, cursor: "pointer",
-                        }}>Accept</button>
-                        <button onClick={() => handleDecline(req.id)} style={{
-                          padding: "8px 12px", borderRadius: 8, border: "1px solid #E5E7EB",
-                          background: "#fff", color: "#DC2626", fontFamily: FONT,
-                          fontSize: 12, fontWeight: 600, cursor: "pointer",
-                        }}>✕</button>
+                      <div className="flex gap-1.5">
+                        <button onClick={() => handleAccept(req.id)}
+                          className="px-3 py-1.5 rounded-lg border-none bg-primary text-primary-foreground text-xs font-bold cursor-pointer">
+                          Accept
+                        </button>
+                        <button onClick={() => handleDecline(req.id)}
+                          className="px-2.5 py-1.5 rounded-lg border border-border bg-card text-destructive text-xs font-semibold cursor-pointer">
+                          ✕
+                        </button>
                       </div>
                     </div>
                   );
@@ -389,33 +590,26 @@ export default function FriendsPage() {
 
             {/* Sent Requests */}
             {sent.length > 0 && (
-              <div style={{
-                background: "#fff", borderRadius: 20, padding: "18px 20px",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-              }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>
+              <div className="bg-card rounded-2xl p-4 border border-border">
+                <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-3">
                   Sent ({sent.length})
                 </div>
                 {sent.map((req: any) => {
                   const targetId = req.user_id_b;
                   const profile = profiles[targetId];
                   return (
-                    <div key={req.id} style={{
-                      display: "flex", alignItems: "center", gap: 12,
-                      padding: "12px 0", borderBottom: "1px solid #F3F4F6",
-                    }}>
-                      <UserAvatar profile={profile} size={36} bg="#9CA3AF" />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: "#6B7280" }}>
+                    <div key={req.id} className="flex items-center gap-3 py-3 border-b border-border last:border-none">
+                      <UserAvatar profile={profile} size={36} />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold text-muted-foreground">
                           {profile?.display_name || "Unknown"}
                         </div>
-                        <span style={{ fontSize: 11, color: "#9CA3AF" }}>Pending...</span>
+                        <span className="text-xs text-muted-foreground">Pending...</span>
                       </div>
-                      <button onClick={() => handleDecline(req.id)} style={{
-                        padding: "6px 10px", borderRadius: 6, border: "1px solid #E5E7EB",
-                        background: "#fff", color: "#9CA3AF", fontFamily: FONT,
-                        fontSize: 11, fontWeight: 600, cursor: "pointer",
-                      }}>Cancel</button>
+                      <button onClick={() => handleDecline(req.id)}
+                        className="px-2.5 py-1.5 rounded-lg border border-border bg-card text-muted-foreground text-xs font-semibold cursor-pointer">
+                        Cancel
+                      </button>
                     </div>
                   );
                 })}
@@ -423,19 +617,16 @@ export default function FriendsPage() {
             )}
 
             {/* Accepted Friends */}
-            <div style={{
-              background: "#fff", borderRadius: 20, padding: "18px 20px",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-            }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>
+            <div className="bg-card rounded-2xl p-4 border border-border">
+              <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-3">
                 Friends ({friends.length})
               </div>
               {friends.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "20px 0" }}>
-                  <div style={{ fontSize: 32, marginBottom: 8 }}>👥</div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: "#6B7280" }}>No friends yet</div>
-                  <div style={{ fontSize: 12, color: "#9CA3AF", marginTop: 4 }}>
-                    Tap "+ Add Friend" to search and follow other players
+                <div className="text-center py-6">
+                  <UserPlus size={32} className="mx-auto text-muted-foreground mb-2" />
+                  <div className="text-sm font-semibold text-muted-foreground">No friends yet</div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Tap "Find Friends" to get started
                   </div>
                 </div>
               ) : (
@@ -443,28 +634,25 @@ export default function FriendsPage() {
                   const friendId = getFriendId(fr);
                   const profile = profiles[friendId];
                   return (
-                    <div key={fr.id} style={{
-                      display: "flex", alignItems: "center", gap: 12,
-                      padding: "12px 0", borderBottom: "1px solid #F3F4F6",
-                      cursor: "pointer",
-                    }} onClick={() => handleViewLedger(friendId)}>
+                    <div key={fr.id} className="flex items-center gap-3 py-3 border-b border-border last:border-none cursor-pointer hover:bg-accent/50 -mx-4 px-4 transition-colors"
+                      onClick={() => handleViewLedger(friendId)}>
                       <UserAvatar profile={profile} size={44} />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 15, fontWeight: 600, color: "#1A1A1A" }}>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[15px] font-semibold text-foreground">
                           {profile?.display_name || "Unknown"}
                         </div>
-                        <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
+                        <div className="flex gap-2 mt-0.5">
                           {profile?.handicap != null && (
-                            <span style={{ fontFamily: MONO, fontSize: 11, color: "#16A34A", fontWeight: 600 }}>
+                            <span className="text-xs font-mono text-primary font-semibold">
                               HCP {profile.handicap}
                             </span>
                           )}
                           {profile?.home_course && (
-                            <span style={{ fontSize: 11, color: "#9CA3AF" }}>{profile.home_course}</span>
+                            <span className="text-xs text-muted-foreground">{profile.home_course}</span>
                           )}
                         </div>
                       </div>
-                      <span style={{ fontSize: 12, color: "#9CA3AF" }}>View →</span>
+                      <ChevronRight size={16} className="text-muted-foreground" />
                     </div>
                   );
                 })
