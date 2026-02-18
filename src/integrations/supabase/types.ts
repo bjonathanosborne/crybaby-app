@@ -521,6 +521,20 @@ export type Database = {
         Args: { _round_id: string; _user_id: string }
         Returns: boolean
       }
+      lookup_group_by_invite: {
+        Args: { _code: string }
+        Returns: {
+          avatar_url: string
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          invite_code: string
+          name: string
+          privacy_level: string
+          updated_at: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

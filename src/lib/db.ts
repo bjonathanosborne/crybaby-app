@@ -484,16 +484,15 @@ export async function updateGroup(groupId: string, updates: { name?: string; des
   if (error) throw error;
 }
 
-// Look up a group by invite code
+// Look up a group by invite code (uses secure RPC function)
 export async function findGroupByInviteCode(code: string) {
   const { data, error } = await supabase
-    .from("groups")
-    .select("*, group_members(count)")
-    .eq("invite_code", code.toUpperCase().trim())
-    .maybeSingle();
+    .rpc("lookup_group_by_invite", { _code: code });
 
   if (error) throw error;
-  return data;
+  // RPC returns an array; get first match
+  const group = Array.isArray(data) ? data[0] : data;
+  return group || null;
 }
 
 // Regenerate invite code (owner/admin only)
