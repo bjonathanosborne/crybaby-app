@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { createRound } from "@/lib/db";
+import crybabyLogo from "@/assets/crybaby-logo.png";
 
 // ============================================================
 // CRYBABY — Game Setup Wizard
@@ -736,16 +737,9 @@ export default function CrybabSetupWizard() {
         position: "sticky", top: 0, zIndex: 10,
       }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-          <div>
-            <div style={{
-              fontSize: 24, fontWeight: 800, color: "#1A1A1A",
-              letterSpacing: "-0.03em",
-            }}>
-              Crybaby
-            </div>
-            <div style={{ fontSize: 12, color: "#9CA3AF", fontWeight: 500, marginTop: 2 }}>
-              New Round
-            </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <img src={crybabyLogo} alt="Crybaby" style={{ height: 64, marginLeft: -8, marginTop: -12, marginBottom: -12 }} />
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#9CA3AF" }}>/ New Round</span>
           </div>
           {step > 0 && (
             <button

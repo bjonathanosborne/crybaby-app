@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import crybabyLogo from "@/assets/crybaby-logo.png";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { loadRound, updatePlayerScores, completeRound, createPost, saveAICommentary, insertSettlements } from "@/lib/db";
 import { supabase } from "@/integrations/supabase/client";
@@ -1225,13 +1226,11 @@ export default function CrybabActiveRound() {
         <div style={{
           display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8,
         }}>
-          <div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: "#1A1A1A", letterSpacing: "-0.02em" }}>
-              Crybaby
-            </div>
-            <div style={{ fontSize: 12, color: "#9CA3AF", fontWeight: 500 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <img src={crybabyLogo} alt="Crybaby" style={{ height: 64, marginLeft: -8, marginTop: -12, marginBottom: -12 }} />
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#9CA3AF" }}>
               {course.name} · {round.gameName}
-            </div>
+            </span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {/* Sync indicator */}
