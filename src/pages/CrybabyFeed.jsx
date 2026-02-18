@@ -354,9 +354,9 @@ export default function CrybabyFeed() {
       {/* Header */}
       <div className="px-5 pt-[52px] pb-4 bg-card border-b border-border sticky top-0 z-20">
         <div className="flex justify-between items-center">
-          <img src={crybabyLogo} alt="Crybaby Golf" style={{ height: 160, marginLeft: -24, marginTop: -40, marginBottom: -40 }} />
+          <img src={crybabyLogo} alt="Crybaby Golf" style={{ height: 100, marginLeft: -16, marginTop: -24, marginBottom: -24 }} />
           <button onClick={() => navigate("/setup")}
-            className="px-4 py-2 rounded-xl border-none cursor-pointer text-[13px] font-bold bg-foreground text-background hover:opacity-90 transition-opacity mr-8">
+            className="px-4 py-2 rounded-xl border-none cursor-pointer text-[13px] font-bold bg-foreground text-background hover:opacity-90 transition-opacity">
             + New Round
           </button>
         </div>
