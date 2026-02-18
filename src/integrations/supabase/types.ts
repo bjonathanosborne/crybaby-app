@@ -365,6 +365,89 @@ export type Database = {
           },
         ]
       }
+      round_event_reactions: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          reaction_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          reaction_type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          reaction_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "round_event_reactions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "round_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      round_events: {
+        Row: {
+          created_at: string
+          event_data: Json | null
+          event_type: string
+          gross_score: number | null
+          hole_number: number
+          id: string
+          par: number | null
+          round_id: string
+          round_player_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_data?: Json | null
+          event_type?: string
+          gross_score?: number | null
+          hole_number: number
+          id?: string
+          par?: number | null
+          round_id: string
+          round_player_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_data?: Json | null
+          event_type?: string
+          gross_score?: number | null
+          hole_number?: number
+          id?: string
+          par?: number | null
+          round_id?: string
+          round_player_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "round_events_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "rounds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "round_events_round_player_id_fkey"
+            columns: ["round_player_id"]
+            isOneToOne: false
+            referencedRelation: "round_players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       round_players: {
         Row: {
           created_at: string
