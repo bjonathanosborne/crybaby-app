@@ -262,7 +262,8 @@ function PlayerRow({ player, index, onUpdate, onRemove, showCarts, cartOptions, 
           placeholder={`Player ${index + 1}`}
           style={{
             fontFamily: font, fontSize: 15, fontWeight: 500, color: "#1A1A1A",
-            border: "none", background: "transparent", outline: "none", padding: 0, width: "100%",
+            border: "1px solid #E5E7EB", background: "#F9FAFB", borderRadius: 8,
+            outline: "none", padding: "6px 10px", width: "100%",
           }}
         />
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
