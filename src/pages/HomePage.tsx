@@ -2,13 +2,14 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { loadProfile, loadMyRounds, loadFriends } from "@/lib/db";
-import crybabyLogo from "@/assets/crybaby-logo.png";
-import { Trophy, Users, Flame, ChevronRight, Plus, Loader2 } from "lucide-react";
+import { Trophy, Users, Flame, ChevronRight, Plus, Loader2, Target, Clock, MapPin } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 
 export default function HomePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [profile, setProfile] = useState<any>(null);
+  const [recentRounds, setRecentRounds] = useState<any[]>([]);
   const [stats, setStats] = useState({ rounds: 0, friends: 0 });
   const [loading, setLoading] = useState(true);
 
@@ -16,7 +17,10 @@ export default function HomePage() {
     if (!user) return;
     Promise.all([
       loadProfile().then(setProfile),
-      loadMyRounds(100).then(r => setStats(s => ({ ...s, rounds: r?.length || 0 }))),
+      loadMyRounds(100).then(r => {
+        setRecentRounds(r?.slice(0, 5) || []);
+        setStats(s => ({ ...s, rounds: r?.length || 0 }));
+      }),
       loadFriends().then(f => setStats(s => ({ ...s, friends: f?.length || 0 }))),
     ]).finally(() => setLoading(false));
   }, [user]);
@@ -40,26 +44,75 @@ export default function HomePage() {
       </div>
 
       {/* Quick stats */}
-      <div className="px-4 grid grid-cols-2 gap-3 mb-5">
+      <div className="px-4 grid grid-cols-3 gap-3 mb-5">
         <div className="bg-card rounded-2xl p-4 border border-border">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Trophy size={16} className="text-primary" />
+          <div className="flex items-center gap-1.5 mb-2">
+            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Target size={14} className="text-primary" />
             </div>
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Rounds</span>
+          </div>
+          <div className="text-2xl font-extrabold text-foreground">
+            {profile?.handicap != null ? profile.handicap : "—"}
+          </div>
+          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Handicap</span>
+        </div>
+        <div className="bg-card rounded-2xl p-4 border border-border">
+          <div className="flex items-center gap-1.5 mb-2">
+            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Trophy size={14} className="text-primary" />
+            </div>
           </div>
           <div className="text-2xl font-extrabold text-foreground">{stats.rounds}</div>
+          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Rounds</span>
         </div>
         <div className="bg-card rounded-2xl p-4 border border-border">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
-              <Users size={16} className="text-accent-foreground" />
+          <div className="flex items-center gap-1.5 mb-2">
+            <div className="w-7 h-7 rounded-lg bg-accent flex items-center justify-center">
+              <Users size={14} className="text-accent-foreground" />
             </div>
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Friends</span>
           </div>
           <div className="text-2xl font-extrabold text-foreground">{stats.friends}</div>
+          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Friends</span>
         </div>
       </div>
+
+      {/* Recent rounds */}
+      {recentRounds.length > 0 && (
+        <div className="px-4 mb-5">
+          <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider px-1 mb-3">Recent Rounds</h2>
+          <div className="flex flex-col gap-2">
+            {recentRounds.map((round) => (
+              <button
+                key={round.id}
+                onClick={() => navigate(`/round/${round.id}`)}
+                className="w-full p-3 rounded-2xl bg-card border border-border cursor-pointer text-left hover:border-primary/30 transition-all flex items-center gap-3"
+              >
+                <div className="w-9 h-9 rounded-xl bg-accent flex items-center justify-center shrink-0">
+                  <MapPin size={16} className="text-accent-foreground" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-bold text-foreground truncate">{round.course || "Unknown Course"}</div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="capitalize">{round.game_type}</span>
+                    <span>·</span>
+                    <span className="flex items-center gap-1">
+                      <Clock size={10} />
+                      {formatDistanceToNow(new Date(round.created_at), { addSuffix: true })}
+                    </span>
+                  </div>
+                </div>
+                <div className="shrink-0">
+                  {round.status === "completed" ? (
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full">Done</span>
+                  ) : (
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-accent-foreground bg-accent px-2 py-0.5 rounded-full">Live</span>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Quick actions */}
       <div className="px-4 flex flex-col gap-3">
