@@ -157,6 +157,7 @@ export type Database = {
           created_by: string
           description: string | null
           id: string
+          invite_code: string
           name: string
           privacy_level: string
           updated_at: string
@@ -167,6 +168,7 @@ export type Database = {
           created_by: string
           description?: string | null
           id?: string
+          invite_code?: string
           name: string
           privacy_level?: string
           updated_at?: string
@@ -177,6 +179,7 @@ export type Database = {
           created_by?: string
           description?: string | null
           id?: string
+          invite_code?: string
           name?: string
           privacy_level?: string
           updated_at?: string
