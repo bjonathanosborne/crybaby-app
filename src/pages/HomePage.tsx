@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { loadProfile, loadMyRounds, loadFriends } from "@/lib/db";
 import { Trophy, Users, Flame, ChevronRight, Plus, Loader2, Target, Clock, MapPin, BarChart3 } from "lucide-react";
+import FriendSuggestionsModal from "@/components/FriendSuggestionsModal";
 import { formatDistanceToNow } from "date-fns";
 
 export default function HomePage() {
@@ -12,6 +13,7 @@ export default function HomePage() {
   const [recentRounds, setRecentRounds] = useState<any[]>([]);
   const [stats, setStats] = useState({ rounds: 0, friends: 0 });
   const [loading, setLoading] = useState(true);
+  const [showFriendSuggestions, setShowFriendSuggestions] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -21,7 +23,14 @@ export default function HomePage() {
         setRecentRounds(r?.slice(0, 5) || []);
         setStats(s => ({ ...s, rounds: r?.length || 0 }));
       }),
-      loadFriends().then(f => setStats(s => ({ ...s, friends: f?.length || 0 }))),
+      loadFriends().then(f => {
+        const count = f?.length || 0;
+        setStats(s => ({ ...s, friends: count }));
+        // Show friend suggestions for users with no friends, once per session
+        if (count === 0 && !sessionStorage.getItem("friend_suggestions_dismissed")) {
+          setShowFriendSuggestions(true);
+        }
+      }),
     ]).finally(() => setLoading(false));
   }, [user]);
 
@@ -35,6 +44,14 @@ export default function HomePage() {
 
   return (
     <div className="max-w-[420px] mx-auto min-h-screen bg-background pb-24">
+      {showFriendSuggestions && (
+        <FriendSuggestionsModal
+          onClose={() => {
+            setShowFriendSuggestions(false);
+            sessionStorage.setItem("friend_suggestions_dismissed", "true");
+          }}
+        />
+      )}
       {/* Welcome section */}
       <div className="px-5 pt-6 pb-4">
         <p className="text-sm text-muted-foreground font-medium">Welcome back,</p>
