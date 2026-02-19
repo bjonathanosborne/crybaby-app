@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { loadProfile, updateProfile, loadMyRounds, loadSettlements, uploadUserAvatar } from "@/lib/db";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,6 +21,7 @@ type LedgerPeriod = "monthly" | "annual" | "all";
 
 export default function ProfilePage() {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
   const [rounds, setRounds] = useState<any[]>([]);
   const [settlements, setSettlements] = useState<any[]>([]);
@@ -344,6 +346,14 @@ export default function ProfilePage() {
               </div>
             ))}
           </div>
+          <button onClick={() => navigate("/stats")} style={{
+            width: "100%", marginTop: 14, padding: "10px 0", borderRadius: 10,
+            border: "1px solid #E5E7EB", background: "#fff", fontFamily: FONT,
+            fontSize: 13, fontWeight: 700, color: "#16A34A", cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+          }}>
+            📊 View Full Stats Dashboard
+          </button>
         </div>
 
         {/* Ledger */}
