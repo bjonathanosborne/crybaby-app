@@ -832,6 +832,36 @@ export default function CrybabActiveRound() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // ALL hooks must be declared before any conditional returns
+  const [currentHole, setCurrentHole] = useState(1);
+  const [scores, setScores] = useState({});
+  const [totals, setTotals] = useState({});
+  const [holeResults, setHoleResults] = useState([]);
+  const [hammerDepth, setHammerDepth] = useState(0);
+  const [hammerPending, setHammerPending] = useState(false);
+  const [lastHammerBy, setLastHammerBy] = useState(null);
+  const [showHammer, setShowHammer] = useState(false);
+  const [showResult, setShowResult] = useState(null);
+  const [showCrybabSetup, setShowCrybabSetup] = useState(false);
+  const [crybabConfig, setCrybabConfig] = useState(null);
+  const [carryOver, setCarryOver] = useState(0);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+  const [pendingSync, setPendingSync] = useState(0);
+  const [showLiveFeed, setShowLiveFeed] = useState(false);
+  const [isBroadcast, setIsBroadcast] = useState(false);
+  const [flipTeams, setFlipTeams] = useState(null);
+  const [showFlipModal, setShowFlipModal] = useState(false);
+  const [wolfState, setWolfState] = useState({ wolfOrder: [], currentWolfIndex: 0, partnerSelected: null, isLoneWolf: false });
+  const [wolfPartner, setWolfPartner] = useState(null);
+  const [isLoneWolf, setIsLoneWolf] = useState(false);
+  const [showWolfModal, setShowWolfModal] = useState(false);
+  const [nassauState, setNassauState] = useState({ frontMatch: {}, backMatch: {}, overallMatch: {}, presses: [] });
+  const [nassauPresses, setNassauPresses] = useState([]);
+  const [showPressModal, setShowPressModal] = useState(false);
+  const [settlementsSaved, setSettlementsSaved] = useState(false);
+  const [totalsInitialized, setTotalsInitialized] = useState(false);
+
   // Redirect if no round ID
   useEffect(() => {
     if (!roundId) {
@@ -915,6 +945,61 @@ export default function CrybabActiveRound() {
     },
   } : null;
 
+  // Initialize state once round loads
+  useEffect(() => {
+    if (round && !totalsInitialized) {
+      setTotals(Object.fromEntries(round.players.map(p => [p.id, 0])));
+      setIsBroadcast(dbRound?.is_broadcast || false);
+      setShowFlipModal(round.gameMode === 'flip');
+      setWolfState(initWolfState(round.players));
+      setNassauState(initNassauState(round.players));
+      setTotalsInitialized(true);
+    }
+  }, [round, totalsInitialized]);
+
+  // Show wolf modal at the start of each hole for wolf game
+  useEffect(() => {
+    if (round?.gameMode === 'wolf' && !showResult && !showCrybabSetup) {
+      setWolfPartner(null);
+      setIsLoneWolf(false);
+      setShowWolfModal(true);
+    }
+  }, [currentHole, round?.gameMode]);
+
+  // Check if entering crybaby phase
+  useEffect(() => {
+    if (round && currentHole === 16 && round.settings.crybaby && !crybabConfig) {
+      setShowCrybabSetup(true);
+    }
+  }, [currentHole, round]);
+
+  // Auto-save settlements when round completes
+  useEffect(() => {
+    if (!round) return;
+    const isComplete = currentHole >= 18 && holeResults.length >= 17;
+    if (!isComplete || settlementsSaved) return;
+
+    const saveRoundSettlements = async () => {
+      try {
+        if (roundId) {
+          await completeRound(roundId);
+          const settlementData = round.players.map(p => ({
+            userId: p.userId || null,
+            guestName: p.userId ? null : p.name,
+            amount: totals[p.id] || 0,
+          }));
+          await insertSettlements(roundId, settlementData);
+        }
+        setSettlementsSaved(true);
+        console.log("✅ Settlements saved");
+      } catch (err) {
+        console.error("Failed to save settlements:", err);
+      }
+    };
+    saveRoundSettlements();
+  }, [currentHole, holeResults.length, settlementsSaved]);
+
+  // --- Early returns (after all hooks) ---
   if (loading) {
     return (
       <div style={{ maxWidth: 420, margin: "0 auto", minHeight: "100vh", background: "#F7F7F5", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONT }}>
@@ -944,62 +1029,14 @@ export default function CrybabActiveRound() {
     );
   }
 
+  // --- Derived state (safe after early returns guarantee round exists) ---
   const { players, course, settings } = round;
-
-  const [currentHole, setCurrentHole] = useState(1);
-  const [scores, setScores] = useState({});
-  const [totals, setTotals] = useState(() => Object.fromEntries(players.map(p => [p.id, 0])));
-  const [holeResults, setHoleResults] = useState([]);
-  const [hammerDepth, setHammerDepth] = useState(0);
-  const [hammerPending, setHammerPending] = useState(false);
-  const [lastHammerBy, setLastHammerBy] = useState(null);
-  const [showHammer, setShowHammer] = useState(false);
-  const [showResult, setShowResult] = useState(null);
-  const [showCrybabSetup, setShowCrybabSetup] = useState(false);
-  const [crybabConfig, setCrybabConfig] = useState(null);
-  const [carryOver, setCarryOver] = useState(0);
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [isOnline, setIsOnline] = useState(true);
-  const [pendingSync, setPendingSync] = useState(0);
-  const [showLiveFeed, setShowLiveFeed] = useState(false);
-  const [isBroadcast, setIsBroadcast] = useState(dbRound?.is_broadcast || false);
-
-  // Flip state
-  const [flipTeams, setFlipTeams] = useState(null);
-  const [showFlipModal, setShowFlipModal] = useState(round.gameMode === 'flip');
-
-  // Wolf state
-  const [wolfState, setWolfState] = useState(() => initWolfState(players));
-  const [wolfPartner, setWolfPartner] = useState(null);
-  const [isLoneWolf, setIsLoneWolf] = useState(false);
-  const [showWolfModal, setShowWolfModal] = useState(false);
-
-  // Nassau state
-  const [nassauState, setNassauState] = useState(() => initNassauState(players));
-  const [nassauPresses, setNassauPresses] = useState([]);
-  const [showPressModal, setShowPressModal] = useState(false);
-
-  // Show wolf modal at the start of each hole for wolf game
-  useEffect(() => {
-    if (round.gameMode === 'wolf' && !showResult && !showCrybabSetup) {
-      setWolfPartner(null);
-      setIsLoneWolf(false);
-      setShowWolfModal(true);
-    }
-  }, [currentHole, round.gameMode]);
 
   const par = course.pars[currentHole - 1];
   const holeHandicap = course.handicaps[currentHole - 1];
   const lowestHandicap = Math.min(...players.map(p => p.handicap));
 
   const phase = getPhaseLabel(round.gameMode, currentHole);
-
-  // For flip, pass the locked flip teams
-  const teams = round.gameMode === 'flip'
-    ? flipTeams
-    : round.gameMode === 'wolf'
-    ? (wolfPartner || isLoneWolf ? buildWolfTeams() : null)
-    : supportsTeams(round.gameMode) ? getTeamsForHole(round.gameMode, currentHole, players) : null;
 
   function buildWolfTeams() {
     const wolfId = getWolfForHole(wolfState, currentHole);
@@ -1019,47 +1056,18 @@ export default function CrybabActiveRound() {
     };
   }
 
+  const teams = round.gameMode === 'flip'
+    ? flipTeams
+    : round.gameMode === 'wolf'
+    ? (wolfPartner || isLoneWolf ? buildWolfTeams() : null)
+    : supportsTeams(round.gameMode) ? getTeamsForHole(round.gameMode, currentHole, players) : null;
+
   const currentScores = scores[currentHole] || {};
   const allScored = players.every(p => currentScores[p.id] != null);
-
   const effectiveHoleValue = round.holeValue * Math.pow(2, hammerDepth) + carryOver;
 
-  // Determine current crybaby candidate
-  const currentCrybaby = Object.entries(totals).sort((a, b) => a[1] - b[1])[0];
+  const currentCrybaby = Object.entries(totals).sort((a, b) => a[1] - b[1])[0] || [null, 0];
   const crybabyCandidateId = currentCrybaby[1] < 0 ? currentCrybaby[0] : null;
-
-  // Check if entering crybaby phase
-  useEffect(() => {
-    if (currentHole === 16 && settings.crybaby && !crybabConfig) {
-      setShowCrybabSetup(true);
-    }
-  }, [currentHole]);
-
-  // Auto-save settlements when round completes
-  const [settlementsSaved, setSettlementsSaved] = useState(false);
-  useEffect(() => {
-    const isComplete = currentHole >= 18 && holeResults.length >= 17;
-    if (!isComplete || settlementsSaved) return;
-
-    const saveRoundSettlements = async () => {
-      try {
-        if (roundId) {
-          await completeRound(roundId);
-          const settlementData = players.map(p => ({
-            userId: p.userId || null,
-            guestName: p.userId ? null : p.name,
-            amount: totals[p.id] || 0,
-          }));
-          await insertSettlements(roundId, settlementData);
-        }
-        setSettlementsSaved(true);
-        console.log("✅ Settlements saved");
-      } catch (err) {
-        console.error("Failed to save settlements:", err);
-      }
-    };
-    saveRoundSettlements();
-  }, [currentHole, holeResults.length, settlementsSaved]);
 
   const handleScoreChange = (playerId, score) => {
     setScores(prev => ({
