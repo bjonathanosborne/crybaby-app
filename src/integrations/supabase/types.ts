@@ -682,6 +682,18 @@ export type Database = {
         Args: { _group_id: string; _user_id: string }
         Returns: boolean
       }
+      is_round_broadcast_friend: {
+        Args: { _round_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_round_creator: {
+        Args: { _round_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_round_follower: {
+        Args: { _round_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_round_participant: {
         Args: { _round_id: string; _user_id: string }
         Returns: boolean
