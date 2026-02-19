@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { loadFeed, createPost, addComment, toggleReaction, loadProfile } from "@/lib/db";
+import { loadFeed, createPost, addComment, toggleReaction, loadProfile, loadBroadcastRounds, followRound, declineRound, loadFollowedRoundEvents } from "@/lib/db";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { MessageCircle, ArrowUp } from "lucide-react";
+import { MessageCircle, ArrowUp, Radio, Eye, X, Trophy, Zap } from "lucide-react";
 
 const REACTION_EMOJIS = {
   "🔥": "🔥", "🔨": "🔨", "🍼": "🍼", "💀": "💀", "🐔": "🐔",
@@ -294,6 +294,105 @@ function NewPostComposer({ profile, onPost }) {
   );
 }
 
+// ─── Broadcast Announcement Card ───
+function BroadcastCard({ round, onFollow, onDecline }) {
+  const profile = round.creatorProfile;
+  const playerNames = (round.round_players || []).map(p => p.guest_name || "Player").slice(0, 4);
+  const stakes = round.stakes || "";
+  const isFollowing = round.followStatus === "following";
+  const isDeclined = round.followStatus === "declined";
+
+  return (
+    <div className="bg-card rounded-2xl overflow-hidden border-2 border-primary/20 shadow-md">
+      <div className="bg-primary/5 px-4 py-3 flex items-center gap-2 border-b border-primary/10">
+        <Radio size={14} className="text-primary animate-pulse" />
+        <span className="text-xs font-bold text-primary uppercase tracking-wider">Live Round</span>
+      </div>
+      <div className="p-4">
+        <div className="flex gap-3 items-start mb-3">
+          <UserAvatar profile={profile} size={40} />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-bold text-foreground truncate">
+              {profile?.display_name || "A friend"}
+            </div>
+            <div className="text-xs text-muted-foreground">started a round</div>
+          </div>
+        </div>
+        <div className="bg-muted/50 rounded-xl p-3 mb-3">
+          <div className="text-sm font-semibold text-foreground flex items-center gap-1.5 mb-1">
+            <span className="text-primary">⛳</span> {round.course}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {round.game_type?.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
+            {stakes ? ` · ${stakes}` : ""}
+          </div>
+          {playerNames.length > 0 && (
+            <div className="text-xs text-muted-foreground mt-1.5">
+              🏌️ {playerNames.join(", ")}
+            </div>
+          )}
+        </div>
+        {isFollowing ? (
+          <div className="flex items-center justify-center gap-2 py-2.5 bg-primary/10 rounded-xl text-primary text-sm font-bold">
+            <Eye size={14} /> Following this round
+          </div>
+        ) : isDeclined ? (
+          <div className="text-center py-2.5 text-muted-foreground text-xs italic">
+            Declined
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <button
+              onClick={() => onDecline(round.id)}
+              className="flex-1 py-2.5 rounded-xl border-none cursor-pointer text-sm font-semibold bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
+            >
+              Pass
+            </button>
+            <button
+              onClick={() => onFollow(round.id)}
+              className="flex-1 py-2.5 rounded-xl border-none cursor-pointer text-sm font-bold bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+            >
+              📡 Follow Round
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Live Event Item ───
+function LiveEventItem({ event, roundCourse }) {
+  const data = event.event_data || {};
+  const iconMap = {
+    birdie: "🐦", eagle: "🦅", team_win: "🏆", push: "🤝",
+    hammer: "🔨", hammer_fold: "🐔", score: "⛳",
+  };
+  const icon = iconMap[event.event_type] || "⛳";
+
+  return (
+    <div className="flex items-start gap-2.5 py-2">
+      <span className="text-base mt-0.5">{icon}</span>
+      <div className="flex-1 min-w-0">
+        <div className="text-[13px] text-foreground leading-snug">
+          {data.message || `Hole ${event.hole_number}`}
+        </div>
+        {data.quip && (
+          <div className="text-xs text-muted-foreground italic mt-0.5">
+            💬 {data.quip}
+          </div>
+        )}
+        <div className="text-[10px] text-muted-foreground mt-0.5">
+          {roundCourse} · Hole {event.hole_number}
+        </div>
+      </div>
+      {data.amount > 0 && (
+        <span className="text-xs font-bold text-primary font-mono">${data.amount}</span>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Feed Component ───
 export default function CrybabyFeed() {
   const { user } = useAuth();
@@ -304,6 +403,8 @@ export default function CrybabyFeed() {
   const [reactions, setReactions] = useState([]);
   const [myProfile, setMyProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [broadcastRounds, setBroadcastRounds] = useState([]);
+  const [followedEvents, setFollowedEvents] = useState([]);
 
   const refreshFeed = async () => {
     try {
@@ -319,8 +420,24 @@ export default function CrybabyFeed() {
     }
   };
 
+  const refreshBroadcasts = async () => {
+    try {
+      const rounds = await loadBroadcastRounds();
+      setBroadcastRounds(rounds);
+
+      // Load events for followed rounds
+      const followedIds = rounds.filter(r => r.followStatus === "following").map(r => r.id);
+      if (followedIds.length) {
+        const events = await loadFollowedRoundEvents(followedIds);
+        setFollowedEvents(events);
+      }
+    } catch (e) {
+      console.error("Failed to load broadcasts:", e);
+    }
+  };
+
   useEffect(() => {
-    Promise.all([refreshFeed(), loadProfile().then(p => setMyProfile(p))])
+    Promise.all([refreshFeed(), loadProfile().then(p => setMyProfile(p)), refreshBroadcasts()])
       .finally(() => setLoading(false));
 
     const channel = supabase
@@ -328,6 +445,8 @@ export default function CrybabyFeed() {
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "posts" }, () => refreshFeed())
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "comments" }, () => refreshFeed())
       .on("postgres_changes", { event: "*", schema: "public", table: "reactions" }, () => refreshFeed())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "round_events" }, () => refreshBroadcasts())
+      .on("postgres_changes", { event: "*", schema: "public", table: "round_followers" }, () => refreshBroadcasts())
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
@@ -348,6 +467,35 @@ export default function CrybabyFeed() {
     await refreshFeed();
   };
 
+  const handleFollow = async (roundId) => {
+    try {
+      await followRound(roundId);
+      await refreshBroadcasts();
+    } catch (e) {
+      console.error("Failed to follow round:", e);
+    }
+  };
+
+  const handleDecline = async (roundId) => {
+    try {
+      await declineRound(roundId);
+      await refreshBroadcasts();
+    } catch (e) {
+      console.error("Failed to decline round:", e);
+    }
+  };
+
+  // Rounds the user hasn't acted on yet
+  const pendingBroadcasts = broadcastRounds.filter(r => !r.followStatus);
+  const activeBroadcasts = broadcastRounds.filter(r => r.followStatus === "following" && r.status === "active");
+
+  // Group followed events by round
+  const eventsByRound = {};
+  followedEvents.forEach(e => {
+    if (!eventsByRound[e.round_id]) eventsByRound[e.round_id] = [];
+    eventsByRound[e.round_id].push(e);
+  });
+
   return (
     <div className="max-w-[420px] mx-auto min-h-screen bg-background pb-24">
       {/* Page header */}
@@ -363,9 +511,46 @@ export default function CrybabyFeed() {
       <div className="p-4 flex flex-col gap-3.5">
         <NewPostComposer profile={myProfile} onPost={handlePost} />
 
+        {/* Pending broadcast announcements */}
+        {pendingBroadcasts.map(round => (
+          <BroadcastCard
+            key={`bc-${round.id}`}
+            round={round}
+            onFollow={handleFollow}
+            onDecline={handleDecline}
+          />
+        ))}
+
+        {/* Followed live rounds with events */}
+        {activeBroadcasts.map(round => {
+          const events = eventsByRound[round.id] || [];
+          if (!events.length) return null;
+          return (
+            <div key={`live-${round.id}`} className="bg-card rounded-2xl overflow-hidden border border-primary/20">
+              <div className="bg-primary/5 px-4 py-2.5 flex items-center gap-2 border-b border-primary/10">
+                <Radio size={12} className="text-primary animate-pulse" />
+                <span className="text-xs font-bold text-primary uppercase tracking-wider flex-1">
+                  {round.creatorProfile?.display_name}'s Round
+                </span>
+                <span className="text-[10px] text-muted-foreground">{round.course}</span>
+              </div>
+              <div className="px-4 py-2 divide-y divide-border">
+                {events.slice(0, 5).map(event => (
+                  <LiveEventItem key={event.id} event={event} roundCourse={round.course} />
+                ))}
+              </div>
+              {events.length > 5 && (
+                <div className="px-4 py-2 text-center text-xs text-muted-foreground border-t border-border">
+                  +{events.length - 5} more events
+                </div>
+              )}
+            </div>
+          );
+        })}
+
         {loading ? (
           <div className="text-center py-10 text-muted-foreground text-sm">Loading...</div>
-        ) : posts.length === 0 ? (
+        ) : posts.length === 0 && pendingBroadcasts.length === 0 ? (
           <div className="bg-card rounded-2xl p-10 text-center border border-border">
             <div className="text-4xl mb-3">⛳</div>
             <div className="text-sm font-semibold text-muted-foreground">
