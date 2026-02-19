@@ -209,7 +209,7 @@ export default function FriendsPage() {
   }
 
     return (
-    <div className="max-w-[420px] mx-auto min-h-screen bg-background pb-24">
+    <div className="max-w-[420px] mx-auto min-h-screen bg-background pb-24 pt-6">
       {/* Page header */}
       <div className="px-4 pt-4 pb-2 flex justify-between items-center">
         <h1 className="text-2xl font-extrabold text-foreground tracking-tight">
