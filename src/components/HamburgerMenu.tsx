@@ -1,17 +1,16 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Menu, Home, Newspaper, Inbox, Users, UsersRound, User, Settings, Bell, LogOut } from "lucide-react";
+import { Menu, Newspaper, Inbox, Users, UsersRound, User, Settings, Bell, LogOut } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 import crybabyLogo from "@/assets/crybaby-logo.png";
 
 const navItems = [
-  { path: "/home", label: "Home", icon: Home },
+  { path: "/profile", label: "Profile", icon: User },
   { path: "/inbox", label: "Inbox", icon: Inbox },
   { path: "/feed", label: "Feed", icon: Newspaper },
   { path: "/friends", label: "Friends", icon: Users },
   { path: "/groups", label: "Groups", icon: UsersRound },
-  { path: "/profile", label: "Profile", icon: User },
   { path: "/notifications/settings", label: "Notification Settings", icon: Bell },
 ];
 

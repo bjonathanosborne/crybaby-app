@@ -5,7 +5,7 @@ import HamburgerMenu from "./HamburgerMenu";
 import crybabyLogo from "@/assets/crybaby-logo.png";
 import { ChevronLeft } from "lucide-react";
 
-const ROOT_PATHS = ["/home", "/feed", "/friends", "/groups", "/profile", "/inbox", "/stats"];
+const ROOT_PATHS = ["/profile", "/feed", "/friends", "/groups", "/inbox", "/stats"];
 
 export default function AppLayout() {
   const location = useLocation();
