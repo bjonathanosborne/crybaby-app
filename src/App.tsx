@@ -17,6 +17,7 @@ import HomePage from "./pages/HomePage";
 import AppLayout from "./components/AppLayout";
 import JoinGroupPage from "./pages/JoinGroupPage";
 import NotificationSettings from "./pages/NotificationSettings";
+import InboxPage from "./pages/InboxPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -48,6 +49,7 @@ const AppRoutes = () => (
       <Route path="/groups" element={<GroupsPage />} />
       <Route path="/profile" element={<ProfilePage />} />
       <Route path="/notifications/settings" element={<NotificationSettings />} />
+      <Route path="/inbox" element={<InboxPage />} />
     </Route>
     <Route path="/join/:code" element={<ProtectedRoute><JoinGroupPage /></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />
