@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { createRound } from "@/lib/db";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import crybabyLogo from "@/assets/crybaby-logo.png";
 
 // ============================================================
@@ -237,48 +239,212 @@ function GameCard({ game, selected, onSelect, playerCount }) {
 }
 
 // --- PLAYER ROW ---
-function PlayerRow({ player, index, onUpdate, onRemove, showCarts, cartOptions, canRemove }) {
+function PlayerRow({ player, index, onUpdate, onRemove, showCarts, cartOptions, canRemove, currentUserId }) {
   const font = "'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif";
   const mono = "'SF Mono', 'JetBrains Mono', monospace";
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const [isLinkedUser, setIsLinkedUser] = useState(!!player.userId);
+  const dropdownRef = useRef(null);
+  const debounceRef = useRef(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const doSearch = useCallback(async (q) => {
+    if (!q || q.length < 2) { setSearchResults([]); return; }
+    setSearching(true);
+    try {
+      // Search friends first, then all users
+      const { data: friendships } = await supabase
+        .from("friendships")
+        .select("user_id_a, user_id_b")
+        .eq("status", "accepted")
+        .or(`user_id_a.eq.${currentUserId},user_id_b.eq.${currentUserId}`);
+      
+      const friendIds = (friendships || []).map(f =>
+        f.user_id_a === currentUserId ? f.user_id_b : f.user_id_a
+      );
+
+      const { data: results } = await supabase.rpc("search_users_by_name", { _query: q });
+      
+      // Sort friends first
+      const sorted = (results || []).map(r => ({
+        ...r,
+        isFriend: friendIds.includes(r.user_id),
+      })).sort((a, b) => (b.isFriend ? 1 : 0) - (a.isFriend ? 1 : 0));
+      
+      setSearchResults(sorted.slice(0, 10));
+    } catch (e) {
+      console.error("Player search error:", e);
+    } finally {
+      setSearching(false);
+    }
+  }, [currentUserId]);
+
+  const handleNameChange = (val) => {
+    onUpdate(index, { ...player, name: val, userId: null });
+    setIsLinkedUser(false);
+    setSearchQuery(val);
+    clearTimeout(debounceRef.current);
+    if (val.length >= 2) {
+      debounceRef.current = setTimeout(() => {
+        doSearch(val);
+        setShowDropdown(true);
+      }, 300);
+    } else {
+      setShowDropdown(false);
+      setSearchResults([]);
+    }
+  };
+
+  const selectUser = (user) => {
+    const displayName = [user.first_name, user.last_name].filter(Boolean).join(" ") || user.display_name || "";
+    onUpdate(index, {
+      ...player,
+      name: displayName,
+      handicap: user.handicap,
+      ghin: user.ghin || "",
+      userId: user.user_id,
+    });
+    setIsLinkedUser(true);
+    setShowDropdown(false);
+    setSearchResults([]);
+    setSearchQuery("");
+  };
+
+  const clearLinkedUser = () => {
+    onUpdate(index, { ...player, name: "", handicap: null, ghin: "", userId: null });
+    setIsLinkedUser(false);
+  };
+
   return (
     <div style={{
-      display: "flex", alignItems: "center", gap: 10, padding: "12px 14px",
+      display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px",
       background: "#fff", borderRadius: 12,
       boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
       transition: "all 0.2s ease",
+      border: isLinkedUser ? "1.5px solid #16A34A" : "1px solid transparent",
     }}>
       <div style={{
-        width: 32, height: 32, borderRadius: 16,
-        background: ["#16A34A", "#3B82F6", "#F59E0B", "#DC2626", "#8B5CF6", "#EC4899"][index % 6],
+        width: 32, height: 32, borderRadius: 16, marginTop: 6,
+        background: isLinkedUser ? "#16A34A" : ["#16A34A", "#3B82F6", "#F59E0B", "#DC2626", "#8B5CF6", "#EC4899"][index % 6],
         display: "flex", alignItems: "center", justifyContent: "center",
         color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: font, flexShrink: 0,
       }}>
         {player.name ? player.name[0].toUpperCase() : (index + 1)}
       </div>
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
-        <input
-          value={player.name}
-          onChange={e => onUpdate(index, { ...player, name: e.target.value })}
-          placeholder={`Player ${index + 1}`}
-          style={{
-            fontFamily: font, fontSize: 16, fontWeight: 500, color: "#1A1A1A",
-            border: "1px solid #E5E7EB", background: "#F9FAFB", borderRadius: 8,
-            outline: "none", padding: "10px 12px", width: "100%",
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6, minWidth: 0, position: "relative" }} ref={dropdownRef}>
+        {isLinkedUser ? (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 8, padding: "10px 12px",
+            background: "#F0FDF4", borderRadius: 8, border: "1px solid #BBF7D0",
             minHeight: 44, boxSizing: "border-box",
-          }}
-        />
-        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+          }}>
+            <span style={{ fontFamily: font, fontSize: 16, fontWeight: 600, color: "#1A1A1A", flex: 1 }}>
+              {player.name}
+            </span>
+            <button onClick={clearLinkedUser} style={{
+              width: 24, height: 24, borderRadius: 12, border: "none",
+              background: "#DC262620", color: "#DC2626", cursor: "pointer",
+              fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center",
+            }}>×</button>
+          </div>
+        ) : (
           <input
-            value={player.ghin}
-            onChange={e => onUpdate(index, { ...player, ghin: e.target.value })}
-            placeholder="GHIN #"
+            value={player.name}
+            onChange={e => handleNameChange(e.target.value)}
+            placeholder={`Search or type Player ${index + 1}`}
             style={{
-              fontFamily: mono, fontSize: 13, color: "#6B7280",
-              border: "1px solid #E5E7EB", borderRadius: 6, padding: "8px 10px",
-              width: 90, background: "#F9FAFB", outline: "none",
-              minHeight: 36, boxSizing: "border-box",
+              fontFamily: font, fontSize: 16, fontWeight: 500, color: "#1A1A1A",
+              border: "1px solid #E5E7EB", background: "#F9FAFB", borderRadius: 8,
+              outline: "none", padding: "10px 12px", width: "100%",
+              minHeight: 44, boxSizing: "border-box",
             }}
           />
+        )}
+
+        {/* Search dropdown */}
+        {showDropdown && searchResults.length > 0 && (
+          <div style={{
+            position: "absolute", top: 48, left: 0, right: 0, zIndex: 50,
+            background: "#fff", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+            border: "1px solid #E5E7EB", maxHeight: 240, overflowY: "auto",
+          }}>
+            {searchResults.map((u, i) => (
+              <button key={u.user_id} onClick={() => selectUser(u)} style={{
+                width: "100%", textAlign: "left", border: "none", cursor: "pointer",
+                padding: "10px 14px", background: "transparent",
+                borderBottom: i < searchResults.length - 1 ? "1px solid #F3F4F6" : "none",
+                display: "flex", alignItems: "center", gap: 10,
+              }}>
+                {u.avatar_url ? (
+                  <img src={u.avatar_url} alt="" style={{ width: 28, height: 28, borderRadius: 14, objectFit: "cover" }} />
+                ) : (
+                  <div style={{
+                    width: 28, height: 28, borderRadius: 14, background: "#E5E7EB",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 12, fontWeight: 700, color: "#6B7280",
+                  }}>
+                    {(u.display_name || "?")[0].toUpperCase()}
+                  </div>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: font, fontSize: 14, fontWeight: 600, color: "#1A1A1A", display: "flex", alignItems: "center", gap: 6 }}>
+                    {[u.first_name, u.last_name].filter(Boolean).join(" ") || u.display_name}
+                    {u.isFriend && (
+                      <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 4, background: "#DBEAFE", color: "#2563EB" }}>Friend</span>
+                    )}
+                  </div>
+                  <div style={{ fontFamily: font, fontSize: 11, color: "#9CA3AF", display: "flex", gap: 8 }}>
+                    {u.handicap != null && <span>HCP {u.handicap}</span>}
+                    {u.home_course && <span>{u.home_course}</span>}
+                  </div>
+                </div>
+              </button>
+            ))}
+            <div style={{
+              padding: "8px 14px", borderTop: "1px solid #F3F4F6",
+              fontFamily: font, fontSize: 11, color: "#9CA3AF", textAlign: "center",
+            }}>
+              Or just type a name for a guest player
+            </div>
+          </div>
+        )}
+        {showDropdown && searching && (
+          <div style={{
+            position: "absolute", top: 48, left: 0, right: 0, zIndex: 50,
+            background: "#fff", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+            padding: "14px", textAlign: "center", fontFamily: font, fontSize: 13, color: "#9CA3AF",
+          }}>
+            Searching…
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+          {!isLinkedUser && (
+            <input
+              value={player.ghin}
+              onChange={e => onUpdate(index, { ...player, ghin: e.target.value })}
+              placeholder="GHIN #"
+              style={{
+                fontFamily: mono, fontSize: 13, color: "#6B7280",
+                border: "1px solid #E5E7EB", borderRadius: 6, padding: "8px 10px",
+                width: 90, background: "#F9FAFB", outline: "none",
+                minHeight: 36, boxSizing: "border-box",
+              }}
+            />
+          )}
           {player.handicap !== null && (
             <span style={{
               fontFamily: mono, fontSize: 12, fontWeight: 600,
@@ -315,7 +481,7 @@ function PlayerRow({ player, index, onUpdate, onRemove, showCarts, cartOptions, 
             width: 32, height: 32, borderRadius: 16, border: "none",
             background: "#FEE2E2", color: "#DC2626", cursor: "pointer",
             fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center",
-            justifyContent: "center", flexShrink: 0,
+            justifyContent: "center", flexShrink: 0, marginTop: 6,
           }}
         >×</button>
       )}
@@ -567,6 +733,7 @@ function ReviewSection({ label, value, icon }) {
 // ============================================================
 export default function CrybabSetupWizard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const font = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
   const mono = "'SF Mono', 'JetBrains Mono', monospace";
 
@@ -859,6 +1026,7 @@ export default function CrybabSetupWizard() {
                 showCarts={format?.requiresCarts}
                 cartOptions={["Cart A — Driver", "Cart A — Rider", "Cart B — Driver", "Cart B — Rider"]}
                 canRemove={format?.players.min !== format?.players.max && i >= 2}
+                currentUserId={user?.id}
               />
             ))}
 
@@ -877,7 +1045,7 @@ export default function CrybabSetupWizard() {
               marginTop: 8, padding: "10px 14px", background: "#FEF3C7", borderRadius: 10,
               fontFamily: font, fontSize: 12, color: "#92400E",
             }}>
-              💡 Enter a 7+ digit GHIN number to auto-pull handicaps. Manual entry available as backup.
+              💡 Start typing a name to search friends &amp; players. Their handicap auto-fills. Or just type a guest name.
             </div>
           </div>
         )}
