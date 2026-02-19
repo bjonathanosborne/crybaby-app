@@ -163,7 +163,7 @@ export default function FriendsPage() {
   const handleShareLink = async () => {
     const shareData = {
       title: "Join me on Crybaby Golf!",
-      text: `${myProfile?.display_name || "Your buddy"} wants you to join Crybaby Golf — the app for tracking bets, trash talk, and bragging rights on the course.`,
+      text: `${[myProfile?.first_name, myProfile?.last_name].filter(Boolean).join(" ") || myProfile?.display_name || "Your buddy"} wants you to join Crybaby Golf — the app for tracking bets, trash talk, and bragging rights on the course.`,
       url: INVITE_URL,
     };
     try {
