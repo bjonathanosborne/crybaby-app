@@ -134,6 +134,7 @@ export default function FriendsPage() {
   const handleAccept = async (friendshipId: string) => {
     try {
       await acceptFriendRequest(friendshipId);
+      toast({ title: "Friend request accepted! 🤝" });
       await loadAll();
     } catch (e) { console.error(e); }
   };
@@ -399,12 +400,13 @@ export default function FriendsPage() {
                 {pending.map((req: any) => {
                   const senderId = req.user_id_a;
                   const profile = profiles[senderId];
+                  const senderName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || profile?.display_name || "Unknown";
                   return (
                     <div key={req.id} className="flex items-center gap-3 py-3 border-b border-border last:border-none">
                       <UserAvatar profile={profile} size={40} />
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-semibold text-foreground">
-                          {profile?.display_name || "Unknown"}
+                          {senderName}
                         </div>
                         {profile?.handicap != null && (
                           <span className="text-xs font-mono text-muted-foreground">HCP {profile.handicap}</span>
@@ -435,12 +437,13 @@ export default function FriendsPage() {
                 {sent.map((req: any) => {
                   const targetId = req.user_id_b;
                   const profile = profiles[targetId];
+                  const targetName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || profile?.display_name || "Unknown";
                   return (
                     <div key={req.id} className="flex items-center gap-3 py-3 border-b border-border last:border-none">
                       <UserAvatar profile={profile} size={36} />
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-semibold text-muted-foreground">
-                          {profile?.display_name || "Unknown"}
+                          {targetName}
                         </div>
                         <span className="text-xs text-muted-foreground">Pending...</span>
                       </div>
@@ -477,7 +480,7 @@ export default function FriendsPage() {
                       <UserAvatar profile={profile} size={44} />
                       <div className="flex-1 min-w-0">
                         <div className="text-[15px] font-semibold text-foreground">
-                          {profile?.display_name || "Unknown"}
+                          {[profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || profile?.display_name || "Unknown"}
                         </div>
                         <div className="flex gap-2 mt-0.5">
                           {profile?.handicap != null && (
