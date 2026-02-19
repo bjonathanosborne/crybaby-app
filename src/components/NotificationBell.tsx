@@ -51,9 +51,8 @@ export default function NotificationBell() {
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  const handleOpen = async () => {
-    setOpen(!open);
-    if (!open) await refresh();
+  const handleOpen = () => {
+    navigate("/inbox");
   };
 
   const handleClick = async (notif: any) => {
