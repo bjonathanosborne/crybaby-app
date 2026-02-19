@@ -10,7 +10,7 @@ import CrybabOnboarding from "./pages/CrybabOnboarding";
 import CrybabySetupWizard from "./pages/CrybabySetupWizard";
 import CrybabyActiveRound from "./pages/CrybabyActiveRound";
 import CrybabyFeed from "./pages/CrybabyFeed";
-import ProfilePage from "./pages/ProfilePage";
+// ProfilePage removed — merged into HomePage
 import FriendsPage from "./pages/FriendsPage";
 import GroupsPage from "./pages/GroupsPage";
 import HomePage from "./pages/HomePage";
