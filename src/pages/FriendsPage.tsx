@@ -7,7 +7,7 @@ import {
   findUsersByEmails, sendInviteEmails, loadProfile,
 } from "@/lib/db";
 import { format, parseISO } from "date-fns";
-import { UserPlus, Search, Mail, Contact, ArrowLeft, ChevronRight, Loader2, CheckCircle2, Send } from "lucide-react";
+import { UserPlus, Search, Mail, ArrowLeft, ChevronRight, Loader2, CheckCircle2, Send, Share2, Copy, Check } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 function UserAvatar({ profile, size = 40 }: { profile: any; size?: number }) {
@@ -51,6 +51,7 @@ export default function FriendsPage() {
 
   // Find friends
   const [findMode, setFindMode] = useState<"menu" | "contacts" | "email">("menu");
+  const [linkCopied, setLinkCopied] = useState(false);
   const [emailInput, setEmailInput] = useState("");
   const [contactEmails, setContactEmails] = useState<string[]>([]);
   const [matchedUsers, setMatchedUsers] = useState<any[]>([]);
@@ -167,32 +168,34 @@ export default function FriendsPage() {
     return friendLedger.reduce((sum, s) => sum + Number(s.amount), 0);
   }, [friendLedger]);
 
-  // ─── Contacts API ───
-  const handleAccessContacts = async () => {
-    try {
-      if (!("contacts" in navigator)) {
-        toast({ title: "Not supported", description: "Contacts API isn't available on this device. Try entering emails manually.", variant: "destructive" });
-        setFindMode("email");
-        return;
+  // ─── Share invite link ───
+  const INVITE_URL = "https://crybabygolf.lovable.app/auth";
+
+  const handleShareLink = async () => {
+    const shareData = {
+      title: "Join me on Crybaby Golf!",
+      text: `${myProfile?.display_name || "Your buddy"} wants you to join Crybaby Golf — the app for tracking bets, trash talk, and bragging rights on the course.`,
+      url: INVITE_URL,
+    };
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (e: any) {
+        if (e.name !== "AbortError") console.error(e);
       }
-      const contacts = await (navigator as any).contacts.select(["email"], { multiple: true });
-      const emails: string[] = [];
-      contacts.forEach((c: any) => {
-        if (c.email) c.email.forEach((e: string) => emails.push(e.toLowerCase().trim()));
-      });
-      if (emails.length === 0) {
-        toast({ title: "No emails found", description: "None of your contacts had email addresses." });
-        return;
-      }
-      setContactEmails(emails);
-      await matchEmails(emails);
-    } catch (e: any) {
-      if (e.name !== "TypeError") {
-        console.error(e);
-      }
-      toast({ title: "Contacts access denied", description: "You can enter emails manually instead." });
-      setFindMode("email");
+    } else {
+      await navigator.clipboard.writeText(INVITE_URL);
+      setLinkCopied(true);
+      toast({ title: "Link copied!" });
+      setTimeout(() => setLinkCopied(false), 2000);
     }
+  };
+
+  const handleCopyLink = async () => {
+    await navigator.clipboard.writeText(INVITE_URL);
+    setLinkCopied(true);
+    toast({ title: "Link copied to clipboard!" });
+    setTimeout(() => setLinkCopied(false), 2000);
   };
 
   const matchEmails = async (emails: string[]) => {
@@ -300,22 +303,33 @@ export default function FriendsPage() {
           <div className="flex flex-col gap-3">
             <div className="bg-card rounded-2xl p-5 border border-border text-center">
               <UserPlus size={32} className="mx-auto text-primary mb-3" />
-              <h3 className="text-base font-bold text-foreground mb-1">Find your golf buddies</h3>
+              <h3 className="text-base font-bold text-foreground mb-1">Invite your golf buddies</h3>
               <p className="text-sm text-muted-foreground">
-                Check your contacts or enter emails to find friends already on Crybaby — or invite them to join.
+                Share a link via text, WhatsApp, or any app — or search by email to find friends already on Crybaby.
               </p>
             </div>
 
-            <button onClick={handleAccessContacts}
+            <button onClick={handleShareLink}
               className="w-full p-4 rounded-2xl border border-border bg-card cursor-pointer text-left hover:border-primary/30 hover:shadow-sm transition-all flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Contact size={20} className="text-primary" />
+                <Share2 size={20} className="text-primary" />
               </div>
               <div className="flex-1">
-                <div className="text-sm font-semibold text-foreground">Check Contacts</div>
-                <div className="text-xs text-muted-foreground">Match your phone contacts with Crybaby</div>
+                <div className="text-sm font-semibold text-foreground">Share Invite Link</div>
+                <div className="text-xs text-muted-foreground">Send via text, WhatsApp, or any app</div>
               </div>
               <ChevronRight size={16} className="text-muted-foreground" />
+            </button>
+
+            <button onClick={handleCopyLink}
+              className="w-full p-4 rounded-2xl border border-border bg-card cursor-pointer text-left hover:border-primary/30 hover:shadow-sm transition-all flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center">
+                {linkCopied ? <Check size={20} className="text-primary" /> : <Copy size={20} className="text-accent-foreground" />}
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-semibold text-foreground">{linkCopied ? "Copied!" : "Copy Link"}</div>
+                <div className="text-xs text-muted-foreground">Paste the invite link anywhere</div>
+              </div>
             </button>
 
             <button onClick={() => setFindMode("email")}
@@ -324,14 +338,13 @@ export default function FriendsPage() {
                 <Mail size={20} className="text-accent-foreground" />
               </div>
               <div className="flex-1">
-                <div className="text-sm font-semibold text-foreground">Enter Emails</div>
-                <div className="text-xs text-muted-foreground">Type or paste email addresses to find friends</div>
+                <div className="text-sm font-semibold text-foreground">Find by Email</div>
+                <div className="text-xs text-muted-foreground">Look up friends already on Crybaby</div>
               </div>
               <ChevronRight size={16} className="text-muted-foreground" />
             </button>
           </div>
         )}
-
         {view === "find" && findMode === "email" && matchedUsers.length === 0 && unmatchedEmails.length === 0 && (
           <div className="flex flex-col gap-3">
             <div className="bg-card rounded-2xl p-4 border border-border">
