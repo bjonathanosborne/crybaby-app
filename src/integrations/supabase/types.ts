@@ -457,6 +457,38 @@ export type Database = {
           },
         ]
       }
+      round_followers: {
+        Row: {
+          created_at: string
+          id: string
+          round_id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          round_id: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          round_id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "round_followers_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "rounds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       round_players: {
         Row: {
           created_at: string
@@ -551,6 +583,7 @@ export type Database = {
           game_type: string
           group_id: string | null
           id: string
+          is_broadcast: boolean
           scorekeeper_mode: boolean
           stakes: string | null
           status: string
@@ -564,6 +597,7 @@ export type Database = {
           game_type?: string
           group_id?: string | null
           id?: string
+          is_broadcast?: boolean
           scorekeeper_mode?: boolean
           stakes?: string | null
           status?: string
@@ -577,6 +611,7 @@ export type Database = {
           game_type?: string
           group_id?: string | null
           id?: string
+          is_broadcast?: boolean
           scorekeeper_mode?: boolean
           stakes?: string | null
           status?: string

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import crybabyLogo from "@/assets/crybaby-logo.png";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { loadRound, updatePlayerScores, completeRound, createPost, saveAICommentary, insertSettlements, createRoundEvent } from "@/lib/db";
+import { loadRound, updatePlayerScores, completeRound, createPost, saveAICommentary, insertSettlements, createRoundEvent, toggleBroadcast } from "@/lib/db";
 import { supabase } from "@/integrations/supabase/client";
 import RoundLiveFeed from "@/components/RoundLiveFeed";
 
@@ -770,6 +770,7 @@ export default function CrybabActiveRound() {
   const [isOnline, setIsOnline] = useState(true);
   const [pendingSync, setPendingSync] = useState(0);
   const [showLiveFeed, setShowLiveFeed] = useState(false);
+  const [isBroadcast, setIsBroadcast] = useState(dbRound?.is_broadcast || false);
 
   const par = course.pars[currentHole - 1];
   const holeHandicap = course.handicaps[currentHole - 1];
@@ -1297,6 +1298,23 @@ export default function CrybabActiveRound() {
             </span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {/* Broadcast toggle */}
+            <button
+              onClick={async () => {
+                const next = !isBroadcast;
+                setIsBroadcast(next);
+                try { await toggleBroadcast(roundId, next); } catch (e) { console.error(e); setIsBroadcast(!next); }
+              }}
+              style={{
+                padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer",
+                fontFamily: FONT, fontSize: 12, fontWeight: 700,
+                background: isBroadcast ? "#16A34A20" : "#F3F4F6",
+                color: isBroadcast ? "#16A34A" : "#9CA3AF",
+              }}
+              title={isBroadcast ? "Broadcasting to friends" : "Broadcast this round"}
+            >
+              {isBroadcast ? "📡 Live" : "📡"}
+            </button>
             {/* Sync indicator */}
             <div style={{
               width: 8, height: 8, borderRadius: 4,

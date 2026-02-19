@@ -869,6 +869,113 @@ export async function loadEventReactions(eventIds: string[]) {
   return data || [];
 }
 
+// ─── Round Broadcast & Follow ───
+
+export async function toggleBroadcast(roundId: string, isBroadcast: boolean) {
+  const { error } = await supabase
+    .from("rounds")
+    .update({ is_broadcast: isBroadcast } as any)
+    .eq("id", roundId);
+  if (error) throw error;
+}
+
+export async function loadBroadcastRounds() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  // Get friend IDs
+  const { data: friendships } = await supabase
+    .from("friendships")
+    .select("user_id_a, user_id_b")
+    .or(`user_id_a.eq.${user.id},user_id_b.eq.${user.id}`)
+    .eq("status", "accepted");
+
+  const friendIds = (friendships || []).map(f =>
+    f.user_id_a === user.id ? f.user_id_b : f.user_id_a
+  );
+
+  if (!friendIds.length) return [];
+
+  // Get active broadcast rounds from friends
+  const { data: rounds, error } = await supabase
+    .from("rounds")
+    .select("*, round_players(*)")
+    .eq("is_broadcast", true)
+    .in("created_by", friendIds)
+    .in("status", ["active", "completed"])
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (error) throw error;
+
+  // Get creator profiles
+  const creatorIds = [...new Set((rounds || []).map(r => r.created_by))];
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("user_id, display_name, avatar_url")
+    .in("user_id", creatorIds.length ? creatorIds : ["none"]);
+
+  // Get current user's follow status
+  const roundIds = (rounds || []).map(r => r.id);
+  const { data: follows } = await supabase
+    .from("round_followers")
+    .select("*")
+    .eq("user_id", user.id)
+    .in("round_id", roundIds.length ? roundIds : ["none"]);
+
+  const profileMap: Record<string, any> = {};
+  (profiles || []).forEach(p => { profileMap[p.user_id] = p; });
+
+  const followMap: Record<string, any> = {};
+  (follows || []).forEach(f => { followMap[f.round_id] = f; });
+
+  return (rounds || []).map(r => ({
+    ...r,
+    creatorProfile: profileMap[r.created_by] || null,
+    followStatus: followMap[r.id]?.status || null,
+  }));
+}
+
+export async function followRound(roundId: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { error } = await supabase
+    .from("round_followers")
+    .upsert({
+      round_id: roundId,
+      user_id: user.id,
+      status: "following",
+    } as any, { onConflict: "round_id,user_id" });
+  if (error) throw error;
+}
+
+export async function declineRound(roundId: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { error } = await supabase
+    .from("round_followers")
+    .upsert({
+      round_id: roundId,
+      user_id: user.id,
+      status: "declined",
+    } as any, { onConflict: "round_id,user_id" });
+  if (error) throw error;
+}
+
+export async function loadFollowedRoundEvents(roundIds: string[]) {
+  if (!roundIds.length) return [];
+  const { data, error } = await supabase
+    .from("round_events")
+    .select("*")
+    .in("round_id", roundIds)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  if (error) throw error;
+  return data || [];
+}
+
 export async function toggleEventReaction(eventId: string, reactionType: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
