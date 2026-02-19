@@ -39,7 +39,7 @@ export default function HomePage() {
       <div className="px-5 pt-6 pb-4">
         <p className="text-sm text-muted-foreground font-medium">Welcome back,</p>
         <h1 className="text-3xl font-extrabold text-foreground tracking-tight mt-0.5">
-          {profile?.display_name || "Golfer"} 👋
+          {[profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || profile?.display_name || "Golfer"} 👋
         </h1>
       </div>
 
