@@ -13,7 +13,6 @@ import CrybabyFeed from "./pages/CrybabyFeed";
 import ProfilePage from "./pages/ProfilePage";
 import FriendsPage from "./pages/FriendsPage";
 import GroupsPage from "./pages/GroupsPage";
-import HomePage from "./pages/HomePage";
 import AppLayout from "./components/AppLayout";
 import JoinGroupPage from "./pages/JoinGroupPage";
 import NotificationSettings from "./pages/NotificationSettings";
@@ -26,7 +25,7 @@ const queryClient = new QueryClient();
 function RootRedirect() {
   const { user, loading } = useAuth();
   if (loading) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>Loading...</div>;
-  return <Navigate to={user ? "/home" : "/auth"} replace />;
+  return <Navigate to={user ? "/profile" : "/auth"} replace />;
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -42,7 +41,7 @@ const AppRoutes = () => (
     <Route path="/reset-password" element={<ResetPassword />} />
     <Route path="/" element={<RootRedirect />} />
     <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-      <Route path="/home" element={<HomePage />} />
+      <Route path="/home" element={<Navigate to="/profile" replace />} />
       <Route path="/setup" element={<CrybabySetupWizard />} />
       <Route path="/round" element={<CrybabyActiveRound />} />
       <Route path="/feed" element={<CrybabyFeed />} />
