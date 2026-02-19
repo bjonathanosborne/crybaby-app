@@ -22,8 +22,13 @@ function timeAgo(dateStr) {
   return `${days}d`;
 }
 
+function profileName(profile) {
+  const full = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ");
+  return full || profile?.display_name || "Unknown";
+}
+
 function UserAvatar({ profile, size = 36 }) {
-  const name = profile?.display_name || "?";
+  const name = profileName(profile);
   const initial = name[0]?.toUpperCase() || "?";
   if (profile?.avatar_url) {
     return (
@@ -77,7 +82,7 @@ function PostCard({ post, profile, comments, reactions, profiles, currentUserId,
         <UserAvatar profile={profile} size={40} />
         <div className="flex-1 min-w-0">
           <div className="text-sm font-bold text-foreground truncate">
-            {profile?.display_name || "Unknown"}
+            {profileName(profile)}
           </div>
           <div className="text-xs text-muted-foreground mt-0.5">
             {timeAgo(post.created_at)}
@@ -185,7 +190,7 @@ function PostCard({ post, profile, comments, reactions, profiles, currentUserId,
                   <div className="flex-1 bg-muted rounded-2xl px-3 py-2">
                     <div className="flex gap-1.5 items-baseline">
                       <span className="text-xs font-bold text-foreground">
-                        {commenter?.display_name || "Unknown"}
+                        {profileName(commenter)}
                       </span>
                       <span className="text-[10px] text-muted-foreground">
                         {timeAgo(comment.created_at)}
@@ -264,7 +269,7 @@ function NewPostComposer({ profile, onPost }) {
       <div className="flex gap-3 mb-3 items-center">
         <UserAvatar profile={profile} size={36} />
         <div className="text-sm font-bold text-foreground">
-          {profile?.display_name || "You"}
+          {profileName(profile) || "You"}
         </div>
       </div>
       <textarea
@@ -313,7 +318,7 @@ function BroadcastCard({ round, onFollow, onDecline }) {
           <UserAvatar profile={profile} size={40} />
           <div className="flex-1 min-w-0">
             <div className="text-sm font-bold text-foreground truncate">
-              {profile?.display_name || "A friend"}
+              {profileName(profile)}
             </div>
             <div className="text-xs text-muted-foreground">started a round</div>
           </div>
@@ -530,7 +535,7 @@ export default function CrybabyFeed() {
               <div className="bg-primary/5 px-4 py-2.5 flex items-center gap-2 border-b border-primary/10">
                 <Radio size={12} className="text-primary animate-pulse" />
                 <span className="text-xs font-bold text-primary uppercase tracking-wider flex-1">
-                  {round.creatorProfile?.display_name}'s Round
+                  {profileName(round.creatorProfile)}'s Round
                 </span>
                 <span className="text-[10px] text-muted-foreground">{round.course}</span>
               </div>
