@@ -10,7 +10,7 @@ import CrybabOnboarding from "./pages/CrybabOnboarding";
 import CrybabySetupWizard from "./pages/CrybabySetupWizard";
 import CrybabyActiveRound from "./pages/CrybabyActiveRound";
 import CrybabyFeed from "./pages/CrybabyFeed";
-// ProfilePage removed — merged into HomePage
+import ProfilePage from "./pages/ProfilePage";
 import FriendsPage from "./pages/FriendsPage";
 import GroupsPage from "./pages/GroupsPage";
 import HomePage from "./pages/HomePage";
@@ -48,7 +48,7 @@ const AppRoutes = () => (
       <Route path="/feed" element={<CrybabyFeed />} />
       <Route path="/friends" element={<FriendsPage />} />
       <Route path="/groups" element={<GroupsPage />} />
-      <Route path="/profile" element={<Navigate to="/home" replace />} />
+      <Route path="/profile" element={<ProfilePage />} />
       <Route path="/notifications/settings" element={<NotificationSettings />} />
       <Route path="/inbox" element={<InboxPage />} />
       <Route path="/stats" element={<StatsPage />} />
