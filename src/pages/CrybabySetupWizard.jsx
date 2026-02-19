@@ -1194,7 +1194,3 @@ export default function CrybabSetupWizard() {
     </div>
   );
 }
-      </div>
-    </div>
-  );
-}
