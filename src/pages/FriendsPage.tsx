@@ -166,17 +166,24 @@ export default function FriendsPage() {
       text: `${myProfile?.display_name || "Your buddy"} wants you to join Crybaby Golf — the app for tracking bets, trash talk, and bragging rights on the course.`,
       url: INVITE_URL,
     };
-    if (navigator.share) {
-      try {
+    try {
+      if (navigator.share && navigator.canShare?.(shareData)) {
         await navigator.share(shareData);
-      } catch (e: any) {
-        if (e.name !== "AbortError") console.error(e);
+        return;
       }
-    } else {
+    } catch (e: any) {
+      if (e.name === "AbortError") return;
+      // Fall through to clipboard
+    }
+    // Fallback: copy to clipboard
+    try {
       await navigator.clipboard.writeText(INVITE_URL);
       setLinkCopied(true);
-      toast({ title: "Link copied!" });
+      toast({ title: "Link copied to clipboard!" });
       setTimeout(() => setLinkCopied(false), 2000);
+    } catch {
+      // Last resort: prompt
+      window.prompt("Copy this invite link:", INVITE_URL);
     }
   };
 
