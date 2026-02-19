@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { loadProfile, loadMyRounds, loadFriends } from "@/lib/db";
-import { Trophy, Users, Flame, ChevronRight, Plus, Loader2, Target, Clock, MapPin } from "lucide-react";
+import { Trophy, Users, Flame, ChevronRight, Plus, Loader2, Target, Clock, MapPin, BarChart3 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 export default function HomePage() {
@@ -150,6 +150,18 @@ export default function HomePage() {
           <div className="flex-1">
             <div className="text-sm font-bold text-foreground">Find Friends</div>
             <div className="text-xs text-muted-foreground">Invite your golf buddies</div>
+          </div>
+          <ChevronRight size={18} className="text-muted-foreground" />
+        </button>
+
+        <button onClick={() => navigate("/stats")}
+          className="w-full p-4 rounded-2xl bg-card border border-border cursor-pointer text-left hover:border-primary/30 hover:shadow-sm transition-all flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center">
+            <BarChart3 size={20} className="text-accent-foreground" />
+          </div>
+          <div className="flex-1">
+            <div className="text-sm font-bold text-foreground">My Stats</div>
+            <div className="text-xs text-muted-foreground">Scoring trends, P&L, and win record</div>
           </div>
           <ChevronRight size={18} className="text-muted-foreground" />
         </button>
