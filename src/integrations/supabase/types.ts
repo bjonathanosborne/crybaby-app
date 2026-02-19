@@ -270,11 +270,14 @@ export type Database = {
           bio: string | null
           created_at: string
           display_name: string
+          first_name: string
           ghin: string | null
           ghin_verified: boolean | null
           handicap: number | null
           home_course: string | null
           id: string
+          last_name: string
+          state: string
           updated_at: string
           user_id: string
         }
@@ -283,11 +286,14 @@ export type Database = {
           bio?: string | null
           created_at?: string
           display_name?: string
+          first_name?: string
           ghin?: string | null
           ghin_verified?: boolean | null
           handicap?: number | null
           home_course?: string | null
           id?: string
+          last_name?: string
+          state?: string
           updated_at?: string
           user_id: string
         }
@@ -296,11 +302,14 @@ export type Database = {
           bio?: string | null
           created_at?: string
           display_name?: string
+          first_name?: string
           ghin?: string | null
           ghin_verified?: boolean | null
           handicap?: number | null
           home_course?: string | null
           id?: string
+          last_name?: string
+          state?: string
           updated_at?: string
           user_id?: string
         }
