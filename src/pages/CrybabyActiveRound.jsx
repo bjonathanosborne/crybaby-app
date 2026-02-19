@@ -4,6 +4,14 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { loadRound, updatePlayerScores, completeRound, createPost, saveAICommentary, insertSettlements, createRoundEvent, toggleBroadcast } from "@/lib/db";
 import { supabase } from "@/integrations/supabase/client";
 import RoundLiveFeed from "@/components/RoundLiveFeed";
+import {
+  getStrokesOnHole, getTeamsForHole, getPhaseLabel, getPhaseDisplayLabel, getPhaseColor,
+  supportsTeams, supportsHammer, supportsCrybaby,
+  calculateTeamHoleResult, calculateSkinsResult, calculateNassauHoleResult,
+  calculateWolfHoleResult, calculateFoldResult as calcFoldResult,
+  generateFlipTeams, initWolfState, getWolfForHole, initNassauState,
+  isRoundComplete,
+} from "@/lib/gameEngines";
 
 // ============================================================
 // CRYBABY — Active Round / Score Entry
@@ -150,8 +158,8 @@ function getScoreWord(score, par) {
 // --- COMPONENTS ---
 
 function HoleHeader({ holeNumber, par, handicap, yardage, phase }) {
-  const phaseLabels = { drivers: "Drivers", others: "Others", carts: "Carts", crybaby: "Crybaby" };
-  const phaseColors = { drivers: "#16A34A", others: "#F59E0B", carts: "#3B82F6", crybaby: "#DC2626" };
+  const phaseLabel = getPhaseDisplayLabel(phase);
+  const phaseColor = getPhaseColor(phase);
   return (
     <div style={{
       display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -168,13 +176,13 @@ function HoleHeader({ holeNumber, par, handicap, yardage, phase }) {
             <span style={{ fontFamily: FONT, fontSize: 14, fontWeight: 700, color: "#1A1A1A" }}>Par {par}</span>
             <span style={{ fontFamily: MONO, fontSize: 11, color: "#9CA3AF" }}>HCP {handicap}</span>
           </div>
-          <span style={{
-            fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 5,
-            background: phaseColors[phase] + "14",
-            color: phaseColors[phase],
-            fontFamily: FONT, textTransform: "uppercase", letterSpacing: "0.05em",
-          }}>
-            {phaseLabels[phase]}
+            <span style={{
+              fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 5,
+              background: phaseColor + "14",
+              color: phaseColor,
+              fontFamily: FONT, textTransform: "uppercase", letterSpacing: "0.05em",
+            }}>
+              {phaseLabel}
           </span>
         </div>
       </div>
@@ -699,13 +707,14 @@ export default function CrybabActiveRound() {
     holeValue: dbRound.course_details?.holeValue || 5,
     players: dbPlayers.map((p, i) => {
       const profile = p.user_id ? playerProfiles[p.user_id] : null;
+      const config = dbRound.course_details?.playerConfig?.[i] || {};
       return {
         id: p.id,
         userId: p.user_id || null,
-        name: p.guest_name || profile?.display_name || `Player ${i + 1}`,
-        handicap: profile?.handicap || 12,
-        cart: i < 2 ? "A" : "B",
-        position: i % 2 === 0 ? "driver" : "rider",
+        name: p.guest_name || profile?.display_name || config.name || `Player ${i + 1}`,
+        handicap: config.handicap ?? profile?.handicap ?? 12,
+        cart: config.cart || (i < 2 ? "A" : "B"),
+        position: config.position || (i % 2 === 0 ? "driver" : "rider"),
         color: PLAYER_COLORS[i % PLAYER_COLORS.length],
       };
     }),
@@ -717,9 +726,13 @@ export default function CrybabActiveRound() {
       crybabHoles: dbRound.course_details?.mechanicSettings?.crybaby?.holes || 3,
       crybabHammerRule: "Only crybaby hammers",
       birdieBonus: (dbRound.course_details?.mechanics || []).includes("birdie_bonus"),
-      birdieMultiplier: 2,
+      birdieMultiplier: parseInt(dbRound.course_details?.mechanicSettings?.birdie_bonus?.multiplier || "2"),
       pops: (dbRound.course_details?.mechanics || []).includes("pops"),
       noPopsParThree: false,
+      carryOverCap: dbRound.course_details?.mechanicSettings?.carry_overs?.cap ?? "∞",
+      handicapPercent: dbRound.course_details?.mechanicSettings?.pops?.handicapPercent || 100,
+      presses: (dbRound.course_details?.mechanics || []).includes("presses"),
+      pressType: dbRound.course_details?.mechanicSettings?.presses?.autoPress || "Optional (must request)",
     },
   } : null;
 
@@ -776,8 +789,8 @@ export default function CrybabActiveRound() {
   const holeHandicap = course.handicaps[currentHole - 1];
   const lowestHandicap = Math.min(...players.map(p => p.handicap));
 
-  const phase = currentHole <= 5 ? "drivers" : currentHole <= 10 ? "others" : currentHole <= 15 ? "carts" : "crybaby";
-  const teams = currentHole <= 15 ? getTeams(currentHole, players) : null;
+  const phase = getPhaseLabel(round.gameMode, currentHole);
+  const teams = supportsTeams(round.gameMode) ? getTeamsForHole(round.gameMode, currentHole, players) : null;
 
   const currentScores = scores[currentHole] || {};
   const allScored = players.every(p => currentScores[p.id] != null);
@@ -923,6 +936,20 @@ export default function CrybabActiveRound() {
   };
 
   const calculateHoleResult = () => {
+    const cs = scores[currentHole];
+    const gameMode = round.gameMode;
+
+    // Skins — individual scoring
+    if (gameMode === 'skins' || gameMode === 'custom') {
+      return calculateSkinsResult(players, cs, par, currentHole, round.holeValue, carryOver, round.settings, lowestHandicap, holeHandicap);
+    }
+
+    // Nassau — match play per hole
+    if (gameMode === 'nassau') {
+      return calculateNassauHoleResult(players, teams, cs, par, currentHole, round.holeValue, round.settings, lowestHandicap, holeHandicap);
+    }
+
+    // Team-based games (DOC, Flip) — use team engine
     if (!teams) return null;
     const cs = scores[currentHole];
 
@@ -1382,7 +1409,7 @@ export default function CrybabActiveRound() {
       {/* Score Inputs */}
       <div style={{ padding: "8px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
         {players.map(player => {
-          const strokes = settings.pops ? getStrokesOnHole(player.handicap, lowestHandicap, holeHandicap) : 0;
+          const strokes = settings.pops ? getStrokesOnHole(player.handicap, lowestHandicap, holeHandicap, settings.handicapPercent) : 0;
           return (
             <ScoreInput
               key={player.id}

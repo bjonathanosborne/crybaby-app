@@ -76,6 +76,17 @@ export async function createRound({ gameType, course, courseDetails, stakes, hol
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
+  // Build player config to persist setup wizard selections
+  const playerConfig = players
+    .filter(p => p.name.trim())
+    .map(p => ({
+      name: p.name,
+      handicap: p.handicap,
+      cart: p.cart || null,
+      position: p.position || null,
+      userId: p.userId || null,
+    }));
+
   // 1. Create the round
   const { data: round, error: roundError } = await supabase
     .from("rounds")
@@ -92,6 +103,7 @@ export async function createRound({ gameType, course, courseDetails, stakes, hol
         mechanics: Array.from(mechanics),
         mechanicSettings,
         privacy,
+        playerConfig,
       },
       stakes: `$${holeValue}/hole`,
       status: "active",
@@ -102,13 +114,13 @@ export async function createRound({ gameType, course, courseDetails, stakes, hol
 
   if (roundError) throw roundError;
 
-  // 2. Add players
+  // 2. Add players — use userId from setup for all linked players
   const playerInserts = players
     .filter(p => p.name.trim())
     .map((p, i) => ({
       round_id: round.id,
-      user_id: i === 0 ? user.id : null, // First player is creator
-      guest_name: i === 0 ? null : p.name,
+      user_id: p.userId || (i === 0 ? user.id : null),
+      guest_name: (p.userId || i === 0) ? null : p.name,
       hole_scores: [],
       total_score: 0,
       is_scorekeeper: i === 0,
