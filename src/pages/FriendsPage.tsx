@@ -3,11 +3,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   loadFriends, loadPendingRequests, loadSentRequests,
   sendFriendRequest, acceptFriendRequest, removeFriendship,
-  searchProfiles, loadSettlements, loadUserProfile,
-  findUsersByEmails, sendInviteEmails, loadProfile,
+  searchProfiles, loadSettlements, loadUserProfile, loadProfile,
 } from "@/lib/db";
 import { format, parseISO } from "date-fns";
-import { UserPlus, Search, Mail, ArrowLeft, ChevronRight, Loader2, CheckCircle2, Send, Share2, Copy, Check } from "lucide-react";
+import { UserPlus, Search, ArrowLeft, ChevronRight, Loader2, Share2, Copy, Check } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 function UserAvatar({ profile, size = 40 }: { profile: any; size?: number }) {
@@ -28,7 +27,7 @@ function UserAvatar({ profile, size = 40 }: { profile: any; size?: number }) {
   );
 }
 
-type View = "list" | "search" | "ledger" | "find";
+type View = "list" | "search" | "ledger";
 
 export default function FriendsPage() {
   const { user } = useAuth();
@@ -49,17 +48,11 @@ export default function FriendsPage() {
   const [friendLedger, setFriendLedger] = useState<any[]>([]);
   const [friendProfile, setFriendProfile] = useState<any>(null);
 
-  // Find friends
-  const [findMode, setFindMode] = useState<"menu" | "contacts" | "email">("menu");
+  // Invite
   const [linkCopied, setLinkCopied] = useState(false);
-  const [emailInput, setEmailInput] = useState("");
-  const [contactEmails, setContactEmails] = useState<string[]>([]);
-  const [matchedUsers, setMatchedUsers] = useState<any[]>([]);
-  const [unmatchedEmails, setUnmatchedEmails] = useState<string[]>([]);
-  const [findLoading, setFindLoading] = useState(false);
-  const [inviteSending, setInviteSending] = useState<Set<string>>(new Set());
-  const [inviteSent, setInviteSent] = useState<Set<string>>(new Set());
   const [myProfile, setMyProfile] = useState<any>(null);
+
+  const INVITE_URL = "https://crybabygolf.lovable.app/auth";
 
   const loadAll = async () => {
     if (!user) return;
@@ -119,7 +112,6 @@ export default function FriendsPage() {
     try {
       await sendFriendRequest(targetUserId);
       setSearchResults(prev => prev.filter(p => p.user_id !== targetUserId));
-      setMatchedUsers(prev => prev.map(u => u.user_id === targetUserId ? { ...u, requestSent: true } : u));
       await loadAll();
       toast({ title: "Friend request sent!" });
     } catch (e: any) {
@@ -168,9 +160,6 @@ export default function FriendsPage() {
     return friendLedger.reduce((sum, s) => sum + Number(s.amount), 0);
   }, [friendLedger]);
 
-  // ─── Share invite link ───
-  const INVITE_URL = "https://crybabygolf.lovable.app/auth";
-
   const handleShareLink = async () => {
     const shareData = {
       title: "Join me on Crybaby Golf!",
@@ -198,63 +187,7 @@ export default function FriendsPage() {
     setTimeout(() => setLinkCopied(false), 2000);
   };
 
-  const matchEmails = async (emails: string[]) => {
-    setFindLoading(true);
-    try {
-      const uniqueEmails = [...new Set(emails.map(e => e.toLowerCase().trim()))];
-      const matched = await findUsersByEmails(uniqueEmails);
-      const matchedEmailSet = new Set(matched.map((m: any) => m.email.toLowerCase()));
-      const unmatched = uniqueEmails.filter(e => !matchedEmailSet.has(e));
-      setMatchedUsers(matched);
-      setUnmatchedEmails(unmatched);
-      setFindMode("contacts");
-    } catch (e) {
-      console.error(e);
-      toast({ title: "Error", description: "Failed to look up contacts", variant: "destructive" });
-    } finally {
-      setFindLoading(false);
-    }
-  };
-
-  const handleEmailSubmit = async () => {
-    const emails = emailInput
-      .split(/[,\n]+/)
-      .map(e => e.trim().toLowerCase())
-      .filter(e => e.includes("@"));
-    if (emails.length === 0) {
-      toast({ title: "Enter valid emails", description: "Separate multiple emails with commas." });
-      return;
-    }
-    setContactEmails(emails);
-    await matchEmails(emails);
-  };
-
-  const handleSendInvite = async (email: string) => {
-    setInviteSending(prev => new Set(prev).add(email));
-    try {
-      await sendInviteEmails([email], myProfile?.display_name || "A friend");
-      setInviteSent(prev => new Set(prev).add(email));
-      toast({ title: "Invite sent!", description: `Email invite sent to ${email}` });
-    } catch (e: any) {
-      toast({ title: "Failed to send", description: e.message, variant: "destructive" });
-    } finally {
-      setInviteSending(prev => {
-        const next = new Set(prev);
-        next.delete(email);
-        return next;
-      });
-    }
-  };
-
   const goBack = () => {
-    if (view === "find") {
-      setFindMode("menu");
-      setMatchedUsers([]);
-      setUnmatchedEmails([]);
-      setContactEmails([]);
-      setEmailInput("");
-      setInviteSent(new Set());
-    }
     setView("list");
     setSearchQuery("");
     setSearchResults([]);
@@ -273,18 +206,18 @@ export default function FriendsPage() {
       {/* Page header */}
       <div className="px-4 pt-4 pb-2 flex justify-between items-center">
         <h1 className="text-2xl font-extrabold text-foreground tracking-tight">
-          {view === "ledger" ? "Ledger" : view === "find" ? "Find Friends" : view === "search" ? "Search" : "Friends"}
+          {view === "ledger" ? "Ledger" : view === "search" ? "Find Friends" : "Friends"}
         </h1>
         <div className="flex gap-2">
           {view === "list" && (
             <>
-              <button onClick={() => { setView("find"); setFindMode("menu"); }}
+              <button onClick={handleShareLink}
                 className="px-3 py-2 rounded-xl border border-border bg-card text-foreground text-xs font-semibold cursor-pointer hover:border-primary/30 transition-colors flex items-center gap-1.5">
-                <UserPlus size={14} /> Find Friends
+                <Share2 size={14} /> Invite
               </button>
               <button onClick={() => setView("search")}
                 className="px-3 py-2 rounded-xl border-none bg-primary text-primary-foreground text-xs font-bold cursor-pointer hover:opacity-90 transition-opacity flex items-center gap-1.5">
-                <Search size={14} /> Search
+                <Search size={14} /> Find
               </button>
             </>
           )}
@@ -298,191 +231,65 @@ export default function FriendsPage() {
       </div>
 
       <div className="px-4 flex flex-col gap-4">
-        {/* ─── FIND FRIENDS VIEW ─── */}
-        {view === "find" && findMode === "menu" && (
-          <div className="flex flex-col gap-3">
-            <div className="bg-card rounded-2xl p-5 border border-border text-center">
-              <UserPlus size={32} className="mx-auto text-primary mb-3" />
-              <h3 className="text-base font-bold text-foreground mb-1">Invite your golf buddies</h3>
-              <p className="text-sm text-muted-foreground">
-                Share a link via text, WhatsApp, or any app — or search by email to find friends already on Crybaby.
-              </p>
-            </div>
-
-            <button onClick={handleShareLink}
-              className="w-full p-4 rounded-2xl border border-border bg-card cursor-pointer text-left hover:border-primary/30 hover:shadow-sm transition-all flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Share2 size={20} className="text-primary" />
-              </div>
-              <div className="flex-1">
-                <div className="text-sm font-semibold text-foreground">Share Invite Link</div>
-                <div className="text-xs text-muted-foreground">Send via text, WhatsApp, or any app</div>
-              </div>
-              <ChevronRight size={16} className="text-muted-foreground" />
-            </button>
-
-            <button onClick={handleCopyLink}
-              className="w-full p-4 rounded-2xl border border-border bg-card cursor-pointer text-left hover:border-primary/30 hover:shadow-sm transition-all flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center">
-                {linkCopied ? <Check size={20} className="text-primary" /> : <Copy size={20} className="text-accent-foreground" />}
-              </div>
-              <div className="flex-1">
-                <div className="text-sm font-semibold text-foreground">{linkCopied ? "Copied!" : "Copy Link"}</div>
-                <div className="text-xs text-muted-foreground">Paste the invite link anywhere</div>
-              </div>
-            </button>
-
-            <button onClick={() => setFindMode("email")}
-              className="w-full p-4 rounded-2xl border border-border bg-card cursor-pointer text-left hover:border-primary/30 hover:shadow-sm transition-all flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center">
-                <Mail size={20} className="text-accent-foreground" />
-              </div>
-              <div className="flex-1">
-                <div className="text-sm font-semibold text-foreground">Find by Email</div>
-                <div className="text-xs text-muted-foreground">Look up friends already on Crybaby</div>
-              </div>
-              <ChevronRight size={16} className="text-muted-foreground" />
-            </button>
-          </div>
-        )}
-        {view === "find" && findMode === "email" && matchedUsers.length === 0 && unmatchedEmails.length === 0 && (
-          <div className="flex flex-col gap-3">
-            <div className="bg-card rounded-2xl p-4 border border-border">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">
-                Enter email addresses
-              </label>
-              <textarea
-                value={emailInput}
-                onChange={e => setEmailInput(e.target.value)}
-                placeholder={"john@example.com\njane@example.com"}
-                rows={4}
-                className="w-full border border-border rounded-xl p-3 bg-background text-sm text-foreground outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 resize-none placeholder:text-muted-foreground"
-              />
-              <p className="text-xs text-muted-foreground mt-1.5">Separate multiple emails with commas or new lines</p>
-              <button
-                onClick={handleEmailSubmit}
-                disabled={findLoading || !emailInput.trim()}
-                className="w-full mt-3 p-3 rounded-xl border-none bg-primary text-primary-foreground text-sm font-bold cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {findLoading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
-                {findLoading ? "Searching..." : "Find Friends"}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Results (shared for contacts + email) */}
-        {view === "find" && (matchedUsers.length > 0 || unmatchedEmails.length > 0) && (
-          <div className="flex flex-col gap-4">
-            {/* Matched users */}
-            {matchedUsers.length > 0 && (
-              <div className="bg-card rounded-2xl border border-border overflow-hidden">
-                <div className="px-4 py-3 border-b border-border">
-                  <span className="text-xs font-bold text-primary uppercase tracking-wider">
-                    Already on Crybaby ({matchedUsers.length})
-                  </span>
-                </div>
-                {matchedUsers.map((u: any, i: number) => {
-                  const alreadyConnected = existingRelationships.has(u.user_id);
-                  return (
-                    <div key={u.user_id} className={`flex items-center gap-3 px-4 py-3 ${i < matchedUsers.length - 1 ? "border-b border-border" : ""}`}>
-                      <UserAvatar profile={u} size={40} />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-semibold text-foreground truncate">{u.display_name}</div>
-                        {u.handicap != null && (
-                          <span className="text-xs font-mono text-primary font-semibold">HCP {u.handicap}</span>
-                        )}
-                      </div>
-                      {alreadyConnected || u.requestSent ? (
-                        <span className="flex items-center gap-1 text-xs font-semibold text-muted-foreground">
-                          <CheckCircle2 size={14} /> {u.requestSent ? "Sent" : "Connected"}
-                        </span>
-                      ) : (
-                        <button onClick={() => handleSendRequest(u.user_id)}
-                          className="px-3 py-1.5 rounded-lg border-none bg-primary text-primary-foreground text-xs font-bold cursor-pointer hover:opacity-90 transition-opacity">
-                          Add
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Unmatched emails — invite */}
-            {unmatchedEmails.length > 0 && (
-              <div className="bg-card rounded-2xl border border-border overflow-hidden">
-                <div className="px-4 py-3 border-b border-border">
-                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                    Not on Crybaby yet ({unmatchedEmails.length})
-                  </span>
-                </div>
-                {unmatchedEmails.map((email, i) => (
-                  <div key={email} className={`flex items-center gap-3 px-4 py-3 ${i < unmatchedEmails.length - 1 ? "border-b border-border" : ""}`}>
-                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                      <Mail size={16} className="text-muted-foreground" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm text-foreground truncate">{email}</div>
-                    </div>
-                    {inviteSent.has(email) ? (
-                      <span className="flex items-center gap-1 text-xs font-semibold text-primary">
-                        <CheckCircle2 size={14} /> Invited
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => handleSendInvite(email)}
-                        disabled={inviteSending.has(email)}
-                        className="px-3 py-1.5 rounded-lg border border-primary text-primary bg-transparent text-xs font-bold cursor-pointer hover:bg-primary/5 transition-colors disabled:opacity-50 flex items-center gap-1"
-                      >
-                        {inviteSending.has(email) ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
-                        Invite
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <button onClick={() => { setMatchedUsers([]); setUnmatchedEmails([]); setFindMode("menu"); }}
-              className="text-sm text-primary font-semibold bg-transparent border-none cursor-pointer hover:underline self-center">
-              Search more contacts
-            </button>
-          </div>
-        )}
-
-        {/* ─── SEARCH VIEW ─── */}
+        {/* ─── SEARCH / FIND VIEW ─── */}
         {view === "search" && (
           <>
+            <div className="bg-card rounded-2xl p-4 border border-border">
+              <p className="text-xs text-muted-foreground mb-3">
+                Search by name, GHIN number, home course, or state
+              </p>
+              <div className="flex gap-2">
+                <input
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && handleSearch()}
+                  placeholder="Name, GHIN, course, or state..."
+                  className="flex-1 p-3 rounded-xl border border-border bg-background text-sm text-foreground outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 placeholder:text-muted-foreground"
+                  style={{ fontSize: 16 }}
+                />
+                <button onClick={handleSearch} disabled={searching}
+                  className="px-4 rounded-xl border-none bg-primary text-primary-foreground text-sm font-bold cursor-pointer disabled:opacity-50 flex items-center justify-center"
+                  style={{ minWidth: 48 }}>
+                  {searching ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Invite link fallback */}
             <div className="flex gap-2">
-              <input
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && handleSearch()}
-                placeholder="Search by name..."
-                className="flex-1 p-3 rounded-2xl border border-border bg-card text-sm text-foreground outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 placeholder:text-muted-foreground"
-              />
-              <button onClick={handleSearch} disabled={searching}
-                className="px-4 rounded-2xl border-none bg-primary text-primary-foreground text-sm font-bold cursor-pointer disabled:opacity-50">
-                {searching ? "..." : "🔍"}
+              <button onClick={handleShareLink}
+                className="flex-1 p-3 rounded-xl border border-border bg-card text-foreground text-xs font-semibold cursor-pointer hover:border-primary/30 transition-colors flex items-center justify-center gap-1.5">
+                <Share2 size={14} /> Share Invite Link
+              </button>
+              <button onClick={handleCopyLink}
+                className="p-3 rounded-xl border border-border bg-card text-foreground text-xs font-semibold cursor-pointer hover:border-primary/30 transition-colors flex items-center justify-center gap-1.5"
+                style={{ minWidth: 48 }}>
+                {linkCopied ? <Check size={14} className="text-primary" /> : <Copy size={14} />}
               </button>
             </div>
 
             {searchResults.length > 0 && (
               <div className="bg-card rounded-2xl overflow-hidden border border-border">
-                {searchResults.map((p, i) => {
+                {searchResults.map((p: any, i: number) => {
                   const alreadyConnected = existingRelationships.has(p.user_id);
+                  const nameDisplay = [p.first_name, p.last_name].filter(Boolean).join(" ") || p.display_name;
                   return (
-                    <div key={p.id} className={`flex items-center gap-3 px-4 py-3 ${i < searchResults.length - 1 ? "border-b border-border" : ""}`}>
+                    <div key={p.user_id} className={`flex items-center gap-3 px-4 py-3 ${i < searchResults.length - 1 ? "border-b border-border" : ""}`}>
                       <UserAvatar profile={p} size={40} />
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-semibold text-foreground">{p.display_name}</div>
-                        <div className="flex gap-2 items-center">
+                        <div className="text-sm font-semibold text-foreground truncate">{nameDisplay}</div>
+                        <div className="flex flex-wrap gap-x-2 gap-y-0.5 items-center">
                           {p.handicap != null && (
                             <span className="text-xs font-mono text-primary font-semibold">HCP {p.handicap}</span>
                           )}
                           {p.home_course && (
-                            <span className="text-xs text-muted-foreground">{p.home_course}</span>
+                            <span className="text-xs text-muted-foreground truncate">{p.home_course}</span>
+                          )}
+                          {p.state && (
+                            <span className="text-xs text-muted-foreground">{p.state}</span>
+                          )}
+                          {p.ghin && (
+                            <span className="text-xs text-muted-foreground font-mono">GHIN {p.ghin}</span>
                           )}
                         </div>
                       </div>
@@ -491,7 +298,7 @@ export default function FriendsPage() {
                       ) : (
                         <button onClick={() => handleSendRequest(p.user_id)}
                           className="px-3 py-1.5 rounded-lg border-none bg-primary text-primary-foreground text-xs font-bold cursor-pointer hover:opacity-90">
-                          Follow
+                          Add
                         </button>
                       )}
                     </div>
@@ -639,7 +446,7 @@ export default function FriendsPage() {
                   <UserPlus size={32} className="mx-auto text-muted-foreground mb-2" />
                   <div className="text-sm font-semibold text-muted-foreground">No friends yet</div>
                   <div className="text-xs text-muted-foreground mt-1">
-                    Tap "Find Friends" to get started
+                    Tap "Find" to search or "Invite" to share a link
                   </div>
                 </div>
               ) : (

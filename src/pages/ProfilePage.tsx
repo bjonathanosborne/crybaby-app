@@ -18,7 +18,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [ledgerPeriod, setLedgerPeriod] = useState<LedgerPeriod>("monthly");
   const [editingProfile, setEditingProfile] = useState(false);
-  const [editForm, setEditForm] = useState({ display_name: "", handicap: "", home_course: "", bio: "" });
+  const [editForm, setEditForm] = useState({ display_name: "", handicap: "", home_course: "", bio: "", first_name: "", last_name: "", state: "", ghin: "" });
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
@@ -58,6 +58,10 @@ export default function ProfilePage() {
         handicap: p.handicap?.toString() || "",
         home_course: p.home_course || "",
         bio: p.bio || "",
+        first_name: p.first_name || "",
+        last_name: p.last_name || "",
+        state: p.state || "",
+        ghin: p.ghin || "",
       });
     }).finally(() => setLoading(false));
   }, [user]);
@@ -100,11 +104,21 @@ export default function ProfilePage() {
         handicap: editForm.handicap ? Number(editForm.handicap) : null,
         home_course: editForm.home_course || null,
         bio: editForm.bio || null,
+        first_name: editForm.first_name || "",
+        last_name: editForm.last_name || "",
+        state: editForm.state || "",
+        ghin: editForm.ghin || null,
       });
-      setProfile((prev: any) => ({ ...prev, ...editForm, handicap: editForm.handicap ? Number(editForm.handicap) : null }));
+      setProfile((prev: any) => ({
+        ...prev,
+        ...editForm,
+        handicap: editForm.handicap ? Number(editForm.handicap) : null,
+      }));
       setEditingProfile(false);
+      toast({ title: "Profile saved!" });
     } catch (e) {
       console.error(e);
+      toast({ title: "Failed to save", variant: "destructive" });
     }
   };
 
@@ -168,12 +182,24 @@ export default function ProfilePage() {
 
           {editingProfile ? (
             <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input value={editForm.first_name} onChange={e => setEditForm(f => ({ ...f, first_name: e.target.value }))}
+                  placeholder="First Name" style={{ ...inputStyle, flex: 1 }} />
+                <input value={editForm.last_name} onChange={e => setEditForm(f => ({ ...f, last_name: e.target.value }))}
+                  placeholder="Last Name" style={{ ...inputStyle, flex: 1 }} />
+              </div>
               <input value={editForm.display_name} onChange={e => setEditForm(f => ({ ...f, display_name: e.target.value }))}
                 placeholder="Display Name" style={inputStyle} />
-              <input value={editForm.handicap} onChange={e => setEditForm(f => ({ ...f, handicap: e.target.value }))}
-                placeholder="Handicap" type="number" style={inputStyle} />
+              <div style={{ display: "flex", gap: 8 }}>
+                <input value={editForm.handicap} onChange={e => setEditForm(f => ({ ...f, handicap: e.target.value }))}
+                  placeholder="Handicap" type="number" style={{ ...inputStyle, flex: 1 }} />
+                <input value={editForm.ghin} onChange={e => setEditForm(f => ({ ...f, ghin: e.target.value }))}
+                  placeholder="GHIN #" style={{ ...inputStyle, flex: 1 }} />
+              </div>
               <input value={editForm.home_course} onChange={e => setEditForm(f => ({ ...f, home_course: e.target.value }))}
-                placeholder="Home Course" style={inputStyle} />
+                placeholder="Home Course / Club" style={inputStyle} />
+              <input value={editForm.state} onChange={e => setEditForm(f => ({ ...f, state: e.target.value }))}
+                placeholder="State (e.g. CA, TX, FL)" style={inputStyle} />
               <textarea value={editForm.bio} onChange={e => setEditForm(f => ({ ...f, bio: e.target.value }))}
                 placeholder="Bio" rows={2} style={{ ...inputStyle, resize: "none" }} />
               <div style={{ display: "flex", gap: 8 }}>
