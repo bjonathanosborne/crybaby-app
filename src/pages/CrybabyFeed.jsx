@@ -46,7 +46,7 @@ function UserAvatar({ profile, size = 36 }) {
 }
 
 // ─── Post Card ───
-function PostCard({ post, profile, comments, reactions, profiles, currentUserId, onAddComment, onReact }) {
+function PostCard({ post, profile, comments, reactions, profiles, currentUserId, onAddComment, onReact, onTapProfile }) {
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -79,11 +79,14 @@ function PostCard({ post, profile, comments, reactions, profiles, currentUserId,
     <div className="bg-card rounded-2xl overflow-hidden border border-border shadow-sm hover:shadow-md transition-shadow duration-300">
       {/* Header */}
       <div className="p-4 pb-3 flex gap-3 items-start">
-        <UserAvatar profile={profile} size={40} />
+        <button onClick={() => onTapProfile?.(post.user_id)} className="bg-transparent border-none p-0 cursor-pointer">
+          <UserAvatar profile={profile} size={40} />
+        </button>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-bold text-foreground truncate">
+          <button onClick={() => onTapProfile?.(post.user_id)}
+            className="text-sm font-bold text-foreground truncate bg-transparent border-none p-0 cursor-pointer text-left hover:underline">
             {profileName(profile)}
-          </div>
+          </button>
           <div className="text-xs text-muted-foreground mt-0.5">
             {timeAgo(post.created_at)}
           </div>
@@ -577,6 +580,7 @@ export default function CrybabyFeed() {
               currentUserId={user?.id}
               onAddComment={handleAddComment}
               onReact={handleReact}
+              onTapProfile={(uid) => navigate(`/profile/${uid}`)}
             />
           ))
         )}
