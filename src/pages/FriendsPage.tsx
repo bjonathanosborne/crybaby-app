@@ -208,36 +208,43 @@ export default function FriendsPage() {
     );
   }
 
-  return (
+    return (
     <div className="max-w-[420px] mx-auto min-h-screen bg-background pb-24">
       {/* Page header */}
       <div className="px-4 pt-4 pb-2 flex justify-between items-center">
         <h1 className="text-2xl font-extrabold text-foreground tracking-tight">
           {view === "ledger" ? "Ledger" : view === "search" ? "Find Friends" : "Friends"}
         </h1>
-        <div className="flex gap-2">
-          {view === "list" && (
-            <>
-              <button onClick={handleShareLink}
-                className="px-3 py-2 rounded-xl border border-border bg-card text-foreground text-xs font-semibold cursor-pointer hover:border-primary/30 transition-colors flex items-center gap-1.5">
-                <Share2 size={14} /> Invite
-              </button>
-              <button onClick={() => setView("search")}
-                className="px-3 py-2 rounded-xl border-none bg-primary text-primary-foreground text-xs font-bold cursor-pointer hover:opacity-90 transition-opacity flex items-center gap-1.5">
-                <Search size={14} /> Find
-              </button>
-            </>
-          )}
-          {view !== "list" && (
-            <button onClick={goBack}
-              className="px-3 py-2 rounded-xl border border-border bg-card text-foreground text-xs font-semibold cursor-pointer hover:border-primary/30 transition-colors flex items-center gap-1.5">
-              <ArrowLeft size={14} /> Back
-            </button>
-          )}
-        </div>
+        {view !== "list" && (
+          <button onClick={goBack}
+            className="px-3 py-2 rounded-xl border border-border bg-card text-foreground text-xs font-semibold cursor-pointer hover:border-primary/30 transition-colors flex items-center gap-1.5">
+            <ArrowLeft size={14} /> Back
+          </button>
+        )}
       </div>
 
       <div className="px-4 flex flex-col gap-4">
+        {/* ─── ACTION CARDS (list view only) ─── */}
+        {view === "list" && (
+          <div className="grid grid-cols-2 gap-3">
+            <button onClick={handleShareLink}
+              className="flex flex-col items-center gap-2 p-4 rounded-2xl border border-border bg-card cursor-pointer hover:border-primary/30 hover:shadow-sm transition-all">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Share2 size={20} className="text-primary" />
+              </div>
+              <span className="text-sm font-semibold text-foreground">Invite Friends</span>
+              <span className="text-[11px] text-muted-foreground text-center leading-tight">Share a link via text or any app</span>
+            </button>
+            <button onClick={() => setView("search")}
+              className="flex flex-col items-center gap-2 p-4 rounded-2xl border border-border bg-card cursor-pointer hover:border-primary/30 hover:shadow-sm transition-all">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Search size={20} className="text-primary" />
+              </div>
+              <span className="text-sm font-semibold text-foreground">Find Friends</span>
+              <span className="text-[11px] text-muted-foreground text-center leading-tight">Search by name, GHIN, or course</span>
+            </button>
+          </div>
+        )}
         {/* ─── SEARCH / FIND VIEW ─── */}
         {view === "search" && (
           <>
@@ -262,18 +269,6 @@ export default function FriendsPage() {
               </div>
             </div>
 
-            {/* Invite link fallback */}
-            <div className="flex gap-2">
-              <button onClick={handleShareLink}
-                className="flex-1 p-3 rounded-xl border border-border bg-card text-foreground text-xs font-semibold cursor-pointer hover:border-primary/30 transition-colors flex items-center justify-center gap-1.5">
-                <Share2 size={14} /> Share Invite Link
-              </button>
-              <button onClick={handleCopyLink}
-                className="p-3 rounded-xl border border-border bg-card text-foreground text-xs font-semibold cursor-pointer hover:border-primary/30 transition-colors flex items-center justify-center gap-1.5"
-                style={{ minWidth: 48 }}>
-                {linkCopied ? <Check size={14} className="text-primary" /> : <Copy size={14} />}
-              </button>
-            </div>
 
             {searchResults.length > 0 && (
               <div className="bg-card rounded-2xl overflow-hidden border border-border">
