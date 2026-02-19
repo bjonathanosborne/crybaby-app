@@ -513,6 +513,28 @@ function MechanicToggle({ id, config, enabled, onToggle, expanded, onExpand, set
           ))}
         </div>
       )}
+      {enabled && id === "pops" && (
+        <div style={{ padding: "0 16px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontFamily: font, fontSize: 12, color: "#6B7280" }}>Handicap %:</span>
+            {[60, 70, 80, 90, 100].map(pct => (
+              <button key={pct} onClick={() => onSettings(id, { ...settings, handicapPercent: pct })} style={{
+                minWidth: 42, height: 36, borderRadius: 8, border: "none", cursor: "pointer",
+                fontFamily: "'SF Mono', 'JetBrains Mono', monospace", fontSize: 12, fontWeight: 600,
+                background: (settings?.handicapPercent || 100) === pct ? "#16A34A" : "#F3F4F6",
+                color: (settings?.handicapPercent || 100) === pct ? "#fff" : "#6B7280",
+                transition: "all 0.15s ease",
+              }}>{pct}%</button>
+            ))}
+          </div>
+          <div style={{ fontFamily: font, fontSize: 11, color: "#9CA3AF", fontStyle: "italic" }}>
+            {(settings?.handicapPercent || 100) === 100
+              ? "Full handicap — strokes based on 100% of each player's index."
+              : `Playing at ${settings?.handicapPercent}% — a ${20} HCP gets ${Math.round(20 * (settings?.handicapPercent || 100) / 100)} strokes.`
+            }
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -568,6 +590,7 @@ export default function CrybabSetupWizard() {
     birdie_bonus: { multiplier: "2x" },
     carry_overs: { cap: "∞" },
     presses: { autoPress: "Optional (must request)" },
+    pops: { handicapPercent: 100 },
   });
   const [privacy, setPrivacy] = useState("friends");
   const [roundStarted, setRoundStarted] = useState(false);
@@ -1138,7 +1161,7 @@ export default function CrybabSetupWizard() {
                   )}
                   {enabledMechanics.has("pops") && (
                     <div style={{ fontFamily: font, fontSize: 13, color: "#6B7280" }}>
-                      🎯 Handicap strokes enabled{enabledMechanics.has("no_pops_par3") ? " (no pops on par 3s)" : ""}
+                      🎯 Handicap strokes at {mechanicSettings.pops?.handicapPercent || 100}%{enabledMechanics.has("no_pops_par3") ? " (no pops on par 3s)" : ""}
                     </div>
                   )}
                   {enabledMechanics.has("carry_overs") && (
