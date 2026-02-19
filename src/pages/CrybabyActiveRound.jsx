@@ -23,53 +23,6 @@ const MONO = "'SF Mono', 'JetBrains Mono', monospace";
 
 const PLAYER_COLORS = ["#16A34A", "#3B82F6", "#F59E0B", "#DC2626", "#8B5CF6", "#EC4899"];
 
-// --- TEAM LOGIC ---
-function getTeams(holeNumber, players) {
-  const drivers = players.filter(p => p.position === "driver");
-  const riders = players.filter(p => p.position === "rider");
-  const cartA = players.filter(p => p.cart === "A");
-  const cartB = players.filter(p => p.cart === "B");
-
-  if (holeNumber <= 5) {
-    // Drivers vs Riders
-    return {
-      teamA: { name: "Drivers", players: drivers, color: "#16A34A" },
-      teamB: { name: "Riders", players: riders, color: "#8B5CF6" },
-    };
-  } else if (holeNumber <= 10) {
-    // Others (cross-cart)
-    const othersA = [
-      players.find(p => p.cart === "A" && p.position === "driver"),
-      players.find(p => p.cart === "B" && p.position === "rider"),
-    ].filter(Boolean);
-    const othersB = [
-      players.find(p => p.cart === "B" && p.position === "driver"),
-      players.find(p => p.cart === "A" && p.position === "rider"),
-    ].filter(Boolean);
-    return {
-      teamA: { name: "Others 1", players: othersA, color: "#F59E0B" },
-      teamB: { name: "Others 2", players: othersB, color: "#EC4899" },
-    };
-  } else if (holeNumber <= 15) {
-    // Carts
-    return {
-      teamA: { name: "Cart A", players: cartA, color: "#3B82F6" },
-      teamB: { name: "Cart B", players: cartB, color: "#DC2626" },
-    };
-  } else {
-    // Crybaby holes — teams set dynamically
-    return null;
-  }
-}
-
-function getStrokesOnHole(playerHandicap, lowestHandicap, holeHandicapRank) {
-  const diff = playerHandicap - lowestHandicap;
-  if (diff <= 0) return 0;
-  if (diff >= 18 + holeHandicapRank) return 2;
-  if (diff >= holeHandicapRank) return 1;
-  return 0;
-}
-
 // --- COMMENTATOR ---
 const QUIPS = {
   birdie: [
@@ -373,8 +326,6 @@ function Leaderboard({ players, totals, currentCrybaby }) {
 }
 
 function HammerModal({ teams, currentValue, hammerDepth, lastHammerBy, onThrow, onAccept, onFold }) {
-  // If no hammer thrown yet, show team selection for who throws
-  // If hammer is pending (just thrown), show accept/fold for the OTHER team
   const isPending = lastHammerBy !== null;
   const throwingTeam = isPending ? (lastHammerBy === "A" ? teams.teamA : teams.teamB) : null;
   const receivingTeam = isPending ? (lastHammerBy === "A" ? teams.teamB : teams.teamA) : null;
@@ -397,7 +348,6 @@ function HammerModal({ teams, currentValue, hammerDepth, lastHammerBy, onThrow, 
 
         {!isPending ? (
           <>
-            {/* Who's throwing? */}
             <div style={{ fontFamily: FONT, fontSize: 14, color: "#6B7280", marginBottom: 20 }}>
               Which team is throwing the hammer?
             </div>
@@ -435,7 +385,6 @@ function HammerModal({ teams, currentValue, hammerDepth, lastHammerBy, onThrow, 
           </>
         ) : (
           <>
-            {/* Accept / Fold / Hammer Back */}
             <div style={{ fontFamily: FONT, fontSize: 14, color: "#6B7280", marginBottom: 6 }}>
               <span style={{ fontWeight: 700, color: throwingTeam.color }}>{throwingTeam.name}</span> {isHammerBack ? "hammered back!" : "threw the hammer!"}
             </div>
@@ -575,7 +524,6 @@ function CrybabSetupModal({ players, totals, onConfirm }) {
           💬 "Ladies and gentlemen, your crybaby: {crybaby.name}. Currently holding the bag at -${crybabAmount}."
         </div>
 
-        {/* Bet Amount */}
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontFamily: FONT, fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
             Crybaby Bet (max ${maxBet})
@@ -597,7 +545,6 @@ function CrybabSetupModal({ players, totals, onConfirm }) {
           </div>
         </div>
 
-        {/* Partner Selection */}
         <div style={{ marginBottom: 20 }}>
           <div style={{ fontFamily: FONT, fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
             Choose Partner
@@ -639,6 +586,238 @@ function CrybabSetupModal({ players, totals, onConfirm }) {
     </div>
   );
 }
+
+// --- FLIP: Random Team Modal ---
+function FlipTeamModal({ players, onConfirm }) {
+  const [teams, setTeams] = useState(() => generateFlipTeams(players));
+  const [animating, setAnimating] = useState(false);
+
+  const reshuffle = () => {
+    setAnimating(true);
+    // Quick shuffle animation
+    let count = 0;
+    const interval = setInterval(() => {
+      setTeams(generateFlipTeams(players));
+      count++;
+      if (count >= 6) {
+        clearInterval(interval);
+        setAnimating(false);
+      }
+    }, 120);
+  };
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(12px)",
+      display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100,
+      padding: 20,
+    }}>
+      <div style={{
+        background: "#fff", borderRadius: 24, padding: "28px 24px", maxWidth: 380, width: "100%",
+        textAlign: "center",
+      }}>
+        <div style={{ fontSize: 48, marginBottom: 8 }}>🪙</div>
+        <div style={{ fontFamily: FONT, fontSize: 22, fontWeight: 800, color: "#1A1A1A", marginBottom: 4 }}>
+          Flip Teams
+        </div>
+        <div style={{ fontFamily: FONT, fontSize: 14, color: "#6B7280", marginBottom: 20 }}>
+          Randomly paired — tap to re-flip
+        </div>
+
+        <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
+          <div style={{
+            flex: 1, padding: "16px 12px", borderRadius: 16,
+            background: teams.teamA.color + "10",
+            border: `2px solid ${teams.teamA.color}30`,
+            transition: "all 0.2s ease",
+            opacity: animating ? 0.5 : 1,
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: teams.teamA.color, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
+              {teams.teamA.name}
+            </div>
+            {teams.teamA.players.map(p => (
+              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0" }}>
+                <div style={{
+                  width: 28, height: 28, borderRadius: 14, background: p.color,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  color: "#fff", fontSize: 11, fontWeight: 700, fontFamily: FONT,
+                }}>{p.name[0]}</div>
+                <span style={{ fontFamily: FONT, fontSize: 13, fontWeight: 600, color: "#1A1A1A" }}>{p.name}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: "flex", alignItems: "center" }}>
+            <span style={{ fontFamily: FONT, fontSize: 12, fontWeight: 700, color: "#9CA3AF" }}>VS</span>
+          </div>
+          <div style={{
+            flex: 1, padding: "16px 12px", borderRadius: 16,
+            background: teams.teamB.color + "10",
+            border: `2px solid ${teams.teamB.color}30`,
+            transition: "all 0.2s ease",
+            opacity: animating ? 0.5 : 1,
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: teams.teamB.color, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
+              {teams.teamB.name}
+            </div>
+            {teams.teamB.players.map(p => (
+              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0" }}>
+                <div style={{
+                  width: 28, height: 28, borderRadius: 14, background: p.color,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  color: "#fff", fontSize: 11, fontWeight: 700, fontFamily: FONT,
+                }}>{p.name[0]}</div>
+                <span style={{ fontFamily: FONT, fontSize: 13, fontWeight: 600, color: "#1A1A1A" }}>{p.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={reshuffle} disabled={animating} style={{
+            flex: 1, padding: "14px", borderRadius: 14, border: "none", cursor: animating ? "not-allowed" : "pointer",
+            fontFamily: FONT, fontSize: 14, fontWeight: 700,
+            background: "#F3F4F6", color: "#6B7280",
+          }}>
+            🔄 Re-flip
+          </button>
+          <button onClick={() => onConfirm(teams)} style={{
+            flex: 1, padding: "14px", borderRadius: 14, border: "none", cursor: "pointer",
+            fontFamily: FONT, fontSize: 14, fontWeight: 700,
+            background: "#EC4899", color: "#fff",
+          }}>
+            Lock Teams 🪙
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- WOLF: Partner Selection Modal ---
+function WolfPartnerModal({ wolfPlayer, otherPlayers, holeNumber, holeValue, onSelectPartner, onGoLone }) {
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(12px)",
+      display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100,
+      padding: 20,
+    }}>
+      <div style={{
+        background: "#fff", borderRadius: 24, padding: "28px 24px", maxWidth: 380, width: "100%",
+        textAlign: "center",
+      }}>
+        <div style={{ fontSize: 48, marginBottom: 8 }}>🐺</div>
+        <div style={{ fontFamily: FONT, fontSize: 22, fontWeight: 800, color: "#1A1A1A", marginBottom: 4 }}>
+          Hole {holeNumber} — Wolf
+        </div>
+        <div style={{ fontFamily: FONT, fontSize: 14, color: "#6B7280", marginBottom: 6 }}>
+          <span style={{ fontWeight: 700, color: wolfPlayer.color }}>{wolfPlayer.name}</span> is the Wolf
+        </div>
+        <div style={{ fontFamily: FONT, fontSize: 12, color: "#9CA3AF", marginBottom: 20 }}>
+          Pick a partner or go lone for 2× payout
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
+          {otherPlayers.map(p => (
+            <button key={p.id} onClick={() => onSelectPartner(p.id)} style={{
+              display: "flex", alignItems: "center", gap: 12, padding: "14px 16px",
+              borderRadius: 14, border: "none", cursor: "pointer",
+              background: "#F9FAFB", transition: "all 0.15s ease",
+            }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: 18, background: p.color,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: "#fff", fontSize: 14, fontWeight: 700, fontFamily: FONT,
+              }}>{p.name[0]}</div>
+              <div style={{ flex: 1, textAlign: "left" }}>
+                <div style={{ fontFamily: FONT, fontSize: 14, fontWeight: 600, color: "#1A1A1A" }}>{p.name}</div>
+                <div style={{ fontFamily: MONO, fontSize: 11, color: "#9CA3AF" }}>HCP {p.handicap}</div>
+              </div>
+              <span style={{ fontFamily: FONT, fontSize: 12, fontWeight: 700, color: "#8B5CF6" }}>Pick →</span>
+            </button>
+          ))}
+        </div>
+
+        <button onClick={onGoLone} style={{
+          width: "100%", padding: "16px", borderRadius: 14, border: "none", cursor: "pointer",
+          fontFamily: FONT, fontSize: 15, fontWeight: 700,
+          background: "linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)",
+          color: "#fff",
+          boxShadow: "0 4px 12px rgba(139,92,246,0.3)",
+        }}>
+          🐺 Go Lone Wolf — 2× Payout
+        </button>
+
+        <div style={{
+          marginTop: 12, padding: "10px 14px", background: "#F5F3FF", borderRadius: 10,
+          fontFamily: FONT, fontSize: 12, color: "#7C3AED", fontStyle: "italic",
+          borderLeft: "3px solid #8B5CF6",
+          textAlign: "left",
+        }}>
+          💬 "The wolf surveys the pack. Choose wisely — or don't choose at all."
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- NASSAU: Press Modal ---
+function NassauPressModal({ currentHole, holeValue, nassauPresses, onPress, onClose }) {
+  const segment = currentHole <= 9 ? "Front 9" : "Back 9";
+  const pressCount = nassauPresses.filter(p => {
+    if (currentHole <= 9) return p.startHole <= 9;
+    return p.startHole > 9;
+  }).length;
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)",
+      display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100,
+      padding: 20,
+    }}>
+      <div style={{
+        background: "#fff", borderRadius: 24, padding: "28px 24px", maxWidth: 360, width: "100%",
+        textAlign: "center",
+      }}>
+        <div style={{ fontSize: 48, marginBottom: 8 }}>📌</div>
+        <div style={{ fontFamily: FONT, fontSize: 22, fontWeight: 800, color: "#1A1A1A", marginBottom: 4 }}>
+          Press
+        </div>
+        <div style={{ fontFamily: FONT, fontSize: 14, color: "#6B7280", marginBottom: 8 }}>
+          Start a new match within the {segment}
+        </div>
+        <div style={{ fontFamily: MONO, fontSize: 12, color: "#9CA3AF", marginBottom: 20 }}>
+          Active presses this segment: {pressCount} · ${holeValue} per press
+        </div>
+
+        <div style={{
+          padding: "12px 16px", background: "#FEF3C7", borderRadius: 12, marginBottom: 20,
+          fontFamily: FONT, fontSize: 13, color: "#92400E", fontStyle: "italic",
+          textAlign: "left", borderLeft: "3px solid #F59E0B",
+        }}>
+          💬 "A press starts a new bet from this hole through the end of the {segment.toLowerCase()}. Same stakes. More risk. More reward."
+        </div>
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={onClose} style={{
+            flex: 1, padding: "14px", borderRadius: 14, border: "none", cursor: "pointer",
+            fontFamily: FONT, fontSize: 14, fontWeight: 700,
+            background: "#F3F4F6", color: "#6B7280",
+          }}>
+            Cancel
+          </button>
+          <button onClick={() => { onPress(currentHole); onClose(); }} style={{
+            flex: 1, padding: "14px", borderRadius: 14, border: "none", cursor: "pointer",
+            fontFamily: FONT, fontSize: 14, fontWeight: 700,
+            background: "#16A34A", color: "#fff",
+          }}>
+            Press! 📌
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 // ============================================================
 // MAIN COMPONENT
@@ -768,12 +947,12 @@ export default function CrybabActiveRound() {
   const { players, course, settings } = round;
 
   const [currentHole, setCurrentHole] = useState(1);
-  const [scores, setScores] = useState({}); // { holeNum: { playerId: score } }
+  const [scores, setScores] = useState({});
   const [totals, setTotals] = useState(() => Object.fromEntries(players.map(p => [p.id, 0])));
-  const [holeResults, setHoleResults] = useState([]); // completed hole results
+  const [holeResults, setHoleResults] = useState([]);
   const [hammerDepth, setHammerDepth] = useState(0);
-  const [hammerPending, setHammerPending] = useState(false); // waiting for accept/fold
-  const [lastHammerBy, setLastHammerBy] = useState(null); // "A" or "B" — who threw last
+  const [hammerPending, setHammerPending] = useState(false);
+  const [lastHammerBy, setLastHammerBy] = useState(null);
   const [showHammer, setShowHammer] = useState(false);
   const [showResult, setShowResult] = useState(null);
   const [showCrybabSetup, setShowCrybabSetup] = useState(false);
@@ -785,12 +964,60 @@ export default function CrybabActiveRound() {
   const [showLiveFeed, setShowLiveFeed] = useState(false);
   const [isBroadcast, setIsBroadcast] = useState(dbRound?.is_broadcast || false);
 
+  // Flip state
+  const [flipTeams, setFlipTeams] = useState(null);
+  const [showFlipModal, setShowFlipModal] = useState(round.gameMode === 'flip');
+
+  // Wolf state
+  const [wolfState, setWolfState] = useState(() => initWolfState(players));
+  const [wolfPartner, setWolfPartner] = useState(null);
+  const [isLoneWolf, setIsLoneWolf] = useState(false);
+  const [showWolfModal, setShowWolfModal] = useState(false);
+
+  // Nassau state
+  const [nassauState, setNassauState] = useState(() => initNassauState(players));
+  const [nassauPresses, setNassauPresses] = useState([]);
+  const [showPressModal, setShowPressModal] = useState(false);
+
+  // Show wolf modal at the start of each hole for wolf game
+  useEffect(() => {
+    if (round.gameMode === 'wolf' && !showResult && !showCrybabSetup) {
+      setWolfPartner(null);
+      setIsLoneWolf(false);
+      setShowWolfModal(true);
+    }
+  }, [currentHole, round.gameMode]);
+
   const par = course.pars[currentHole - 1];
   const holeHandicap = course.handicaps[currentHole - 1];
   const lowestHandicap = Math.min(...players.map(p => p.handicap));
 
   const phase = getPhaseLabel(round.gameMode, currentHole);
-  const teams = supportsTeams(round.gameMode) ? getTeamsForHole(round.gameMode, currentHole, players) : null;
+
+  // For flip, pass the locked flip teams
+  const teams = round.gameMode === 'flip'
+    ? flipTeams
+    : round.gameMode === 'wolf'
+    ? (wolfPartner || isLoneWolf ? buildWolfTeams() : null)
+    : supportsTeams(round.gameMode) ? getTeamsForHole(round.gameMode, currentHole, players) : null;
+
+  function buildWolfTeams() {
+    const wolfId = getWolfForHole(wolfState, currentHole);
+    const wolf = players.find(p => p.id === wolfId);
+    if (!wolf) return null;
+    if (isLoneWolf) {
+      return {
+        teamA: { name: `${wolf.name} (Lone Wolf)`, players: [wolf], color: '#8B5CF6' },
+        teamB: { name: 'The Pack', players: players.filter(p => p.id !== wolfId), color: '#DC2626' },
+      };
+    }
+    const partner = players.find(p => p.id === wolfPartner);
+    if (!partner) return null;
+    return {
+      teamA: { name: 'Wolf Team', players: [wolf, partner], color: '#8B5CF6' },
+      teamB: { name: 'The Pack', players: players.filter(p => p.id !== wolfId && p.id !== wolfPartner), color: '#DC2626' },
+    };
+  }
 
   const currentScores = scores[currentHole] || {};
   const allScored = players.every(p => currentScores[p.id] != null);
@@ -841,22 +1068,16 @@ export default function CrybabActiveRound() {
     }));
   };
 
-  // Carry-over cap (from settings — in real app comes from setup)
-  const carryOverCap = "∞"; // would come from round.settings.carryOverCap
+  const carryOverCap = settings.carryOverCap || "∞";
 
   const handleHammer = () => {
-    if (hammerPending) {
-      // Already pending — this shouldn't happen, but safety
-      return;
-    }
-    // Open modal in "who's throwing?" mode
+    if (hammerPending) return;
     setLastHammerBy(null);
     setHammerPending(false);
     setShowHammer(true);
   };
 
   const handleHammerThrow = (teamId) => {
-    // Team selected who's throwing — now it's pending for the other team
     setLastHammerBy(teamId);
     setHammerPending(true);
   };
@@ -866,7 +1087,6 @@ export default function CrybabActiveRound() {
     setHammerPending(false);
     setShowHammer(false);
 
-    // Emit hammer event to live feed
     if (roundId && teams) {
       const acceptingTeam = lastHammerBy === "A" ? teams.teamB : teams.teamA;
       createRoundEvent({
@@ -884,29 +1104,25 @@ export default function CrybabActiveRound() {
 
   const handleHammerFold = () => {
     if (!hammerPending) {
-      // Cancel from team selection — just close
       setShowHammer(false);
       return;
     }
-    // Team that was hammered folds — the throwing team wins at current value
     const foldValue = round.holeValue * Math.pow(2, hammerDepth) + carryOver;
     const throwingTeamId = lastHammerBy;
-    const result = calculateFoldResult(foldValue, throwingTeamId);
+    const result = makeFoldResult(foldValue, throwingTeamId);
     setShowHammer(false);
     setHammerPending(false);
     setShowResult(result);
   };
 
   const handleHammerBack = () => {
-    // The team that just accepted can now hammer back
-    // Flip who's throwing
     const newThrower = lastHammerBy === "A" ? "B" : "A";
     setLastHammerBy(newThrower);
     setHammerPending(true);
     setShowHammer(true);
   };
 
-  const calculateFoldResult = (value, winnerTeamId) => {
+  const makeFoldResult = (value, winnerTeamId) => {
     if (!teams) return null;
     const winTeam = winnerTeamId === "A" ? teams.teamA : teams.teamB;
     const loseTeam = winnerTeamId === "A" ? teams.teamB : teams.teamA;
@@ -949,14 +1165,19 @@ export default function CrybabActiveRound() {
       return calculateNassauHoleResult(players, teams, cs, par, currentHole, round.holeValue, round.settings, lowestHandicap, holeHandicap);
     }
 
-    // Team-based games (DOC, Flip) — use team engine
-    if (!teams) return null;
-    const cs = scores[currentHole];
+    // Wolf — wolf vs pack scoring
+    if (gameMode === 'wolf') {
+      const wolfId = getWolfForHole(wolfState, currentHole);
+      return calculateWolfHoleResult(players, cs, par, round.holeValue, wolfId, wolfPartner, isLoneWolf, round.settings, lowestHandicap, holeHandicap);
+    }
 
-    // Calculate net scores
+    // Team-based games (DOC, Flip) — use inline team logic
+    if (!teams) return null;
+
+    // Calculate net scores using the imported getStrokesOnHole
     const netScores = {};
     players.forEach(p => {
-      const strokes = settings.pops ? getStrokesOnHole(p.handicap, lowestHandicap, holeHandicap) : 0;
+      const strokes = settings.pops ? getStrokesOnHole(p.handicap, lowestHandicap, holeHandicap, settings.handicapPercent) : 0;
       netScores[p.id] = cs[p.id] - strokes;
     });
 
@@ -964,8 +1185,7 @@ export default function CrybabActiveRound() {
     const teamABest = Math.min(...teams.teamA.players.map(p => netScores[p.id]));
     const teamBBest = Math.min(...teams.teamB.players.map(p => netScores[p.id]));
 
-    // Check for birdie bonus — GROSS scores only trigger the double
-    // BUT a net birdie by the opposing team FORCES A PUSH on the hole
+    // Birdie bonus
     const bestGross = Math.min(...Object.values(cs));
     const bestGrossPlayer = players.find(p => cs[p.id] === bestGross);
     const hasGrossBirdie = bestGross < par && settings.birdieBonus;
@@ -974,36 +1194,23 @@ export default function CrybabActiveRound() {
     let birdieForcedPush = false;
 
     if (hasGrossBirdie) {
-      // Which team has the gross birdie?
       const grossBirdieTeamA = teams.teamA.players.some(p => cs[p.id] < par);
       const grossBirdieTeamB = teams.teamB.players.some(p => cs[p.id] < par);
-
-      // Check if the opposing team has a net birdie
       const teamAHasNetBirdie = teams.teamA.players.some(p => netScores[p.id] < par);
       const teamBHasNetBirdie = teams.teamB.players.some(p => netScores[p.id] < par);
 
-      if (grossBirdieTeamA && teamBHasNetBirdie) {
-        // Team A has gross birdie, Team B covers with net birdie → forced push
-        birdieForcedPush = true;
-      } else if (grossBirdieTeamB && teamAHasNetBirdie) {
-        // Team B has gross birdie, Team A covers with net birdie → forced push
+      if ((grossBirdieTeamA && teamBHasNetBirdie) || (grossBirdieTeamB && teamAHasNetBirdie)) {
         birdieForcedPush = true;
       } else {
-        // Gross birdie stands — pot doubles
         birdieMultiplier = settings.birdieMultiplier;
       }
     }
 
-    // FORCED PUSH — net birdie cancels the gross birdie and the hole
     if (birdieForcedPush) {
       const rawCarry = round.holeValue * Math.pow(2, hammerDepth) + carryOver;
       let cappedCarry = rawCarry;
-      if (carryOverCap === "None") {
-        cappedCarry = 0;
-      } else if (carryOverCap !== "∞") {
-        const maxCarry = round.holeValue * parseInt(carryOverCap);
-        cappedCarry = Math.min(rawCarry, maxCarry);
-      }
+      if (carryOverCap === "None") cappedCarry = 0;
+      else if (carryOverCap !== "∞") cappedCarry = Math.min(rawCarry, round.holeValue * parseInt(carryOverCap));
       return {
         push: true,
         winnerName: null,
@@ -1018,24 +1225,17 @@ export default function CrybabActiveRound() {
     const holeVal = (round.holeValue * Math.pow(2, hammerDepth) + carryOver) * birdieMultiplier;
 
     if (teamABest === teamBBest) {
-      // Push — calculate carry-over with cap
       const rawCarry = round.holeValue * Math.pow(2, hammerDepth) * birdieMultiplier + carryOver;
       let cappedCarry = rawCarry;
-      if (carryOverCap === "None") {
-        cappedCarry = 0;
-      } else if (carryOverCap !== "∞") {
-        const maxCarry = round.holeValue * parseInt(carryOverCap);
-        cappedCarry = Math.min(rawCarry, maxCarry);
-      }
+      if (carryOverCap === "None") cappedCarry = 0;
+      else if (carryOverCap !== "∞") cappedCarry = Math.min(rawCarry, round.holeValue * parseInt(carryOverCap));
       return {
         push: true,
         winnerName: null,
         amount: 0,
         carryOver: cappedCarry,
         playerResults: players.map(p => ({ id: p.id, name: p.name, amount: 0 })),
-        quip: cappedCarry === 0
-          ? "Push. No carry-overs — clean slate next hole."
-          : getQuip("push"),
+        quip: cappedCarry === 0 ? "Push. No carry-overs — clean slate next hole." : getQuip("push"),
       };
     }
 
@@ -1045,40 +1245,23 @@ export default function CrybabActiveRound() {
 
     const playerResults = players.map(p => {
       const isWinner = winTeam.players.some(tp => tp.id === p.id);
-      return {
-        id: p.id,
-        name: p.name,
-        amount: isWinner ? holeVal : -holeVal,
-      };
+      return { id: p.id, name: p.name, amount: isWinner ? holeVal : -holeVal };
     });
 
-    // Generate quip (birdie forced push is already handled above and returned early)
     let quip;
     if (hasGrossBirdie && birdieMultiplier > 1) {
       quip = getQuip("birdie", { player: bestGrossPlayer.name });
     } else if (holeVal >= round.holeValue * 3) {
       quip = getQuip("big_swing", { amount: holeVal * 2 });
     } else {
-      quip = getQuip("team_win", {
-        team: winTeam.name,
-        losingTeam: loseTeam.name,
-        amount: holeVal,
-      });
+      quip = getQuip("team_win", { team: winTeam.name, losingTeam: loseTeam.name, amount: holeVal });
     }
 
-    return {
-      push: false,
-      winnerName: winTeam.name,
-      amount: holeVal,
-      carryOver: 0,
-      playerResults,
-      quip,
-    };
+    return { push: false, winnerName: winTeam.name, amount: holeVal, carryOver: 0, playerResults, quip };
   };
 
   const advanceHole = () => {
     if (showResult) {
-      // Apply results to totals
       const newTotals = { ...totals };
       showResult.playerResults.forEach(pr => {
         newTotals[pr.id] = (newTotals[pr.id] || 0) + pr.amount;
@@ -1092,14 +1275,36 @@ export default function CrybabActiveRound() {
       setShowResult(null);
       setPendingSync(ps => ps + 1);
 
+      // Update nassau state
+      if (round.gameMode === 'nassau' && !showResult.push) {
+        setNassauState(prev => {
+          const next = { ...prev };
+          const winnerId = showResult.playerResults.find(pr => pr.amount > 0)?.id;
+          if (winnerId) {
+            if (currentHole <= 9) {
+              next.frontMatch = { ...prev.frontMatch, [winnerId]: (prev.frontMatch[winnerId] || 0) + 1 };
+            } else {
+              next.backMatch = { ...prev.backMatch, [winnerId]: (prev.backMatch[winnerId] || 0) + 1 };
+            }
+            next.overallMatch = { ...prev.overallMatch, [winnerId]: (prev.overallMatch[winnerId] || 0) + 1 };
+
+            // Update presses
+            next.presses = prev.presses.map(press => {
+              if (currentHole >= press.startHole) {
+                return { ...press, match: { ...press.match, [winnerId]: (press.match[winnerId] || 0) + 1 } };
+              }
+              return press;
+            });
+          }
+          return next;
+        });
+      }
+
       // Emit live feed event
       if (roundId) {
-        const cs = scores[currentHole] || {};
-        const eventType = showResult.push ? "push"
-          : showResult.folded ? "hammer_fold"
-          : "team_win";
+        const holeScores = scores[currentHole] || {};
+        const eventType = showResult.push ? "push" : showResult.folded ? "hammer_fold" : "team_win";
 
-        // Emit a summary event for the hole
         createRoundEvent({
           roundId,
           holeNumber: currentHole,
@@ -1117,9 +1322,8 @@ export default function CrybabActiveRound() {
           },
         }).catch(err => console.error("Failed to emit round event:", err));
 
-        // Emit individual player score events for notable scores
         players.forEach(p => {
-          const score = cs[p.id];
+          const score = holeScores[p.id];
           if (score == null) return;
           const diff = score - par;
           if (diff <= -2 || diff === -1) {
@@ -1152,7 +1356,30 @@ export default function CrybabActiveRound() {
     setShowCrybabSetup(false);
   };
 
-  // Simulate connectivity changes
+  const handleFlipConfirm = (teams) => {
+    setFlipTeams(teams);
+    setShowFlipModal(false);
+  };
+
+  const handleWolfPartner = (partnerId) => {
+    setWolfPartner(partnerId);
+    setIsLoneWolf(false);
+    setShowWolfModal(false);
+  };
+
+  const handleLoneWolf = () => {
+    setWolfPartner(null);
+    setIsLoneWolf(true);
+    setShowWolfModal(false);
+  };
+
+  const handleNassauPress = (startHole) => {
+    const init = {};
+    players.forEach(p => { init[p.id] = 0; });
+    setNassauPresses(prev => [...prev, { startHole, match: init }]);
+  };
+
+  // Connectivity sim
   useEffect(() => {
     const interval = setInterval(() => {
       if (pendingSync > 0 && isOnline) {
@@ -1181,7 +1408,6 @@ export default function CrybabActiveRound() {
         </div>
 
         <div style={{ padding: "24px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
-          {/* Results */}
           {sorted.map((p, i) => {
             const amount = totals[p.id] || 0;
             const isCrybab = i === sorted.length - 1 && amount < 0;
@@ -1191,9 +1417,7 @@ export default function CrybabActiveRound() {
                 background: isCrybab ? "#FEF2F2" : "#fff", borderRadius: 16,
                 boxShadow: i === 0 ? "0 0 0 2px #16A34A, 0 4px 12px rgba(22,163,74,0.15)" : "0 1px 3px rgba(0,0,0,0.06)",
               }}>
-                <div style={{
-                  fontSize: 20, width: 32, textAlign: "center",
-                }}>{i === 0 ? "🏆" : isCrybab ? "🍼" : `#${i + 1}`}</div>
+                <div style={{ fontSize: 20, width: 32, textAlign: "center" }}>{i === 0 ? "🏆" : isCrybab ? "🍼" : `#${i + 1}`}</div>
                 <div style={{
                   width: 40, height: 40, borderRadius: 20, background: p.color,
                   display: "flex", alignItems: "center", justifyContent: "center",
@@ -1213,6 +1437,39 @@ export default function CrybabActiveRound() {
             );
           })}
 
+          {/* Nassau summary */}
+          {round.gameMode === 'nassau' && (
+            <div style={{
+              background: "#fff", borderRadius: 16, padding: 20,
+              boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+            }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>
+                Nassau Breakdown
+              </div>
+              {['Front 9', 'Back 9', 'Overall'].map((label, idx) => {
+                const match = idx === 0 ? nassauState.frontMatch : idx === 1 ? nassauState.backMatch : nassauState.overallMatch;
+                const sortedMatch = [...players].sort((a, b) => (match[b.id] || 0) - (match[a.id] || 0));
+                const topWins = match[sortedMatch[0]?.id] || 0;
+                return (
+                  <div key={label} style={{ marginBottom: 10 }}>
+                    <div style={{ fontFamily: FONT, fontSize: 12, fontWeight: 700, color: "#6B7280", marginBottom: 4 }}>{label}</div>
+                    {sortedMatch.map(p => (
+                      <div key={p.id} style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", fontFamily: MONO, fontSize: 12 }}>
+                        <span style={{ color: "#1A1A1A" }}>{p.name}</span>
+                        <span style={{ color: (match[p.id] || 0) === topWins && topWins > 0 ? "#16A34A" : "#9CA3AF" }}>{match[p.id] || 0} wins</span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+              {nassauPresses.length > 0 && (
+                <div style={{ marginTop: 8, fontFamily: MONO, fontSize: 11, color: "#F59E0B" }}>
+                  📌 {nassauPresses.length} press{nassauPresses.length > 1 ? "es" : ""} played
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Settlement */}
           <div style={{
             background: "#fff", borderRadius: 16, padding: 20, marginTop: 8,
@@ -1222,7 +1479,6 @@ export default function CrybabActiveRound() {
               Settlement
             </div>
             {(() => {
-              // Calculate who owes who
               const settlements = [];
               const balances = players.map(p => ({ ...p, balance: totals[p.id] || 0 }));
               const debtors = balances.filter(p => p.balance < 0).sort((a, b) => a.balance - b.balance);
@@ -1269,7 +1525,7 @@ export default function CrybabActiveRound() {
             </button>
           </div>
 
-          {/* Commentator Summary */}
+          {/* Recap */}
           <div style={{
             background: "#F0FDF4", borderRadius: 16, padding: "16px 18px",
             borderLeft: "4px solid #16A34A",
@@ -1302,6 +1558,10 @@ export default function CrybabActiveRound() {
     );
   }
 
+  // Wolf info for current hole
+  const wolfId = round.gameMode === 'wolf' ? getWolfForHole(wolfState, currentHole) : null;
+  const wolfPlayer = wolfId ? players.find(p => p.id === wolfId) : null;
+
   return (
     <div style={{
       maxWidth: 420, margin: "0 auto", minHeight: "100vh",
@@ -1325,7 +1585,6 @@ export default function CrybabActiveRound() {
             </span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {/* Broadcast toggle */}
             <button
               onClick={async () => {
                 const next = !isBroadcast;
@@ -1342,7 +1601,6 @@ export default function CrybabActiveRound() {
             >
               {isBroadcast ? "📡 Live" : "📡"}
             </button>
-            {/* Sync indicator */}
             <div style={{
               width: 8, height: 8, borderRadius: 4,
               background: pendingSync > 0 ? "#F59E0B" : "#16A34A",
@@ -1393,6 +1651,32 @@ export default function CrybabActiveRound() {
         </div>
       )}
 
+      {/* Wolf indicator */}
+      {round.gameMode === 'wolf' && wolfPlayer && !showWolfModal && (
+        <div style={{
+          margin: "8px 20px 0", padding: "10px 16px", background: "#F5F3FF", borderRadius: 12,
+          display: "flex", alignItems: "center", gap: 10,
+          borderLeft: "3px solid #8B5CF6",
+        }}>
+          <span style={{ fontSize: 20 }}>🐺</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontFamily: FONT, fontSize: 13, fontWeight: 700, color: "#7C3AED" }}>
+              {wolfPlayer.name} is the Wolf
+            </div>
+            <div style={{ fontFamily: MONO, fontSize: 11, color: "#9CA3AF" }}>
+              {isLoneWolf ? "Lone Wolf — 2× payout" : wolfPartner ? `Partner: ${players.find(p => p.id === wolfPartner)?.name}` : "Choosing..."}
+            </div>
+          </div>
+          <button onClick={() => setShowWolfModal(true)} style={{
+            padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer",
+            fontFamily: FONT, fontSize: 11, fontWeight: 700,
+            background: "#8B5CF620", color: "#8B5CF6",
+          }}>
+            Change
+          </button>
+        </div>
+      )}
+
       {/* Team Banner */}
       {teams && <TeamBanner teams={teams} holeValue={round.holeValue} hammerDepth={hammerDepth} />}
 
@@ -1423,10 +1707,11 @@ export default function CrybabActiveRound() {
         })}
       </div>
 
-      {/* Hammer Button */}
-      {settings.hammer && teams && !allScored && (
-        <div style={{ padding: "12px 20px", display: "flex", gap: 8 }}>
-          {hammerDepth === 0 ? (
+      {/* Action Buttons Row */}
+      <div style={{ padding: "12px 20px", display: "flex", gap: 8 }}>
+        {/* Hammer Button — for team games with hammer enabled */}
+        {settings.hammer && teams && !allScored && (
+          hammerDepth === 0 ? (
             <button onClick={handleHammer} style={{
               flex: 1, padding: "14px", borderRadius: 14, border: "none", cursor: "pointer",
               fontFamily: FONT, fontSize: 14, fontWeight: 700,
@@ -1449,7 +1734,28 @@ export default function CrybabActiveRound() {
             }}>
               {"🔨".repeat(Math.min(hammerDepth + 1, 5))} Hammer Back — ${round.holeValue * Math.pow(2, hammerDepth) + carryOver} → ${round.holeValue * Math.pow(2, hammerDepth + 1) + carryOver}
             </button>
-          )}
+          )
+        )}
+
+        {/* Nassau Press Button */}
+        {round.gameMode === 'nassau' && settings.presses && !allScored && (
+          <button onClick={() => setShowPressModal(true)} style={{
+            padding: "14px 18px", borderRadius: 14, border: "none", cursor: "pointer",
+            fontFamily: FONT, fontSize: 14, fontWeight: 700,
+            background: "#16A34A20", color: "#16A34A",
+          }}>
+            📌 Press
+          </button>
+        )}
+      </div>
+
+      {/* Nassau presses indicator */}
+      {round.gameMode === 'nassau' && nassauPresses.length > 0 && (
+        <div style={{
+          margin: "0 20px 8px", padding: "8px 14px", background: "#F0FDF4", borderRadius: 10,
+          fontFamily: MONO, fontSize: 11, fontWeight: 700, color: "#166534", textAlign: "center",
+        }}>
+          📌 {nassauPresses.length} active press{nassauPresses.length > 1 ? "es" : ""} · ${nassauPresses.length * round.holeValue} extra on the line
         </div>
       )}
 
@@ -1523,6 +1829,31 @@ export default function CrybabActiveRound() {
           players={players}
           totals={totals}
           onConfirm={handleCrybabConfirm}
+        />
+      )}
+      {showFlipModal && (
+        <FlipTeamModal
+          players={players}
+          onConfirm={handleFlipConfirm}
+        />
+      )}
+      {showWolfModal && wolfPlayer && (
+        <WolfPartnerModal
+          wolfPlayer={wolfPlayer}
+          otherPlayers={players.filter(p => p.id !== wolfId)}
+          holeNumber={currentHole}
+          holeValue={round.holeValue}
+          onSelectPartner={handleWolfPartner}
+          onGoLone={handleLoneWolf}
+        />
+      )}
+      {showPressModal && (
+        <NassauPressModal
+          currentHole={currentHole}
+          holeValue={round.holeValue}
+          nassauPresses={nassauPresses}
+          onPress={handleNassauPress}
+          onClose={() => setShowPressModal(false)}
         />
       )}
       {roundId && (
