@@ -34,7 +34,7 @@ export default function AppLayout() {
         <img src={crybabyLogo} alt="Crybaby" style={{ height: "120px", marginTop: "-30px", marginBottom: "-30px", objectFit: "contain" }} />
         <NotificationBell />
       </div>
-      <div style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 68px)" }}>
+      <div style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 76px)" }}>
         <Outlet />
       </div>
       <BottomNav />
