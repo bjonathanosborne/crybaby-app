@@ -48,7 +48,7 @@ const AppRoutes = () => (
       <Route path="/feed" element={<CrybabyFeed />} />
       <Route path="/friends" element={<FriendsPage />} />
       <Route path="/groups" element={<GroupsPage />} />
-      <Route path="/profile" element={<ProfilePage />} />
+      <Route path="/profile" element={<Navigate to="/home" replace />} />
       <Route path="/notifications/settings" element={<NotificationSettings />} />
       <Route path="/inbox" element={<InboxPage />} />
       <Route path="/stats" element={<StatsPage />} />
