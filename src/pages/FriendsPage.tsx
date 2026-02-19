@@ -95,11 +95,12 @@ export default function FriendsPage() {
     return friendship.user_id_a === user?.id ? friendship.user_id_b : friendship.user_id_a;
   };
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
+  const handleSearch = async (query?: string) => {
+    const q = (query ?? searchQuery).trim();
+    if (!q) { setSearchResults([]); return; }
     setSearching(true);
     try {
-      const results = await searchProfiles(searchQuery.trim());
+      const results = await searchProfiles(q);
       setSearchResults(results);
     } catch (e) {
       console.error(e);
@@ -108,10 +109,20 @@ export default function FriendsPage() {
     }
   };
 
+  // Debounced live search
+  useEffect(() => {
+    if (view !== "search") return;
+    if (!searchQuery.trim()) { setSearchResults([]); return; }
+    const timer = setTimeout(() => handleSearch(), 350);
+    return () => clearTimeout(timer);
+  }, [searchQuery, view]);
+
   const handleSendRequest = async (targetUserId: string) => {
     try {
       await sendFriendRequest(targetUserId);
       setSearchResults(prev => prev.filter(p => p.user_id !== targetUserId));
+      setSearchQuery("");
+      setSearchResults([]);
       await loadAll();
       toast({ title: "Friend request sent!" });
     } catch (e: any) {
@@ -248,71 +259,76 @@ export default function FriendsPage() {
         {/* ─── SEARCH / FIND VIEW ─── */}
         {view === "search" && (
           <>
-            <div className="bg-card rounded-2xl p-4 border border-border">
+            <div className="bg-card rounded-2xl p-4 border border-border relative">
               <p className="text-xs text-muted-foreground mb-3">
                 Search by name, GHIN number, home course, or state
               </p>
-              <div className="flex gap-2">
-                <input
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && handleSearch()}
-                  placeholder="Name, GHIN, course, or state..."
-                  className="flex-1 p-3 rounded-xl border border-border bg-background text-sm text-foreground outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 placeholder:text-muted-foreground"
-                  style={{ fontSize: 16 }}
-                />
-                <button onClick={handleSearch} disabled={searching}
-                  className="px-4 rounded-xl border-none bg-primary text-primary-foreground text-sm font-bold cursor-pointer disabled:opacity-50 flex items-center justify-center"
-                  style={{ minWidth: 48 }}>
-                  {searching ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
-                </button>
+              <div className="relative">
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      placeholder="Name, GHIN, course, or state..."
+                      autoFocus
+                      className="w-full p-3 pr-10 rounded-xl border border-border bg-background text-sm text-foreground outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 placeholder:text-muted-foreground"
+                      style={{ fontSize: 16 }}
+                    />
+                    {searching && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <Loader2 size={16} className="animate-spin text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Dropdown results */}
+                {searchQuery.trim() && (
+                  <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-card border border-border rounded-xl shadow-lg max-h-[320px] overflow-y-auto">
+                    {searchResults.length > 0 ? (
+                      searchResults.map((p: any, i: number) => {
+                        const alreadyConnected = existingRelationships.has(p.user_id);
+                        const nameDisplay = [p.first_name, p.last_name].filter(Boolean).join(" ") || p.display_name;
+                        return (
+                          <div key={p.user_id} className={`flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors ${i < searchResults.length - 1 ? "border-b border-border" : ""}`}>
+                            <UserAvatar profile={p} size={36} />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-semibold text-foreground truncate">{nameDisplay}</div>
+                              <div className="flex flex-wrap gap-x-2 gap-y-0.5 items-center">
+                                {p.handicap != null && (
+                                  <span className="text-xs font-mono text-primary font-semibold">HCP {p.handicap}</span>
+                                )}
+                                {p.home_course && (
+                                  <span className="text-xs text-muted-foreground truncate">{p.home_course}</span>
+                                )}
+                                {p.state && (
+                                  <span className="text-xs text-muted-foreground">{p.state}</span>
+                                )}
+                                {p.ghin && (
+                                  <span className="text-xs text-muted-foreground font-mono">GHIN {p.ghin}</span>
+                                )}
+                              </div>
+                            </div>
+                            {alreadyConnected ? (
+                              <span className="text-xs font-semibold text-muted-foreground">Connected</span>
+                            ) : (
+                              <button onClick={() => handleSendRequest(p.user_id)}
+                                className="px-3 py-1.5 rounded-lg border-none bg-primary text-primary-foreground text-xs font-bold cursor-pointer hover:opacity-90">
+                                Add
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })
+                    ) : !searching ? (
+                      <div className="py-4 text-center text-sm text-muted-foreground">
+                        No players found for "{searchQuery}"
+                      </div>
+                    ) : null}
+                  </div>
+                )}
               </div>
             </div>
-
-
-            {searchResults.length > 0 && (
-              <div className="bg-card rounded-2xl overflow-hidden border border-border">
-                {searchResults.map((p: any, i: number) => {
-                  const alreadyConnected = existingRelationships.has(p.user_id);
-                  const nameDisplay = [p.first_name, p.last_name].filter(Boolean).join(" ") || p.display_name;
-                  return (
-                    <div key={p.user_id} className={`flex items-center gap-3 px-4 py-3 ${i < searchResults.length - 1 ? "border-b border-border" : ""}`}>
-                      <UserAvatar profile={p} size={40} />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-semibold text-foreground truncate">{nameDisplay}</div>
-                        <div className="flex flex-wrap gap-x-2 gap-y-0.5 items-center">
-                          {p.handicap != null && (
-                            <span className="text-xs font-mono text-primary font-semibold">HCP {p.handicap}</span>
-                          )}
-                          {p.home_course && (
-                            <span className="text-xs text-muted-foreground truncate">{p.home_course}</span>
-                          )}
-                          {p.state && (
-                            <span className="text-xs text-muted-foreground">{p.state}</span>
-                          )}
-                          {p.ghin && (
-                            <span className="text-xs text-muted-foreground font-mono">GHIN {p.ghin}</span>
-                          )}
-                        </div>
-                      </div>
-                      {alreadyConnected ? (
-                        <span className="text-xs font-semibold text-muted-foreground">Connected</span>
-                      ) : (
-                        <button onClick={() => handleSendRequest(p.user_id)}
-                          className="px-3 py-1.5 rounded-lg border-none bg-primary text-primary-foreground text-xs font-bold cursor-pointer hover:opacity-90">
-                          Add
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            {searchQuery && !searching && searchResults.length === 0 && (
-              <div className="text-center py-5 text-sm text-muted-foreground">
-                No players found for "{searchQuery}"
-              </div>
-            )}
           </>
         )}
 
