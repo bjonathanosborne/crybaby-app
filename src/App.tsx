@@ -18,6 +18,7 @@ import JoinGroupPage from "./pages/JoinGroupPage";
 import NotificationSettings from "./pages/NotificationSettings";
 import InboxPage from "./pages/InboxPage";
 import StatsPage from "./pages/StatsPage";
+import UserProfilePage from "./pages/UserProfilePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -48,6 +49,7 @@ const AppRoutes = () => (
       <Route path="/friends" element={<FriendsPage />} />
       <Route path="/groups" element={<GroupsPage />} />
       <Route path="/profile" element={<ProfilePage />} />
+      <Route path="/profile/:userId" element={<UserProfilePage />} />
       <Route path="/notifications/settings" element={<NotificationSettings />} />
       <Route path="/inbox" element={<InboxPage />} />
       <Route path="/stats" element={<StatsPage />} />
