@@ -297,10 +297,15 @@ export default function ProfilePage() {
             </div>
           ) : (
             <>
-              <div style={{ fontSize: (profile?.display_name || "").length > 20 ? 16 : 22, fontWeight: 800, color: "#1A1A1A", marginTop: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%", padding: "0 8px" }}
-                title={profile?.display_name || "Player"}>
-                {profile?.display_name || "Player"}
-              </div>
+              {(() => {
+                const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || profile?.display_name || "Player";
+                return (
+                  <div style={{ fontSize: fullName.length > 20 ? 16 : 22, fontWeight: 800, color: "#1A1A1A", marginTop: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%", padding: "0 8px" }}
+                    title={fullName}>
+                    {fullName}
+                  </div>
+                );
+              })()}
               {profile?.handicap != null && (
                 <span style={{
                   fontFamily: MONO, fontSize: 13, fontWeight: 700, color: "#16A34A",
