@@ -4,6 +4,14 @@ import { loadProfile, updateProfile, loadMyRounds, loadSettlements, uploadUserAv
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { format, startOfMonth, startOfYear, parseISO } from "date-fns";
+import { AUSTIN_COURSES } from "@/data/constants";
+import { ChevronDown, Plus } from "lucide-react";
+
+const US_STATES = [
+  "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD",
+  "MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC",
+  "SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"
+];
 
 const FONT = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 const MONO = "'SF Mono', 'JetBrains Mono', monospace";
@@ -18,7 +26,11 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [ledgerPeriod, setLedgerPeriod] = useState<LedgerPeriod>("monthly");
   const [editingProfile, setEditingProfile] = useState(false);
-  const [editForm, setEditForm] = useState({ display_name: "", handicap: "", home_course: "", bio: "", first_name: "", last_name: "", state: "", ghin: "" });
+  const [editForm, setEditForm] = useState({ display_name: "", handicap: "", home_course: "", first_name: "", last_name: "", state: "", ghin: "" });
+  const [showAddCourse, setShowAddCourse] = useState(false);
+  const [newCourseName, setNewCourseName] = useState("");
+  const [newCourseCity, setNewCourseCity] = useState("");
+  const [userCourses, setUserCourses] = useState<any[]>([]);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
@@ -43,6 +55,11 @@ export default function ProfilePage() {
     }
   };
 
+  const loadUserCourses = async () => {
+    const { data } = await supabase.from("user_courses").select("*").order("name");
+    setUserCourses(data || []);
+  };
+
   useEffect(() => {
     if (!user) return;
     Promise.all([
@@ -57,13 +74,13 @@ export default function ProfilePage() {
         display_name: p.display_name || "",
         handicap: p.handicap?.toString() || "",
         home_course: p.home_course || "",
-        bio: p.bio || "",
         first_name: p.first_name || "",
         last_name: p.last_name || "",
         state: p.state || "",
         ghin: p.ghin || "",
       });
     }).finally(() => setLoading(false));
+    loadUserCourses();
   }, [user]);
 
   // Ledger calculations
@@ -103,7 +120,6 @@ export default function ProfilePage() {
         display_name: editForm.display_name,
         handicap: editForm.handicap ? Number(editForm.handicap) : null,
         home_course: editForm.home_course || null,
-        bio: editForm.bio || null,
         first_name: editForm.first_name || "",
         last_name: editForm.last_name || "",
         state: editForm.state || "",
@@ -193,21 +209,87 @@ export default function ProfilePage() {
               <div style={{ display: "flex", gap: 8 }}>
                 <input value={editForm.handicap} onChange={e => setEditForm(f => ({ ...f, handicap: e.target.value }))}
                   placeholder="Handicap" type="number" style={{ ...inputStyle, flex: 1 }} />
-                <input value={editForm.ghin} onChange={e => setEditForm(f => ({ ...f, ghin: e.target.value }))}
-                  placeholder="GHIN #" style={{ ...inputStyle, flex: 1 }} />
+                <div style={{ flex: 1, position: "relative" }}>
+                  <input value={editForm.ghin} disabled
+                    placeholder="GHIN #" style={{ ...inputStyle, flex: 1, opacity: 0.5, cursor: "not-allowed", background: "#F3F4F6" }} />
+                  <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", fontSize: 9, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase" }}>Coming Soon</span>
+                </div>
               </div>
-              <input value={editForm.home_course} onChange={e => setEditForm(f => ({ ...f, home_course: e.target.value }))}
-                placeholder="Home Course / Club" style={inputStyle} />
-              <input value={editForm.state} onChange={e => setEditForm(f => ({ ...f, state: e.target.value }))}
-                placeholder="State (e.g. CA, TX, FL)" style={inputStyle} />
-              <textarea value={editForm.bio} onChange={e => setEditForm(f => ({ ...f, bio: e.target.value }))}
-                placeholder="Bio" rows={2} style={{ ...inputStyle, resize: "none" }} />
+
+              {/* Home Course Dropdown */}
+              {!showAddCourse ? (
+                <select
+                  value={editForm.home_course}
+                  onChange={e => {
+                    if (e.target.value === "__add_new__") {
+                      setShowAddCourse(true);
+                    } else {
+                      setEditForm(f => ({ ...f, home_course: e.target.value }));
+                    }
+                  }}
+                  style={{ ...inputStyle, appearance: "none", backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center" }}
+                >
+                  <option value="">Select Home Course / Club</option>
+                  {AUSTIN_COURSES.map(c => (
+                    <option key={c.id} value={c.name}>{c.name}</option>
+                  ))}
+                  {userCourses.map(c => (
+                    <option key={c.id} value={c.name}>{c.name} (User Added)</option>
+                  ))}
+                  <option value="__add_new__">+ Add a Course / Club</option>
+                </select>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: 12, borderRadius: 10, border: "1px solid #E5E7EB", background: "#F9FAFB" }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#6B7280" }}>Add New Course</span>
+                  <input value={newCourseName} onChange={e => setNewCourseName(e.target.value)}
+                    placeholder="Course / Club Name" style={inputStyle} />
+                  <input value={newCourseCity} onChange={e => setNewCourseCity(e.target.value)}
+                    placeholder="City" style={inputStyle} />
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={async () => {
+                      if (!newCourseName.trim()) return;
+                      const { data, error } = await supabase.from("user_courses").insert({
+                        name: newCourseName.trim(),
+                        city: newCourseCity.trim(),
+                        state: editForm.state || "",
+                        created_by: user!.id,
+                      }).select().single();
+                      if (error) { toast({ title: "Error adding course", variant: "destructive" }); return; }
+                      setUserCourses(prev => [...prev, data]);
+                      setEditForm(f => ({ ...f, home_course: newCourseName.trim() }));
+                      setNewCourseName("");
+                      setNewCourseCity("");
+                      setShowAddCourse(false);
+                      toast({ title: "Course added!" });
+                    }} style={{ flex: 1, padding: 8, borderRadius: 8, border: "none", background: "#16A34A", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                      Add
+                    </button>
+                    <button onClick={() => { setShowAddCourse(false); setNewCourseName(""); setNewCourseCity(""); }}
+                      style={{ flex: 1, padding: 8, borderRadius: 8, border: "1px solid #E5E7EB", background: "#fff", color: "#6B7280", fontWeight: 600, fontSize: 12, cursor: "pointer" }}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* State Dropdown */}
+              <select
+                value={editForm.state}
+                onChange={e => setEditForm(f => ({ ...f, state: e.target.value }))}
+                style={{ ...inputStyle, appearance: "none", backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center" }}
+              >
+                <option value="">Select State</option>
+                {US_STATES.map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+
               <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={handleSaveProfile} style={{
                   flex: 1, padding: 10, borderRadius: 10, border: "none",
                   background: "#16A34A", color: "#fff", fontWeight: 700, fontFamily: FONT, cursor: "pointer",
                 }}>Save</button>
-                <button onClick={() => setEditingProfile(false)} style={{
+                <button onClick={() => { setEditingProfile(false); setShowAddCourse(false); }} style={{
                   flex: 1, padding: 10, borderRadius: 10, border: "1px solid #E5E7EB",
                   background: "#fff", color: "#6B7280", fontWeight: 600, fontFamily: FONT, cursor: "pointer",
                 }}>Cancel</button>
@@ -227,9 +309,6 @@ export default function ProfilePage() {
               )}
               {profile?.home_course && (
                 <div style={{ fontSize: 12, color: "#9CA3AF", marginTop: 6 }}>{profile.home_course}</div>
-              )}
-              {profile?.bio && (
-                <div style={{ fontSize: 13, color: "#6B7280", marginTop: 6, fontStyle: "italic" }}>{profile.bio}</div>
               )}
               <button onClick={() => setEditingProfile(true)} style={{
                 marginTop: 12, padding: "8px 16px", borderRadius: 10, border: "1px solid #E5E7EB",

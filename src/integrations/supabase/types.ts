@@ -592,6 +592,33 @@ export type Database = {
           },
         ]
       }
+      user_courses: {
+        Row: {
+          city: string
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          state: string
+        }
+        Insert: {
+          city?: string
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          state?: string
+        }
+        Update: {
+          city?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          state?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
