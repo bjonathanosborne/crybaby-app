@@ -1,7 +1,8 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Menu, Newspaper, Inbox, Users, UsersRound, User, Settings, Bell, LogOut } from "lucide-react";
+import { Menu, Newspaper, Inbox, Users, UsersRound, User, Bell, LogOut, ShieldCheck } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useState } from "react";
 import crybabyLogo from "@/assets/crybaby-logo.png";
 
@@ -18,6 +19,7 @@ export default function HamburgerMenu() {
   const navigate = useNavigate();
   const location = useLocation();
   const { signOut } = useAuth();
+  const { isAdmin } = useIsAdmin();
   const [open, setOpen] = useState(false);
 
   const handleNav = (path: string) => {
@@ -28,7 +30,6 @@ export default function HamburgerMenu() {
   const handleSignOut = async () => {
     setOpen(false);
     await signOut();
-    // Navigation handled by AuthContext/ProtectedRoute after session clears
   };
 
   return (
@@ -64,6 +65,19 @@ export default function HamburgerMenu() {
               </button>
             );
           })}
+
+          {isAdmin && (
+            <>
+              <div className="border-t border-border my-2" />
+              <button
+                onClick={() => handleNav("/admin")}
+                className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors cursor-pointer border-none bg-transparent text-left text-primary hover:bg-accent/50"
+              >
+                <ShieldCheck size={18} />
+                Admin Panel
+              </button>
+            </>
+          )}
         </nav>
 
         <div className="border-t border-border p-2">
