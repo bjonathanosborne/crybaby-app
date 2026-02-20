@@ -20,6 +20,12 @@ import InboxPage from "./pages/InboxPage";
 import StatsPage from "./pages/StatsPage";
 import UserProfilePage from "./pages/UserProfilePage";
 import NotFound from "./pages/NotFound";
+import AdminLayout from "./pages/admin/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminUsersPage from "./pages/admin/AdminUsersPage";
+import AdminRoundsPage from "./pages/admin/AdminRoundsPage";
+import AdminGroupsPage from "./pages/admin/AdminGroupsPage";
+import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
 
 const queryClient = new QueryClient();
 
@@ -55,6 +61,13 @@ const AppRoutes = () => (
       <Route path="/stats" element={<StatsPage />} />
     </Route>
     <Route path="/join/:code" element={<ProtectedRoute><JoinGroupPage /></ProtectedRoute>} />
+    <Route element={<AdminLayout />}>
+      <Route path="/admin" element={<AdminDashboard />} />
+      <Route path="/admin/users" element={<AdminUsersPage />} />
+      <Route path="/admin/rounds" element={<AdminRoundsPage />} />
+      <Route path="/admin/groups" element={<AdminGroupsPage />} />
+      <Route path="/admin/settings" element={<AdminSettingsPage />} />
+    </Route>
     <Route path="*" element={<NotFound />} />
   </Routes>
 );
