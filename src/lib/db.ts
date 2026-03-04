@@ -742,6 +742,24 @@ export async function loadMyRounds(limit = 10) {
   return data;
 }
 
+// Load the current user's active round (if any)
+export async function loadActiveRound() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  // Check rounds created by this user
+  const { data } = await supabase
+    .from("rounds")
+    .select("id, course, game_type, stakes, created_at")
+    .eq("created_by", user.id)
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return data || null;
+}
+
 // Load settlements for a user (for ledger)
 export async function loadSettlements(userId?: string) {
   const { data: { user } } = await supabase.auth.getUser();

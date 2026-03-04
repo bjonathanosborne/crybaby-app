@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import crybabyLogo from "@/assets/crybaby-logo.png";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useBlocker } from "react-router-dom";
 import { loadRound, updatePlayerScores, completeRound, createPost, saveAICommentary, insertSettlements, createRoundEvent, toggleBroadcast } from "@/lib/db";
 import { supabase } from "@/integrations/supabase/client";
 import RoundLiveFeed from "@/components/RoundLiveFeed";
@@ -862,6 +862,22 @@ export default function CrybabActiveRound() {
   const [settlementsSaved, setSettlementsSaved] = useState(false);
   const [totalsInitialized, setTotalsInitialized] = useState(false);
 
+  // Round is considered complete once we're past hole 18 with results saved
+  const roundIsComplete = settlementsSaved || (currentHole >= 18 && holeResults.length >= 17);
+
+  // Block in-app navigation while round is active
+  const blocker = useBlocker(({ currentLocation, nextLocation }) =>
+    !roundIsComplete && currentLocation.pathname !== nextLocation.pathname
+  );
+
+  // Warn on browser refresh / tab close while round is active
+  useEffect(() => {
+    if (roundIsComplete) return;
+    const handler = (e) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [roundIsComplete]);
+
   // Redirect if no round ID
   useEffect(() => {
     if (!roundId) {
@@ -1576,6 +1592,49 @@ export default function CrybabActiveRound() {
       background: "#F7F7F5", fontFamily: FONT,
       paddingBottom: 140,
     }}>
+
+      {/* Leave Round Confirmation Dialog */}
+      {blocker.state === "blocked" && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)",
+          backdropFilter: "blur(8px)", zIndex: 9999,
+          display: "flex", alignItems: "flex-end", justifyContent: "center",
+          padding: "0 0 24px",
+        }}>
+          <div style={{
+            background: "#fff", borderRadius: 24, padding: "28px 24px",
+            maxWidth: 380, width: "calc(100% - 32px)",
+            boxShadow: "0 24px 48px rgba(0,0,0,0.18)",
+          }}>
+            <div style={{ fontSize: 28, textAlign: "center", marginBottom: 12 }}>⛳</div>
+            <div style={{ fontFamily: FONT, fontSize: 18, fontWeight: 800, color: "#1A1A1A", textAlign: "center", marginBottom: 8 }}>
+              Leave this round?
+            </div>
+            <div style={{ fontFamily: FONT, fontSize: 14, color: "#6B7280", textAlign: "center", marginBottom: 24, lineHeight: 1.5 }}>
+              Scores are saved. You can resume from the Feed or home screen anytime.
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => blocker.reset()} style={{
+                flex: 1, padding: "14px", borderRadius: 14,
+                border: "2px solid #E5E7EB", background: "#fff",
+                fontFamily: FONT, fontSize: 15, fontWeight: 700,
+                color: "#1A1A1A", cursor: "pointer",
+              }}>
+                Stay in Round
+              </button>
+              <button onClick={() => blocker.proceed()} style={{
+                flex: 1, padding: "14px", borderRadius: 14,
+                border: "none", background: "#DC2626",
+                fontFamily: FONT, fontSize: 15, fontWeight: 700,
+                color: "#fff", cursor: "pointer",
+              }}>
+                Leave
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Top Bar */}
       <div style={{
         padding: "50px 20px 0",

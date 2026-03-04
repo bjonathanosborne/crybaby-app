@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { loadFeed, createPost, addComment, toggleReaction, loadProfile, loadBroadcastRounds, followRound, declineRound, loadFollowedRoundEvents } from "@/lib/db";
+import { loadFeed, createPost, addComment, toggleReaction, loadProfile, loadBroadcastRounds, followRound, declineRound, loadFollowedRoundEvents, loadActiveRound } from "@/lib/db";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { MessageCircle, ArrowUp, Radio, Eye, X, Trophy, Zap } from "lucide-react";
@@ -413,6 +413,7 @@ export default function CrybabyFeed() {
   const [loading, setLoading] = useState(true);
   const [broadcastRounds, setBroadcastRounds] = useState([]);
   const [followedEvents, setFollowedEvents] = useState([]);
+  const [activeRound, setActiveRound] = useState(null);
 
   const refreshFeed = async () => {
     try {
@@ -445,8 +446,12 @@ export default function CrybabyFeed() {
   };
 
   useEffect(() => {
-    Promise.all([refreshFeed(), loadProfile().then(p => setMyProfile(p)), refreshBroadcasts()])
-      .finally(() => setLoading(false));
+    Promise.all([
+      refreshFeed(),
+      loadProfile().then(p => setMyProfile(p)),
+      refreshBroadcasts(),
+      loadActiveRound().then(r => setActiveRound(r)).catch(() => {}),
+    ]).finally(() => setLoading(false));
 
     const channel = supabase
       .channel("feed-updates")
@@ -514,6 +519,22 @@ export default function CrybabyFeed() {
           + New Round
         </button>
       </div>
+
+      {/* Active Round Resume Banner */}
+      {activeRound && (
+        <div className="mx-4 mb-1 px-4 py-3 rounded-2xl bg-primary/10 border border-primary/20 flex items-center gap-3">
+          <span className="text-xl">⛳</span>
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] font-bold text-primary uppercase tracking-wider">Round In Progress</div>
+            <div className="text-sm font-semibold text-foreground truncate">{activeRound.course}</div>
+          </div>
+          <button
+            onClick={() => navigate(`/active-round?id=${activeRound.id}`)}
+            className="px-3 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold border-none cursor-pointer whitespace-nowrap hover:opacity-90">
+            Resume →
+          </button>
+        </div>
+      )}
 
       {/* Content */}
       <div className="p-4 flex flex-col gap-3.5">

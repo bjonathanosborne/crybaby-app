@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { createRound } from "@/lib/db";
+import { createRound, loadActiveRound, loadProfile } from "@/lib/db";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import crybabyLogo from "@/assets/crybaby-logo.png";
@@ -761,6 +761,29 @@ export default function CrybabSetupWizard() {
   });
   const [privacy, setPrivacy] = useState("friends");
   const [roundStarted, setRoundStarted] = useState(false);
+  const [activeRound, setActiveRound] = useState(null);
+  const [checkingActive, setCheckingActive] = useState(true);
+
+  // On mount: check for active round + pre-fill Player 1 with current user
+  useEffect(() => {
+    const init = async () => {
+      const [active, profile] = await Promise.all([
+        loadActiveRound().catch(() => null),
+        loadProfile().catch(() => null),
+      ]);
+      setActiveRound(active);
+      if (profile) {
+        const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(" ") || profile.display_name || "";
+        setPlayers(prev => {
+          const next = [...prev];
+          next[0] = { ...next[0], name: fullName, handicap: profile.handicap ?? null, userId: user?.id || null };
+          return next;
+        });
+      }
+      setCheckingActive(false);
+    };
+    init();
+  }, []);
 
   const format = GAME_FORMATS.find(g => g.id === selectedFormat);
   const course = AUSTIN_COURSES.find(c => c.id === selectedCourse);
@@ -924,6 +947,41 @@ export default function CrybabSetupWizard() {
       background: "#F7F7F5", fontFamily: font,
       paddingBottom: 140,
     }}>
+      {/* Active Round Resume Banner */}
+      {activeRound && (
+        <div style={{
+          margin: "12px 16px 0",
+          padding: "14px 16px",
+          background: "#FEF9C3",
+          border: "1.5px solid #FDE047",
+          borderRadius: 16,
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+        }}>
+          <span style={{ fontSize: 24 }}>⛳</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#A16207", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Round In Progress
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: "#1A1A1A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {activeRound.course}
+            </div>
+          </div>
+          <button
+            onClick={() => navigate(`/active-round?id=${activeRound.id}`)}
+            style={{
+              padding: "9px 14px", borderRadius: 12, border: "none",
+              background: "#16A34A", color: "#fff",
+              fontFamily: font, fontSize: 13, fontWeight: 700,
+              cursor: "pointer", whiteSpace: "nowrap",
+            }}
+          >
+            Resume →
+          </button>
+        </div>
+      )}
+
       {/* Header — sticky below AppLayout top bar */}
       <div style={{
         padding: "12px 16px 12px",

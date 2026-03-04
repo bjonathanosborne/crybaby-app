@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Trash2 } from "lucide-react";
 
 interface Round {
   id: string;
@@ -18,7 +20,7 @@ export default function AdminRoundsPage() {
   const [rounds, setRounds] = useState<Round[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const loadRounds = () => {
     supabase
       .from("rounds")
       .select("id, course, game_type, status, stakes, is_broadcast, created_at, created_by")
@@ -27,12 +29,25 @@ export default function AdminRoundsPage() {
         setRounds((data as Round[]) ?? []);
         setLoading(false);
       });
-  }, []);
+  };
+
+  useEffect(() => { loadRounds(); }, []);
 
   const statusColor = (s: string) => {
     if (s === "active") return "default";
     if (s === "complete") return "secondary";
     return "outline";
+  };
+
+  const setStatus = async (id: string, status: string) => {
+    await supabase.from("rounds").update({ status }).eq("id", id);
+    setRounds((prev) => prev.map((r) => r.id === id ? { ...r, status } : r));
+  };
+
+  const deleteRound = async (id: string, course: string) => {
+    if (!window.confirm(`Delete round at "${course || id}"? This cannot be undone.`)) return;
+    await supabase.from("rounds").delete().eq("id", id);
+    setRounds((prev) => prev.filter((r) => r.id !== id));
   };
 
   return (
@@ -52,16 +67,17 @@ export default function AdminRoundsPage() {
               <TableHead>Stakes</TableHead>
               <TableHead>Broadcast</TableHead>
               <TableHead>Created</TableHead>
+              <TableHead className="w-32">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">Loading...</TableCell>
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">Loading...</TableCell>
               </TableRow>
             ) : rounds.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">No rounds yet</TableCell>
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">No rounds yet</TableCell>
               </TableRow>
             ) : (
               rounds.map((r) => (
@@ -75,6 +91,32 @@ export default function AdminRoundsPage() {
                   <TableCell>{r.is_broadcast ? "Yes" : "No"}</TableCell>
                   <TableCell className="text-muted-foreground text-xs">
                     {new Date(r.created_at).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      {r.status === "active" && (
+                        <Button
+                          variant="outline" size="sm" className="h-7 text-xs px-2"
+                          onClick={() => setStatus(r.id, "complete")}
+                        >
+                          Complete
+                        </Button>
+                      )}
+                      {r.status === "complete" && (
+                        <Button
+                          variant="outline" size="sm" className="h-7 text-xs px-2"
+                          onClick={() => setStatus(r.id, "active")}
+                        >
+                          Reopen
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
+                        onClick={() => deleteRound(r.id, r.course)}
+                      >
+                        <Trash2 size={13} />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
