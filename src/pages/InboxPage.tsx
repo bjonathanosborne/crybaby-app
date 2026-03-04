@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   loadNotifications, markNotificationRead, markAllNotificationsRead,
   acceptFriendRequest, removeFriendship, loadUserProfile,
 } from "@/lib/db";
 import { formatDistanceToNow, parseISO } from "date-fns";
-import { Inbox, UserPlus, Users, Bell, Check, X, Loader2 } from "lucide-react";
+import { Inbox, UserPlus, Users, Bell, Check, X, Loader2, Radio } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -35,10 +36,12 @@ function UserAvatar({ profile, size = 36 }: { profile: any; size?: number }) {
 const ICON_MAP: Record<string, any> = {
   friend_request: UserPlus,
   group_join: Users,
+  round_broadcast_started: Radio,
 };
 
 export default function InboxPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [senderProfiles, setSenderProfiles] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
@@ -182,8 +185,15 @@ export default function InboxPage() {
                 key={notif.id}
                 className={`rounded-2xl border p-4 transition-colors ${
                   notif.read ? "border-border bg-card" : "border-primary/20 bg-accent"
-                }`}
-                onClick={() => !isFriendRequest && handleMarkRead(notif)}
+                } ${notif.type === "round_broadcast_started" ? "cursor-pointer" : ""}`}
+                onClick={() => {
+                  if (notif.type === "round_broadcast_started" && notif.data?.roundId) {
+                    markNotificationRead(notif.id).catch(() => {});
+                    navigate(`/watch?id=${notif.data.roundId}`);
+                  } else if (!isFriendRequest) {
+                    handleMarkRead(notif);
+                  }
+                }}
               >
                 <div className="flex gap-3 items-start">
                   {/* Icon or avatar */}

@@ -26,6 +26,7 @@ import AdminUsersPage from "./pages/admin/AdminUsersPage";
 import AdminRoundsPage from "./pages/admin/AdminRoundsPage";
 import AdminGroupsPage from "./pages/admin/AdminGroupsPage";
 import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
+import RoundSpectateView from "./pages/RoundSpectateView";
 
 const queryClient = new QueryClient();
 
@@ -59,6 +60,7 @@ const AppRoutes = () => (
       <Route path="/notifications/settings" element={<NotificationSettings />} />
       <Route path="/inbox" element={<InboxPage />} />
       <Route path="/stats" element={<StatsPage />} />
+      <Route path="/watch" element={<RoundSpectateView />} />
     </Route>
     <Route path="/join/:code" element={<ProtectedRoute><JoinGroupPage /></ProtectedRoute>} />
     <Route element={<AdminLayout />}>

@@ -303,7 +303,7 @@ function NewPostComposer({ profile, onPost }) {
 }
 
 // ─── Broadcast Announcement Card ───
-function BroadcastCard({ round, onFollow, onDecline }) {
+function BroadcastCard({ round, onFollow, onDecline, navigate }) {
   const profile = round.creatorProfile;
   const playerNames = (round.round_players || []).map(p => p.guest_name || "Player").slice(0, 4);
   const stakes = round.stakes || "";
@@ -341,9 +341,12 @@ function BroadcastCard({ round, onFollow, onDecline }) {
           )}
         </div>
         {isFollowing ? (
-          <div className="flex items-center justify-center gap-2 py-2.5 bg-primary/10 rounded-xl text-primary text-sm font-bold">
-            <Eye size={14} /> Following this round
-          </div>
+          <button
+            onClick={() => navigate(`/watch?id=${round.id}`)}
+            className="w-full flex items-center justify-center gap-2 py-2.5 bg-primary/10 rounded-xl text-primary text-sm font-bold border-none cursor-pointer hover:bg-primary/20 transition-colors"
+          >
+            <Eye size={14} /> Watch Live →
+          </button>
         ) : isDeclined ? (
           <div className="text-center py-2.5 text-muted-foreground text-xs italic">
             Declined
@@ -547,6 +550,7 @@ export default function CrybabyFeed() {
             round={round}
             onFollow={handleFollow}
             onDecline={handleDecline}
+            navigate={navigate}
           />
         ))}
 

@@ -88,6 +88,7 @@ export async function createRound({ gameType, course, courseDetails, stakes, hol
     }));
 
   // 1. Create the round
+  const autoBroadcast = privacy !== "private";
   const { data: round, error: roundError } = await supabase
     .from("rounds")
     .insert({
@@ -108,11 +109,25 @@ export async function createRound({ gameType, course, courseDetails, stakes, hol
       stakes: `$${holeValue}/hole`,
       status: "active",
       scorekeeper_mode: scorekeeperMode,
-    })
+      is_broadcast: autoBroadcast,
+    } as any)
     .select()
     .single();
 
   if (roundError) throw roundError;
+
+  // Notify friends if broadcasting
+  if (autoBroadcast) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("display_name, first_name, last_name")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    const name = profile
+      ? ([profile.first_name, profile.last_name].filter(Boolean).join(" ") || profile.display_name)
+      : "Someone";
+    notifyFriendsOfBroadcast(round.id, course.name, name).catch(() => {});
+  }
 
   // 2. Add players — use userId from setup for all linked players
   const playerInserts = players
@@ -901,12 +916,59 @@ export async function loadEventReactions(eventIds: string[]) {
 
 // ─── Round Broadcast & Follow ───
 
+export async function notifyFriendsOfBroadcast(roundId: string, course: string, creatorName: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const { data: friendships } = await supabase
+    .from("friendships")
+    .select("user_id_a, user_id_b")
+    .or(`user_id_a.eq.${user.id},user_id_b.eq.${user.id}`)
+    .eq("status", "accepted");
+
+  const friendIds = (friendships || []).map(f =>
+    f.user_id_a === user.id ? f.user_id_b : f.user_id_a
+  );
+
+  if (!friendIds.length) return;
+
+  const notifications = friendIds.map(friendId => ({
+    user_id: friendId,
+    type: "round_broadcast_started",
+    title: `${creatorName} is live at ${course}`,
+    body: "Tap to follow the round",
+    data: { roundId },
+    read: false,
+  }));
+
+  await supabase.from("notifications").insert(notifications);
+}
+
 export async function toggleBroadcast(roundId: string, isBroadcast: boolean) {
   const { error } = await supabase
     .from("rounds")
     .update({ is_broadcast: isBroadcast } as any)
     .eq("id", roundId);
   if (error) throw error;
+
+  if (isBroadcast) {
+    const { data: round } = await supabase
+      .from("rounds")
+      .select("course, created_by")
+      .eq("id", roundId)
+      .single();
+    if (round) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("display_name, first_name, last_name")
+        .eq("user_id", round.created_by)
+        .maybeSingle();
+      const name = profile
+        ? ([profile.first_name, profile.last_name].filter(Boolean).join(" ") || profile.display_name)
+        : "Someone";
+      await notifyFriendsOfBroadcast(roundId, round.course, name).catch(() => {});
+    }
+  }
 }
 
 export async function loadBroadcastRounds() {
