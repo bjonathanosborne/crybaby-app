@@ -27,6 +27,7 @@ import AdminRoundsPage from "./pages/admin/AdminRoundsPage";
 import AdminGroupsPage from "./pages/admin/AdminGroupsPage";
 import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
 import RoundSpectateView from "./pages/RoundSpectateView";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 
 const queryClient = new QueryClient();
 
@@ -47,6 +48,7 @@ const AppRoutes = () => (
   <Routes>
     <Route path="/auth" element={<AuthPage />} />
     <Route path="/reset-password" element={<ResetPassword />} />
+    <Route path="/privacy" element={<PrivacyPolicyPage />} />
     <Route path="/" element={<RootRedirect />} />
     <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
       <Route path="/home" element={<Navigate to="/profile" replace />} />
