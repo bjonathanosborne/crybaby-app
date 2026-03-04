@@ -99,11 +99,20 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     letter-spacing: -0.01em;
+    /* Prevent over-scroll bounce from showing white background on iOS */
+    overscroll-behavior-y: none;
+    /* Remove iOS tap flash on tappable elements */
+    -webkit-tap-highlight-color: transparent;
   }
 
   /* Prevent iOS zoom on input focus */
   input, select, textarea {
     font-size: 16px !important;
+  }
+
+  /* Faster tap response on buttons — skips 300ms delay */
+  button, a, [role="button"] {
+    touch-action: manipulation;
   }
 }
 

@@ -1,0 +1,29 @@
+{
+  "name": "Crybaby Golf",
+  "short_name": "Crybaby",
+  "description": "Golf's social scoring app. Track rounds, compete with friends, and settle the score.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#2d8653",
+  "icons": [
+    {
+      "src": "/images/logo-sm.png",
+      "sizes": "120x148",
+      "type": "image/png"
+    },
+    {
+      "src": "/images/logo-md.png",
+      "sizes": "200x247",
+      "type": "image/png"
+    },
+    {
+      "src": "/images/crybaby-logo-transparent.png",
+      "sizes": "759x939",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
