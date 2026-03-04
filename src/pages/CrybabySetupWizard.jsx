@@ -432,28 +432,24 @@ function PlayerRow({ player, index, onUpdate, onRemove, showCarts, cartOptions, 
         )}
 
         <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-          {!isLinkedUser && (
-            <input
-              value={player.ghin}
-              onChange={e => onUpdate(index, { ...player, ghin: e.target.value })}
-              placeholder="GHIN #"
-              style={{
-                fontFamily: mono, fontSize: 13, color: "#6B7280",
-                border: "1px solid #E5E7EB", borderRadius: 6, padding: "8px 10px",
-                width: 90, background: "#F9FAFB", outline: "none",
-                minHeight: 36, boxSizing: "border-box",
-              }}
-            />
-          )}
-          {player.handicap !== null && (
-            <span style={{
-              fontFamily: mono, fontSize: 12, fontWeight: 600,
-              color: "#16A34A", background: "#F0FDF4",
-              padding: "4px 8px", borderRadius: 6,
-            }}>
-              HCP {player.handicap}
-            </span>
-          )}
+          <input
+            type="number"
+            value={player.handicap ?? ""}
+            onChange={e => {
+              const val = e.target.value;
+              onUpdate(index, { ...player, handicap: val === "" ? null : parseFloat(val) });
+            }}
+            placeholder="HCP"
+            min="-10"
+            max="54"
+            step="0.1"
+            style={{
+              fontFamily: mono, fontSize: 13, color: "#6B7280",
+              border: "1px solid #E5E7EB", borderRadius: 6, padding: "8px 10px",
+              width: 72, background: "#F9FAFB", outline: "none",
+              minHeight: 36, boxSizing: "border-box",
+            }}
+          />
           {showCarts && (
             <select
               value={player.cart || ""}
@@ -811,23 +807,6 @@ export default function CrybabSetupWizard() {
     }
   }, [selectedFormat]);
 
-  // Simulate GHIN lookup
-  const simulateGHIN = useCallback((index, ghinNum) => {
-    if (ghinNum.length >= 7) {
-      const fakeHandicap = Math.round((parseInt(ghinNum.slice(-2)) / 100) * 30 * 10) / 10;
-      setPlayers(prev => {
-        const next = [...prev];
-        next[index] = { ...next[index], handicap: fakeHandicap };
-        return next;
-      });
-    }
-  }, []);
-
-  useEffect(() => {
-    players.forEach((p, i) => {
-      if (p.ghin.length >= 7 && p.handicap === null) simulateGHIN(i, p.ghin);
-    });
-  }, [players, simulateGHIN]);
 
   const addPlayer = () => {
     const maxP = format?.players.max || 6;
