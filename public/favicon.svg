@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Bold green C: outer radius 13, inner radius 7, gap ±50° from right -->
+  <path d="M 24.36 6.04 A 13 13 0 1 0 24.36 25.96 L 20.50 21.36 A 7 7 0 1 1 20.50 10.64 Z" fill="#16A34A"/>
+</svg>
