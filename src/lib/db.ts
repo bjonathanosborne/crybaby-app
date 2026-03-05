@@ -746,7 +746,8 @@ export async function loadMyRounds(limit = 10) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
-  const { data, error } = await supabase
+  // Rounds created by this user
+  const { data: created, error } = await supabase
     .from("rounds")
     .select("*, round_players(*)")
     .eq("created_by", user.id)
@@ -754,16 +755,40 @@ export async function loadMyRounds(limit = 10) {
     .limit(limit);
 
   if (error) throw error;
-  return data;
+
+  // Also find rounds where user is a player (but didn't create)
+  const { data: playerRows } = await supabase
+    .from("round_players")
+    .select("round_id")
+    .eq("user_id", user.id);
+
+  if (playerRows?.length) {
+    const roundIds = playerRows.map((r: any) => r.round_id);
+    const { data: asPlayer } = await supabase
+      .from("rounds")
+      .select("*, round_players(*)")
+      .in("id", roundIds)
+      .neq("created_by", user.id) // avoid duplicates
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (asPlayer?.length) {
+      const combined = [...(created || []), ...asPlayer];
+      combined.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      return combined.slice(0, limit);
+    }
+  }
+
+  return created || [];
 }
 
-// Load the current user's active round (if any)
+// Load the current user's active round (if any) — includes rounds they're a player in
 export async function loadActiveRound() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  // Check rounds created by this user
-  const { data } = await supabase
+  // Check rounds created by this user first
+  const { data: created } = await supabase
     .from("rounds")
     .select("id, course, game_type, stakes, created_at")
     .eq("created_by", user.id)
@@ -772,7 +797,27 @@ export async function loadActiveRound() {
     .limit(1)
     .maybeSingle();
 
-  return data || null;
+  if (created) return created;
+
+  // Also check rounds where this user is listed as a player
+  const { data: playerRows } = await supabase
+    .from("round_players")
+    .select("round_id")
+    .eq("user_id", user.id);
+
+  if (!playerRows?.length) return null;
+
+  const roundIds = playerRows.map((r: any) => r.round_id);
+  const { data: asPlayer } = await supabase
+    .from("rounds")
+    .select("id, course, game_type, stakes, created_at")
+    .in("id", roundIds)
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return asPlayer || null;
 }
 
 // Load settlements for a user (for ledger)
