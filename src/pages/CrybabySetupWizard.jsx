@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { createRound, loadActiveRound, loadProfile } from "@/lib/db";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import crybabyLogo from "@/assets/crybaby-logo.png";
@@ -437,12 +438,16 @@ function PlayerRow({ player, index, onUpdate, onRemove, showCarts, cartOptions, 
             value={player.handicap ?? ""}
             onChange={e => {
               const val = e.target.value;
-              onUpdate(index, { ...player, handicap: val === "" ? null : parseFloat(val) });
+              if (val === "") { onUpdate(index, { ...player, handicap: null }); return; }
+              const num = parseFloat(val);
+              if (isNaN(num)) return;
+              const clamped = Math.min(54, Math.max(-10, num));
+              onUpdate(index, { ...player, handicap: clamped });
             }}
             placeholder="HCP"
             min="-10"
             max="54"
-            step="0.1"
+            step="0.5"
             style={{
               fontFamily: mono, fontSize: 13, color: "#6B7280",
               border: "1px solid #E5E7EB", borderRadius: 6, padding: "8px 10px",
@@ -730,6 +735,7 @@ function ReviewSection({ label, value, icon }) {
 export default function CrybabSetupWizard() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { toast } = useToast();
   const font = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
   const mono = "'SF Mono', 'JetBrains Mono', monospace";
 
@@ -848,7 +854,7 @@ export default function CrybabSetupWizard() {
     switch (step) {
       case 0: return !!selectedFormat;
       case 1: return players.filter(p => p.name.trim()).length >= (format?.players.min || 2);
-      case 2: return !!selectedCourse;
+      case 2: return !!selectedCourse && (!selectedCourse.tees?.length || !!selectedTee);
       case 3: return holeValue > 0;
       case 4: return true;
       default: return false;
@@ -909,7 +915,7 @@ export default function CrybabSetupWizard() {
       navigate(`/round?id=${roundId}`);
     } catch (err) {
       console.error("Failed to create round:", err);
-      alert("Failed to start round. Please try again.");
+      toast({ title: "Failed to start round", description: "Please try again.", variant: "destructive" });
       setSaving(false);
     }
   };

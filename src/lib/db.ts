@@ -941,7 +941,8 @@ export async function notifyFriendsOfBroadcast(roundId: string, course: string, 
     read: false,
   }));
 
-  await supabase.from("notifications").insert(notifications);
+  const { error } = await supabase.from("notifications").insert(notifications);
+  if (error) console.error("Failed to notify friends of broadcast:", error);
 }
 
 export async function toggleBroadcast(roundId: string, isBroadcast: boolean) {

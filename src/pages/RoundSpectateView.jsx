@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -45,7 +45,8 @@ export default function RoundSpectateView() {
   const [activeReactionEvent, setActiveReactionEvent] = useState(null);
   const feedRef = useRef(null);
 
-  const refreshEvents = async () => {
+  // useCallback so these are stable references for the subscription effect
+  const refreshEvents = useCallback(async () => {
     if (!roundId) return;
     try {
       const evts = await loadRoundEvents(roundId);
@@ -62,9 +63,9 @@ export default function RoundSpectateView() {
     } catch (e) {
       console.error("Failed to load events", e);
     }
-  };
+  }, [roundId]);
 
-  const refreshPlayers = async () => {
+  const refreshPlayers = useCallback(async () => {
     if (!roundId) return;
     const { data } = await supabase
       .from("round_players")
@@ -72,7 +73,7 @@ export default function RoundSpectateView() {
       .eq("round_id", roundId)
       .order("created_at");
     if (data) setPlayers(data);
-  };
+  }, [roundId]);
 
   const loadAll = async () => {
     if (!roundId) { setLoading(false); return; }
@@ -112,12 +113,13 @@ export default function RoundSpectateView() {
     const channel = supabase
       .channel(`spectate-${roundId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "round_players", filter: `round_id=eq.${roundId}` }, refreshPlayers)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "round_events", filter: `round_id=eq.${roundId}` }, refreshEvents)
+      .on("postgres_changes", { event: "*", schema: "public", table: "round_events", filter: `round_id=eq.${roundId}` }, refreshEvents)
+      // round_event_reactions has no round_id — filter is handled in refreshEvents by reloading for current round only
       .on("postgres_changes", { event: "*", schema: "public", table: "round_event_reactions" }, refreshEvents)
       .subscribe();
 
     return () => supabase.removeChannel(channel);
-  }, [roundId]);
+  }, [roundId, refreshPlayers, refreshEvents]);
 
   // Auto-scroll feed on new events
   useEffect(() => {
@@ -304,9 +306,13 @@ export default function RoundSpectateView() {
 
         {events.length === 0 ? (
           <div style={{ textAlign: "center", padding: "32px 0", color: "hsl(var(--muted-foreground))" }}>
-            <div style={{ fontSize: 36, marginBottom: 8 }}>📡</div>
-            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Waiting for action…</div>
-            <div style={{ fontSize: 12 }}>Events appear as holes are scored</div>
+            <div style={{ fontSize: 36, marginBottom: 8 }}>{isActive ? "📡" : "🏁"}</div>
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>
+              {isActive ? "Waiting for action…" : "Round complete"}
+            </div>
+            <div style={{ fontSize: 12 }}>
+              {isActive ? "Events appear as holes are scored" : "No events were recorded for this round"}
+            </div>
           </div>
         ) : (
           <div ref={feedRef} style={{ display: "flex", flexDirection: "column", gap: 8 }}>

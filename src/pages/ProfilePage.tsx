@@ -81,6 +81,9 @@ export default function ProfilePage() {
         state: p.state || "",
         ghin: p.ghin || "",
       });
+    }).catch((e) => {
+      console.error("Failed to load profile data:", e);
+      toast({ title: "Failed to load profile", description: "Please refresh and try again.", variant: "destructive" });
     }).finally(() => setLoading(false));
     loadUserCourses();
   }, [user]);
