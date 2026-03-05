@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import crybabyLogo from "@/assets/crybaby-logo.png";
+import AddClubModal from "@/components/AddClubModal";
 
 // ============================================================
 // CRYBABY — Game Setup Wizard
@@ -751,6 +752,8 @@ export default function CrybabSetupWizard() {
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [selectedTee, setSelectedTee] = useState(null);
   const [courseSearch, setCourseSearch] = useState("");
+  const [userCourses, setUserCourses] = useState([]);
+  const [showAddClub, setShowAddClub] = useState(false);
   const [holeValue, setHoleValue] = useState(5);
   const [enabledMechanics, setEnabledMechanics] = useState(new Set());
   const [mechanicSettings, setMechanicSettings] = useState({
@@ -766,7 +769,7 @@ export default function CrybabSetupWizard() {
   const [activeRound, setActiveRound] = useState(null);
   const [checkingActive, setCheckingActive] = useState(true);
 
-  // On mount: check for active round + pre-fill Player 1 with current user
+  // On mount: check for active round + pre-fill Player 1 + load user courses
   useEffect(() => {
     const init = async () => {
       const [active, profile] = await Promise.all([
@@ -783,12 +786,34 @@ export default function CrybabSetupWizard() {
         });
       }
       setCheckingActive(false);
+
+      // Load user-added courses
+      supabase.from("user_courses").select("*").order("name").then(({ data }) => {
+        if (data) setUserCourses(data);
+      });
     };
     init();
   }, []);
 
   const format = GAME_FORMATS.find(g => g.id === selectedFormat);
-  const course = AUSTIN_COURSES.find(c => c.id === selectedCourse);
+
+  // Resolve course from either built-in list or user courses
+  const course = AUSTIN_COURSES.find(c => c.id === selectedCourse) || (() => {
+    const uc = userCourses.find(c => c.id === selectedCourse);
+    if (!uc) return undefined;
+    const cd = uc.course_data || {};
+    return {
+      id: uc.id,
+      name: uc.name,
+      city: uc.city || "",
+      state: uc.state || "",
+      type: "user",
+      holes: cd.holes || 18,
+      pars: cd.pars || Array(cd.holes || 18).fill(4),
+      handicaps: cd.handicaps || Array.from({ length: cd.holes || 18 }, (_, i) => i + 1),
+      tees: cd.tees || [],
+    };
+  })();
 
   // Auto-enable default mechanics and set player count when format is selected
   useEffect(() => {
@@ -1136,12 +1161,34 @@ export default function CrybabSetupWizard() {
                     </optgroup>
                   );
                 })}
+                {userCourses.length > 0 && (
+                  <optgroup label="⭐ My Courses">
+                    {userCourses.map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}{c.city ? ` — ${c.city}` : ""}{c.course_data?.holes === 9 ? " (9 holes)" : ""}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
               <span style={{
                 position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)",
                 fontSize: 12, color: "#9CA3AF", pointerEvents: "none",
               }}>▼</span>
             </div>
+
+            {/* Add Club link */}
+            <button
+              onClick={() => setShowAddClub(true)}
+              style={{
+                background: "none", border: "none", padding: "4px 0",
+                fontFamily: font, fontSize: 13, color: "#16A34A", fontWeight: 600,
+                cursor: "pointer", textAlign: "left", textDecoration: "underline",
+                textUnderlineOffset: 3,
+              }}
+            >
+              Don't see your club? Add it. ➕
+            </button>
 
             {/* Selected course info card */}
             {course && (
@@ -1426,5 +1473,18 @@ export default function CrybabSetupWizard() {
         </button>
       </div>
     </div>
+
+    {/* Add Club Modal */}
+    {showAddClub && (
+      <AddClubModal
+        onClose={() => setShowAddClub(false)}
+        onSaved={(newCourse) => {
+          setUserCourses(prev => [...prev, newCourse]);
+          setSelectedCourse(newCourse.id);
+          setSelectedTee(null);
+          setShowAddClub(false);
+        }}
+      />
+    )}
   );
 }
