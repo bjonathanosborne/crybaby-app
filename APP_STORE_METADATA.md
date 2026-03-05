@@ -84,9 +84,9 @@ Welcome to Crybaby Golf! Track scores, compete with friends, and watch rounds li
 
 | Field | Value |
 |-------|-------|
-| **Support URL** | https://crybaby-app.onrender.com |
-| **Marketing URL** | https://crybaby-app.onrender.com |
-| **Privacy Policy URL** | https://crybaby-app.onrender.com/privacy |
+| **Support URL** | https://crybaby.golf |
+| **Marketing URL** | https://crybaby.golf |
+| **Privacy Policy URL** | https://crybaby.golf/privacy |
 
 ---
 
@@ -132,7 +132,7 @@ Test account for review:
 - No special reviewer credentials needed
 - All features accessible after sign-in
 
-The app requires a Supabase backend (already live at crybaby-app.onrender.com).
+The app requires a Supabase backend (already live at crybaby.golf).
 Internet connection required.
 ```
 

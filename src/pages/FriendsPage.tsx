@@ -52,7 +52,7 @@ export default function FriendsPage() {
   const [linkCopied, setLinkCopied] = useState(false);
   const [myProfile, setMyProfile] = useState<any>(null);
 
-  const INVITE_URL = "https://crybaby-app.onrender.com/auth";
+  const INVITE_URL = "https://crybaby.golf/auth";
 
   const loadAll = async () => {
     if (!user) return;
