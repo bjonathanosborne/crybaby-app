@@ -952,6 +952,7 @@ export default function CrybabSetupWizard() {
   }, [roundStarted]);
 
   return (
+    <>
     <div style={{
       maxWidth: 420, margin: "0 auto", minHeight: "100vh",
       background: "#F7F7F5", fontFamily: font,
@@ -1486,5 +1487,6 @@ export default function CrybabSetupWizard() {
         }}
       />
     )}
+    </>
   );
 }
