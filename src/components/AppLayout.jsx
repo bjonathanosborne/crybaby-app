@@ -35,7 +35,7 @@ export default function AppLayout() {
         <NotificationBell />
       </div>
       <div style={{
-        paddingTop: "calc(env(safe-area-inset-top, 0px) + 76px)",
+        paddingTop: "calc(env(safe-area-inset-top, 0px) + 100px)",
         paddingBottom: "calc(max(8px, env(safe-area-inset-bottom)) + 64px)",
       }}>
         <Outlet />
