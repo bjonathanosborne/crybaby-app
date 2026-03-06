@@ -22,24 +22,4 @@
   <circle cx="24" cy="72" r="3.8" fill="none" stroke="#C08C00" stroke-width="1.4"/>
   <circle cx="58" cy="83" r="3.8" fill="none" stroke="#C08C00" stroke-width="1.4"/>
   <circle cx="42" cy="83" r="3.8" fill="none" stroke="#C08C00" stroke-width="1.4"/>
-
-  <!-- Brand logo — CRYBABY over GOLF, like Titleist/TaylorMade style -->
-  <text
-    x="50" y="48"
-    font-family="Arial Black, Impact, sans-serif"
-    font-size="16.5"
-    font-weight="900"
-    text-anchor="middle"
-    fill="#1a5c2a"
-    letter-spacing="0.5"
-  >CRYBABY</text>
-  <text
-    x="50" y="63"
-    font-family="Arial Black, Impact, sans-serif"
-    font-size="11.5"
-    font-weight="900"
-    text-anchor="middle"
-    fill="#1a5c2a"
-    letter-spacing="2"
-  >GOLF</text>
 </svg>
