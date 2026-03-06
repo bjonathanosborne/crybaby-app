@@ -29,8 +29,8 @@ export default function NotificationBell() {
       ]);
       setNotifications(notifs);
       setUnread(count);
-    } catch (e) {
-      console.error("Failed to load notifications", e);
+    } catch {
+      // silent
     }
   };
 

@@ -60,8 +60,8 @@ export default function RoundSpectateView() {
         });
         setReactions(grouped);
       }
-    } catch (e) {
-      console.error("Failed to load events", e);
+    } catch {
+      // silent
     }
   }, [roundId]);
 
@@ -132,8 +132,8 @@ export default function RoundSpectateView() {
     try {
       await followRound(roundId);
       setFollowStatus("following");
-    } catch (e) {
-      console.error(e);
+    } catch {
+      // silent
     } finally {
       setFollowLoading(false);
     }
@@ -145,8 +145,8 @@ export default function RoundSpectateView() {
     try {
       await declineRound(roundId);
       setFollowStatus("declined");
-    } catch (e) {
-      console.error(e);
+    } catch {
+      // silent
     } finally {
       setFollowLoading(false);
     }
@@ -157,8 +157,8 @@ export default function RoundSpectateView() {
       await toggleEventReaction(eventId, emoji);
       setActiveReactionEvent(null);
       await refreshEvents();
-    } catch (e) {
-      console.error(e);
+    } catch {
+      // silent
     }
   };
 
@@ -281,7 +281,7 @@ export default function RoundSpectateView() {
                   <div style={{ width: 20, fontSize: 12, fontWeight: 700, color: i === 0 ? "#16A34A" : "hsl(var(--muted-foreground))", textAlign: "center" }}>
                     {i + 1}
                   </div>
-                  <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: "hsl(var(--foreground))" }}>{name}</div>
+                  <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: "hsl(var(--foreground))", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</div>
                   <div style={{ fontSize: 11, color: "hsl(var(--muted-foreground))", marginRight: 8 }}>
                     {holesPlayed > 0 ? `Hole ${holesPlayed}` : "—"}
                   </div>

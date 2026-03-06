@@ -50,7 +50,7 @@ export default function GroupsPage() {
       // Public groups the user hasn't joined
       const myIds = new Set((mine || []).map((g: any) => g.id));
       setPublicGroups((all || []).filter((g: any) => !myIds.has(g.id)));
-    } catch (e) { console.error(e); }
+    } catch { /* silent */ }
     finally { setLoading(false); }
   };
 
@@ -66,7 +66,7 @@ export default function GroupsPage() {
       setView("list");
       await loadAll();
       handleOpenGroup(group);
-    } catch (e) { console.error(e); }
+    } catch { /* silent */ }
     finally { setCreating(false); }
   };
 
@@ -84,7 +84,7 @@ export default function GroupsPage() {
         const lb = await loadGroupLeaderboard(memberIds);
         setLeaderboard(lb);
       }
-    } catch (e) { console.error(e); }
+    } catch { /* silent */ }
   };
 
   const handleJoin = async (groupToJoin?: any) => {
@@ -102,6 +102,7 @@ export default function GroupsPage() {
 
   const handleLeave = async () => {
     if (!selectedGroup) return;
+    if (!window.confirm(`Leave "${selectedGroup.name}"?`)) return;
     try {
       await leaveGroup(selectedGroup.id);
       setIsMember(false);
@@ -109,7 +110,7 @@ export default function GroupsPage() {
       toast({ title: "Left group" });
       await loadAll();
       goBack();
-    } catch (e) { console.error(e); }
+    } catch { /* silent */ }
   };
 
   const handleRemoveMember = async (userId: string) => {
@@ -117,7 +118,7 @@ export default function GroupsPage() {
     try {
       await removeMember(selectedGroup.id, userId);
       await handleOpenGroup(selectedGroup);
-    } catch (e) { console.error(e); }
+    } catch { /* silent */ }
   };
 
   const handleLookupCode = async () => {
@@ -131,7 +132,7 @@ export default function GroupsPage() {
       } else {
         toast({ title: "Not found", description: "No group matches that invite code.", variant: "destructive" });
       }
-    } catch (e) { console.error(e); }
+    } catch { /* silent */ }
     finally { setJoining(false); }
   };
 
@@ -177,7 +178,7 @@ export default function GroupsPage() {
       const updated = await regenerateInviteCode(selectedGroup.id);
       setSelectedGroup(updated);
       toast({ title: "Code regenerated" });
-    } catch (e) { console.error(e); }
+    } catch { /* silent */ }
   };
 
   const goBack = () => {
@@ -204,8 +205,7 @@ export default function GroupsPage() {
       setMyGroups(prev => prev.map(g => g.id === selectedGroup.id ? { ...g, avatar_url: url } : g));
       setPublicGroups(prev => prev.map(g => g.id === selectedGroup.id ? { ...g, avatar_url: url } : g));
       toast({ title: "Avatar updated!" });
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast({ title: "Upload failed", variant: "destructive" });
     } finally {
       setUploadingAvatar(false);
@@ -555,8 +555,8 @@ export default function GroupsPage() {
                           display: "flex", alignItems: "center", justifyContent: "center",
                           color: "#fff", fontSize: 14, fontWeight: 700, fontFamily: FONT,
                         }}>{name[0].toUpperCase()}</div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: "#1A1A1A" }}>{name}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: "#1A1A1A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</div>
                           <div style={{ display: "flex", gap: 6, marginTop: 1 }}>
                             {m.profile?.handicap != null && (
                               <span style={{ fontFamily: MONO, fontSize: 10, color: "#16A34A", fontWeight: 600 }}>
@@ -605,8 +605,8 @@ export default function GroupsPage() {
                       display: "flex", alignItems: "center", justifyContent: "center",
                       color: "#fff", fontSize: 14, fontWeight: 700, fontFamily: FONT,
                     }}>{name[0].toUpperCase()}</div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: "#1A1A1A" }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "#1A1A1A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {name}
                         {m.user_id === user?.id && (
                           <span style={{ fontSize: 10, color: "#9CA3AF", marginLeft: 6 }}>(you)</span>

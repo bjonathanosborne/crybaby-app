@@ -141,7 +141,7 @@ export default function AdminUsersPage() {
     setInviteLoading(true);
     try {
       const token = await createInvite();
-      setInviteLink(`https://crybaby.golf/invite/${token}`);
+      setInviteLink(`${window.location.origin}/invite/${token}`);
     } catch (e: any) {
       toast({ title: "Failed to create invite", description: e.message, variant: "destructive" });
     } finally {

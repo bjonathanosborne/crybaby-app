@@ -82,8 +82,8 @@ export default function FriendsPage() {
         if (prof) profileMap[uid] = prof;
       }
       setProfiles(profileMap);
-    } catch (e) {
-      console.error(e);
+    } catch {
+      // silent
     } finally {
       setLoading(false);
     }
@@ -102,8 +102,8 @@ export default function FriendsPage() {
     try {
       const results = await searchProfiles(q);
       setSearchResults(results);
-    } catch (e) {
-      console.error(e);
+    } catch {
+      // silent
     } finally {
       setSearching(false);
     }
@@ -126,7 +126,6 @@ export default function FriendsPage() {
       await loadAll();
       toast({ title: "Friend request sent!" });
     } catch (e: any) {
-      console.error(e);
       toast({ title: "Error", description: e.message, variant: "destructive" });
     }
   };
@@ -136,14 +135,14 @@ export default function FriendsPage() {
       await acceptFriendRequest(friendshipId);
       toast({ title: "Friend request accepted! 🤝" });
       await loadAll();
-    } catch (e) { console.error(e); }
+    } catch { /* silent */ }
   };
 
   const handleDecline = async (friendshipId: string) => {
     try {
       await removeFriendship(friendshipId);
       await loadAll();
-    } catch (e) { console.error(e); }
+    } catch { /* silent */ }
   };
 
   const handleViewLedger = async (friendUserId: string) => {
@@ -156,7 +155,7 @@ export default function FriendsPage() {
       setFriendProfile(prof);
       setSelectedFriend(friendUserId);
       setView("ledger");
-    } catch (e) { console.error(e); }
+    } catch { /* silent */ }
   };
 
   const existingRelationships = useMemo(() => {
@@ -176,7 +175,7 @@ export default function FriendsPage() {
     setInviteSending(true);
     try {
       const token = await createInvite();
-      const inviteUrl = `https://crybaby.golf/invite/${token}`;
+      const inviteUrl = `${window.location.origin}/invite/${token}`;
       const senderName = [myProfile?.first_name, myProfile?.last_name].filter(Boolean).join(" ") || myProfile?.display_name || "Your buddy";
       const msg = `${senderName} invited you to join Crybaby Golf ⛳ — track scores, settle bets, and talk trash on the course. Create your profile here: ${inviteUrl}`;
 
@@ -193,7 +192,7 @@ export default function FriendsPage() {
   const handleCopyInviteLink = async () => {
     try {
       const token = await createInvite();
-      const inviteUrl = `https://crybaby.golf/invite/${token}`;
+      const inviteUrl = `${window.location.origin}/invite/${token}`;
       await navigator.clipboard.writeText(inviteUrl);
       setLinkCopied(true);
       toast({ title: "Invite link copied!" });

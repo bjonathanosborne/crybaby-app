@@ -8,7 +8,6 @@ import SplashScreen from "./components/SplashScreen";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import AuthPage from "./pages/AuthPage";
 import ResetPassword from "./pages/ResetPassword";
-import CrybabOnboarding from "./pages/CrybabOnboarding";
 import CrybabySetupWizard from "./pages/CrybabySetupWizard";
 import CrybabyActiveRound from "./pages/CrybabyActiveRound";
 import CrybabyFeed from "./pages/CrybabyFeed";

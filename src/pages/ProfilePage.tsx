@@ -48,8 +48,7 @@ export default function ProfilePage() {
       const url = await uploadUserAvatar(file);
       setProfile((prev: any) => ({ ...prev, avatar_url: url }));
       toast({ title: "Avatar updated!" });
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast({ title: "Upload failed", variant: "destructive" });
     } finally {
       setUploadingAvatar(false);
@@ -81,8 +80,7 @@ export default function ProfilePage() {
         state: p.state || "",
         ghin: p.ghin || "",
       });
-    }).catch((e) => {
-      console.error("Failed to load profile data:", e);
+    }).catch(() => {
       toast({ title: "Failed to load profile", description: "Please refresh and try again.", variant: "destructive" });
     }).finally(() => setLoading(false));
     loadUserCourses();
@@ -137,8 +135,7 @@ export default function ProfilePage() {
       }));
       setEditingProfile(false);
       toast({ title: "Profile saved!" });
-    } catch (e) {
-      console.error(e);
+    } catch {
       toast({ title: "Failed to save", variant: "destructive" });
     }
   };

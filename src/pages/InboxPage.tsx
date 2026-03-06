@@ -66,8 +66,8 @@ export default function InboxPage() {
         }
       }
       setSenderProfiles(prev => ({ ...prev, ...profileMap }));
-    } catch (e) {
-      console.error(e);
+    } catch {
+      // silent
     } finally {
       setLoading(false);
     }
