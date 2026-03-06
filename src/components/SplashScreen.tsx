@@ -5,8 +5,8 @@ export default function SplashScreen({ onDone }: { onDone: () => void }) {
   const [fading, setFading] = useState(false);
 
   useEffect(() => {
-    const t1 = setTimeout(() => setFading(true), 2500);
-    const t2 = setTimeout(() => onDone(), 3100);
+    const t1 = setTimeout(() => setFading(true), 3200);
+    const t2 = setTimeout(() => onDone(), 3800);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
@@ -36,7 +36,7 @@ export default function SplashScreen({ onDone }: { onDone: () => void }) {
         style={{
           width: 220,
           objectFit: "contain",
-          animation: "splashSpin 1.4s cubic-bezier(0.15, 0.85, 0.4, 1) forwards",
+          animation: "splashSpin 3s ease-out forwards",
           opacity: 0,
         }}
       />
@@ -49,7 +49,7 @@ export default function SplashScreen({ onDone }: { onDone: () => void }) {
           left: 0,
           height: 3,
           background: "#16A34A",
-          animation: "splashProgress 2.5s cubic-bezier(0.25, 0.1, 0.25, 1) forwards",
+          animation: "splashProgress 3s cubic-bezier(0.25, 0.1, 0.25, 1) forwards",
         }}
       />
     </div>
