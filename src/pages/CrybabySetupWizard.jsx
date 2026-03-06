@@ -980,7 +980,7 @@ export default function CrybabSetupWizard() {
             </div>
           </div>
           <button
-            onClick={() => navigate(`/active-round?id=${activeRound.id}`)}
+            onClick={() => navigate(`/round?id=${activeRound.id}`)}
             style={{
               padding: "9px 14px", borderRadius: 12, border: "none",
               background: "#16A34A", color: "#fff",
