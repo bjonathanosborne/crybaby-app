@@ -518,7 +518,7 @@ export default function CrybabyFeed() {
       <div className="px-4 pt-4 pb-2 flex justify-between items-center">
         <h1 className="text-2xl font-extrabold text-foreground tracking-tight">Feed</h1>
         <button onClick={() => navigate("/setup")}
-          className="px-4 py-2 rounded-xl border-none cursor-pointer text-[13px] font-bold bg-primary text-primary-foreground hover:opacity-90 transition-opacity">
+          className="px-5 py-2.5 rounded-xl border-none cursor-pointer text-sm font-extrabold bg-primary text-primary-foreground hover:opacity-90 transition-opacity shadow-sm">
           + New Round
         </button>
       </div>

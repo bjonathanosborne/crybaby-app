@@ -1461,13 +1461,26 @@ export default function CrybabSetupWizard() {
             else setRoundStarted(true);
           }}
           style={{
-            width: "100%", maxWidth: 380, padding: "14px 24px", borderRadius: 12,
+            width: "100%", maxWidth: 380,
+            padding: step < 4 ? "14px 24px" : "17px 24px",
+            borderRadius: step < 4 ? 12 : 16,
             border: "none", cursor: canProceed() ? "pointer" : "not-allowed",
-            fontFamily: font, fontSize: 16, fontWeight: 700, letterSpacing: "-0.01em",
-            background: canProceed() ? "#1A1A1A" : "#D1D5DB",
+            fontFamily: font,
+            fontSize: step < 4 ? 16 : 20,
+            fontWeight: step < 4 ? 700 : 800,
+            letterSpacing: step < 4 ? "-0.01em" : "-0.02em",
+            background: !canProceed()
+              ? "#D1D5DB"
+              : step < 4
+              ? "#1A1A1A"
+              : "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
             color: canProceed() ? "#fff" : "#9CA3AF",
             transition: "all 0.2s ease",
-            minHeight: 48,
+            minHeight: step < 4 ? 50 : 60,
+            boxShadow: canProceed() && step === 4
+              ? "0 4px 20px rgba(22, 163, 74, 0.45)"
+              : "none",
+            textShadow: canProceed() && step === 4 ? "0 1px 2px rgba(0,0,0,0.15)" : "none",
           }}
         >
           {step < 4 ? "Continue" : "Start Round 🏌️"}
