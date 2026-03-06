@@ -52,10 +52,12 @@ const AppRoutes = () => (
     <Route path="/reset-password" element={<ResetPassword />} />
     <Route path="/privacy" element={<PrivacyPolicyPage />} />
     <Route path="/" element={<RootRedirect />} />
+    {/* Standalone full-screen routes — no AppLayout wrapper */}
+    <Route path="/round" element={<ProtectedRoute><CrybabyActiveRound /></ProtectedRoute>} />
+
     <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
       <Route path="/home" element={<Navigate to="/profile" replace />} />
       <Route path="/setup" element={<CrybabySetupWizard />} />
-      <Route path="/round" element={<CrybabyActiveRound />} />
       <Route path="/feed" element={<CrybabyFeed />} />
       <Route path="/friends" element={<FriendsPage />} />
       <Route path="/groups" element={<GroupsPage />} />

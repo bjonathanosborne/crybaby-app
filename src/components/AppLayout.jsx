@@ -20,8 +20,6 @@ export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const showBack = !ROOT_PATHS.includes(location.pathname);
-  const isRoundPage = location.pathname === "/round";
-
   const [activeRound, setActiveRound] = useState(null);
 
   // Reload active round whenever location changes (e.g. user leaves /round)
@@ -31,7 +29,7 @@ export default function AppLayout() {
       .catch(() => setActiveRound(null));
   }, [location.pathname]);
 
-  const showBanner = !!activeRound && !isRoundPage;
+  const showBanner = !!activeRound;
 
   return (
     <>
@@ -79,7 +77,7 @@ export default function AppLayout() {
       {/* ── Active Round Return Banner ── */}
       {showBanner && (
         <div
-          onClick={() => navigate(`/round?id=${activeRound.id}`)}
+          onClick={() => { window.location.href = `/round?id=${activeRound.id}`; }}
           className="fixed left-0 right-0 z-40 flex items-center justify-between px-4 cursor-pointer"
           style={{
             bottom: `calc(64px + env(safe-area-inset-bottom, 0px))`,
