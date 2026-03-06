@@ -75,7 +75,7 @@ export default function BottomNav() {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-card/90 backdrop-blur-xl border-t border-border"
+    <div className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border"
       style={{ paddingBottom: "max(8px, env(safe-area-inset-bottom))" }}>
       <div className="flex max-w-[420px] w-full mx-auto items-center justify-around">
         {tabs.map(tab => {
