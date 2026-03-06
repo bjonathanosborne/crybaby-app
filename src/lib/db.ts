@@ -1201,3 +1201,29 @@ export async function toggleEventReaction(eventId: string, reactionType: string)
     return data;
   }
 }
+
+// ─── Admin: User Role Management ───
+
+export async function loadAllUserRoles(): Promise<{ user_id: string; role: string }[]> {
+  const { data, error } = await supabase
+    .from("user_roles")
+    .select("user_id, role");
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function assignAdminRole(userId: string): Promise<void> {
+  const { error } = await supabase
+    .from("user_roles")
+    .insert({ user_id: userId, role: "admin" });
+  if (error && error.code !== "23505") throw error; // ignore unique violation
+}
+
+export async function removeAdminRole(userId: string): Promise<void> {
+  const { error } = await supabase
+    .from("user_roles")
+    .delete()
+    .eq("user_id", userId)
+    .eq("role", "admin");
+  if (error) throw error;
+}
