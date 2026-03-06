@@ -129,6 +129,13 @@
   from { opacity: 0; transform: scale(0.55) rotate(-8deg); }
   to   { opacity: 1; transform: scale(1) rotate(0deg); }
 }
+@keyframes splashSpin {
+  0%   { opacity: 0; transform: scale(0.75) rotate(-540deg); }
+  60%  { opacity: 1; transform: scale(1.04) rotate(8deg); }
+  78%  { transform: scale(0.98) rotate(-3deg); }
+  90%  { transform: scale(1.01) rotate(1deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
 
 @keyframes splashTextIn {
   from { opacity: 0; transform: translateY(14px); }

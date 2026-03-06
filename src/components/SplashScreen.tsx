@@ -36,7 +36,7 @@ export default function SplashScreen({ onDone }: { onDone: () => void }) {
         style={{
           width: 220,
           objectFit: "contain",
-          animation: "splashLogoIn 0.6s cubic-bezier(0.34,1.3,0.64,1) forwards",
+          animation: "splashSpin 1.4s cubic-bezier(0.15, 0.85, 0.4, 1) forwards",
           opacity: 0,
         }}
       />
