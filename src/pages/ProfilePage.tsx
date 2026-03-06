@@ -1,12 +1,12 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { loadProfile, updateProfile, loadMyRounds, loadSettlements, uploadUserAvatar } from "@/lib/db";
+import { loadProfile, updateProfile, loadMyRounds, loadSettlements, uploadUserAvatar, loadFriends, loadUserProfile } from "@/lib/db";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { format, startOfMonth, startOfYear, parseISO } from "date-fns";
 import { AUSTIN_COURSES } from "@/data/constants";
-import { ChevronDown, Plus } from "lucide-react";
+import { ChevronDown, Plus, ChevronRight } from "lucide-react";
 
 const US_STATES = [
   "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD",
@@ -35,6 +35,7 @@ export default function ProfilePage() {
   const [userCourses, setUserCourses] = useState<any[]>([]);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [friendProfiles, setFriendProfiles] = useState<any[]>([]);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -84,6 +85,15 @@ export default function ProfilePage() {
       toast({ title: "Failed to load profile", description: "Please refresh and try again.", variant: "destructive" });
     }).finally(() => setLoading(false));
     loadUserCourses();
+
+    // Load friend profiles for the friends strip
+    loadFriends().then(async (friendships) => {
+      const friendIds = friendships.map((f: any) =>
+        f.user_id_a === user!.id ? f.user_id_b : f.user_id_a
+      );
+      const profiles = await Promise.all(friendIds.slice(0, 20).map((id: string) => loadUserProfile(id)));
+      setFriendProfiles(profiles.filter(Boolean));
+    }).catch(() => {/* silent */});
   }, [user]);
 
   // Ledger calculations
@@ -324,6 +334,43 @@ export default function ProfilePage() {
             </>
           )}
         </div>
+
+        {/* Friends Strip */}
+        {friendProfiles.length > 0 && (
+          <div style={{ background: "#fff", borderRadius: 20, padding: "18px 20px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                Friends ({friendProfiles.length})
+              </span>
+              <button onClick={() => navigate("/friends")}
+                style={{ fontSize: 12, fontWeight: 600, color: "#16A34A", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 2 }}>
+                All <ChevronRight size={14} />
+              </button>
+            </div>
+            <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 4 }}>
+              {friendProfiles.map((fp: any) => {
+                const name = [fp.first_name, fp.last_name].filter(Boolean).join(" ") || fp.display_name || "Player";
+                const initial = name[0]?.toUpperCase() || "?";
+                return (
+                  <button key={fp.user_id} onClick={() => navigate(`/profile/${fp.user_id}`)}
+                    style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", flexShrink: 0, minWidth: 56 }}>
+                    {fp.avatar_url ? (
+                      <img src={fp.avatar_url} alt={name}
+                        style={{ width: 48, height: 48, borderRadius: 24, objectFit: "cover" }} />
+                    ) : (
+                      <div style={{ width: 48, height: 48, borderRadius: 24, background: "#16A34A", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 18, fontWeight: 700 }}>
+                        {initial}
+                      </div>
+                    )}
+                    <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280", textAlign: "center", maxWidth: 56, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {fp.first_name || fp.display_name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Quick Stats */}
         <div style={{
