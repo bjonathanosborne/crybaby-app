@@ -30,6 +30,7 @@ import AdminGroupsPage from "./pages/admin/AdminGroupsPage";
 import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
 import RoundSpectateView from "./pages/RoundSpectateView";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
+import InvitePage from "./pages/InvitePage";
 
 const queryClient = new QueryClient();
 
@@ -67,6 +68,7 @@ const AppRoutes = () => (
       <Route path="/watch" element={<RoundSpectateView />} />
     </Route>
     <Route path="/join/:code" element={<ProtectedRoute><JoinGroupPage /></ProtectedRoute>} />
+    <Route path="/invite/:token" element={<InvitePage />} />
     <Route element={<AdminLayout />}>
       <Route path="/admin" element={<AdminDashboard />} />
       <Route path="/admin/users" element={<AdminUsersPage />} />

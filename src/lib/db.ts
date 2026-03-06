@@ -900,6 +900,60 @@ export async function sendInviteEmails(emails: string[], inviterName: string) {
   return data;
 }
 
+// ─── Invites ───
+
+export async function createInvite(phone?: string): Promise<string> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const token = Array.from(crypto.getRandomValues(new Uint8Array(10)))
+    .map(b => b.toString(36).padStart(2, "0"))
+    .join("")
+    .slice(0, 12);
+
+  const { error } = await supabase.from("invites").insert({
+    inviter_id: user.id,
+    token,
+    phone: phone || null,
+    status: "pending",
+  });
+
+  if (error) throw error;
+  return token;
+}
+
+export async function getInvite(token: string) {
+  const { data, error } = await supabase
+    .from("invites")
+    .select("*, profiles:inviter_id(display_name, avatar_url)")
+    .eq("token", token)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function acceptInvite(token: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const invite = await getInvite(token);
+  if (!invite || invite.status === "accepted") return;
+
+  await supabase
+    .from("invites")
+    .update({ status: "accepted", invitee_id: user.id, accepted_at: new Date().toISOString() })
+    .eq("token", token);
+
+  // Auto-send friend request to inviter
+  if (invite.inviter_id && invite.inviter_id !== user.id) {
+    try {
+      await sendFriendRequest(invite.inviter_id);
+    } catch {
+      // Friend request may already exist — that's fine
+    }
+  }
+}
+
 // ─── Round Events (Live Feed) ───
 
 export async function createRoundEvent({

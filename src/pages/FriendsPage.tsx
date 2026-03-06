@@ -4,9 +4,10 @@ import {
   loadFriends, loadPendingRequests, loadSentRequests,
   sendFriendRequest, acceptFriendRequest, removeFriendship,
   searchProfiles, loadSettlements, loadUserProfile, loadProfile,
+  createInvite,
 } from "@/lib/db";
 import { format, parseISO } from "date-fns";
-import { UserPlus, Search, ArrowLeft, ChevronRight, Loader2, Share2, Copy, Check } from "lucide-react";
+import { UserPlus, Search, ArrowLeft, ChevronRight, Loader2, Share2, Copy, Check, MessageSquare } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 function UserAvatar({ profile, size = 40 }: { profile: any; size?: number }) {
@@ -50,9 +51,8 @@ export default function FriendsPage() {
 
   // Invite
   const [linkCopied, setLinkCopied] = useState(false);
+  const [inviteSending, setInviteSending] = useState(false);
   const [myProfile, setMyProfile] = useState<any>(null);
-
-  const INVITE_URL = "https://crybaby.golf/auth";
 
   const loadAll = async () => {
     if (!user) return;
@@ -172,38 +172,35 @@ export default function FriendsPage() {
     return friendLedger.reduce((sum, s) => sum + Number(s.amount), 0);
   }, [friendLedger]);
 
-  const handleShareLink = async () => {
-    const shareData = {
-      title: "Join me on Crybaby Golf!",
-      text: `${[myProfile?.first_name, myProfile?.last_name].filter(Boolean).join(" ") || myProfile?.display_name || "Your buddy"} wants you to join Crybaby Golf — the app for tracking bets, trash talk, and bragging rights on the course.`,
-      url: INVITE_URL,
-    };
+  const handleTextInvite = async () => {
+    setInviteSending(true);
     try {
-      if (navigator.share && navigator.canShare?.(shareData)) {
-        await navigator.share(shareData);
-        return;
-      }
-    } catch (e: any) {
-      if (e.name === "AbortError") return;
-      // Fall through to clipboard
-    }
-    // Fallback: copy to clipboard
-    try {
-      await navigator.clipboard.writeText(INVITE_URL);
-      setLinkCopied(true);
-      toast({ title: "Link copied to clipboard!" });
-      setTimeout(() => setLinkCopied(false), 2000);
-    } catch {
-      // Last resort: prompt
-      window.prompt("Copy this invite link:", INVITE_URL);
+      const token = await createInvite();
+      const inviteUrl = `https://crybaby.golf/invite/${token}`;
+      const senderName = [myProfile?.first_name, myProfile?.last_name].filter(Boolean).join(" ") || myProfile?.display_name || "Your buddy";
+      const msg = `${senderName} invited you to join Crybaby Golf ⛳ — track scores, settle bets, and talk trash on the course. Create your profile here: ${inviteUrl}`;
+
+      // Open native SMS composer
+      const smsUrl = `sms:?body=${encodeURIComponent(msg)}`;
+      window.open(smsUrl, "_self");
+    } catch (e) {
+      toast({ title: "Couldn't create invite", description: "Please try again.", variant: "destructive" });
+    } finally {
+      setInviteSending(false);
     }
   };
 
-  const handleCopyLink = async () => {
-    await navigator.clipboard.writeText(INVITE_URL);
-    setLinkCopied(true);
-    toast({ title: "Link copied to clipboard!" });
-    setTimeout(() => setLinkCopied(false), 2000);
+  const handleCopyInviteLink = async () => {
+    try {
+      const token = await createInvite();
+      const inviteUrl = `https://crybaby.golf/invite/${token}`;
+      await navigator.clipboard.writeText(inviteUrl);
+      setLinkCopied(true);
+      toast({ title: "Invite link copied!" });
+      setTimeout(() => setLinkCopied(false), 2500);
+    } catch {
+      toast({ title: "Couldn't copy link", variant: "destructive" });
+    }
   };
 
   const goBack = () => {
@@ -239,13 +236,13 @@ export default function FriendsPage() {
         {/* ─── ACTION CARDS (list view only) ─── */}
         {view === "list" && (
           <div className="grid grid-cols-2 gap-3">
-            <button onClick={handleShareLink}
-              className="flex flex-col items-center gap-2 p-4 rounded-2xl border border-border bg-card cursor-pointer hover:border-primary/30 hover:shadow-sm transition-all">
+            <button onClick={handleTextInvite} disabled={inviteSending}
+              className="flex flex-col items-center gap-2 p-4 rounded-2xl border border-border bg-card cursor-pointer hover:border-primary/30 hover:shadow-sm transition-all disabled:opacity-60">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Share2 size={20} className="text-primary" />
+                {inviteSending ? <Loader2 size={20} className="text-primary animate-spin" /> : <MessageSquare size={20} className="text-primary" />}
               </div>
-              <span className="text-sm font-semibold text-foreground">Invite Friends</span>
-              <span className="text-[11px] text-muted-foreground text-center leading-tight">Share a link via text or any app</span>
+              <span className="text-sm font-semibold text-foreground">Invite via Text</span>
+              <span className="text-[11px] text-muted-foreground text-center leading-tight">Opens your messages app</span>
             </button>
             <button onClick={() => setView("search")}
               className="flex flex-col items-center gap-2 p-4 rounded-2xl border border-border bg-card cursor-pointer hover:border-primary/30 hover:shadow-sm transition-all">
@@ -256,6 +253,12 @@ export default function FriendsPage() {
               <span className="text-[11px] text-muted-foreground text-center leading-tight">Search by name, GHIN, or course</span>
             </button>
           </div>
+          {/* Copy invite link fallback */}
+          <button onClick={handleCopyInviteLink} disabled={linkCopied}
+            className="flex items-center gap-2 w-full px-4 py-3 rounded-2xl border border-border bg-card cursor-pointer hover:border-primary/30 transition-all text-sm text-muted-foreground">
+            {linkCopied ? <Check size={15} className="text-primary" /> : <Copy size={15} />}
+            <span>{linkCopied ? "Invite link copied!" : "Copy invite link"}</span>
+          </button>
         )}
         {/* ─── SEARCH / FIND VIEW ─── */}
         {view === "search" && (

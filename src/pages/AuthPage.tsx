@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
+import { acceptInvite } from "@/lib/db";
 
 export default function AuthPage() {
   const navigate = useNavigate();
@@ -16,7 +17,14 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (user) navigate("/home", { replace: true });
+    if (user) {
+      const pendingToken = localStorage.getItem("pending_invite_token");
+      if (pendingToken) {
+        localStorage.removeItem("pending_invite_token");
+        acceptInvite(pendingToken).catch(() => {});
+      }
+      navigate("/home", { replace: true });
+    }
   }, [user, navigate]);
 
   const handleEmailAuth = async (e: React.FormEvent) => {
