@@ -77,14 +77,14 @@ export default function AdminGroupsPage() {
   };
 
   return (
-    <div className="p-6 max-w-6xl">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Groups</h1>
+    <div className="p-4 md:p-6 max-w-6xl">
+      <div className="flex items-center justify-between mb-4 md:mb-6">
+        <h1 className="text-xl md:text-2xl font-bold text-foreground">Groups</h1>
         <Badge variant="secondary">{groups.length} total</Badge>
       </div>
 
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
-        <Table>
+      <div className="rounded-xl border border-border bg-card overflow-hidden overflow-x-auto">
+        <Table className="min-w-[520px]">
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>

@@ -164,9 +164,9 @@ export default function AdminUsersPage() {
   };
 
   return (
-    <div className="p-6 max-w-6xl">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Users</h1>
+    <div className="p-4 md:p-6 max-w-6xl">
+      <div className="flex items-center justify-between mb-4 md:mb-6">
+        <h1 className="text-xl md:text-2xl font-bold text-foreground">Users</h1>
         <div className="flex items-center gap-2">
           <Badge variant="secondary">{profiles.length} total</Badge>
           <Button onClick={() => setShowInviteModal(true)} size="sm" className="gap-2">
@@ -185,8 +185,8 @@ export default function AdminUsersPage() {
         />
       </div>
 
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
-        <Table>
+      <div className="rounded-xl border border-border bg-card overflow-hidden overflow-x-auto">
+        <Table className="min-w-[640px]">
           <TableHeader>
             <TableRow>
               <TableHead>User</TableHead>

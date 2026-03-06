@@ -81,8 +81,8 @@ export default function AdminSettingsPage() {
   };
 
   return (
-    <div className="p-6 max-w-4xl">
-      <h1 className="text-2xl font-bold text-foreground mb-6">Settings</h1>
+    <div className="p-4 md:p-6 max-w-4xl">
+      <h1 className="text-xl md:text-2xl font-bold text-foreground mb-4 md:mb-6">Settings</h1>
 
       <div className="rounded-xl border border-border bg-card p-6 mb-6">
         <h2 className="text-lg font-semibold text-foreground mb-4">Admin Users</h2>
@@ -100,7 +100,8 @@ export default function AdminSettingsPage() {
           </Button>
         </div>
 
-        <Table>
+        <div className="overflow-x-auto">
+        <Table className="min-w-[400px]">
           <TableHeader>
             <TableRow>
               <TableHead>User</TableHead>
@@ -154,6 +155,7 @@ export default function AdminSettingsPage() {
             )}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       <div className="rounded-xl border border-border bg-card p-6">

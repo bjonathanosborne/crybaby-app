@@ -40,10 +40,10 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div className="p-6 max-w-5xl">
-      <h1 className="text-2xl font-bold text-foreground mb-6">Dashboard</h1>
+    <div className="p-4 md:p-6 max-w-5xl">
+      <h1 className="text-xl md:text-2xl font-bold text-foreground mb-4 md:mb-6">Dashboard</h1>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-8">
         {cards.map((card) => {
           const Icon = card.icon;
           return (
