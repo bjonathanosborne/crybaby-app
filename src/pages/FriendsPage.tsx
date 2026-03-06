@@ -235,6 +235,7 @@ export default function FriendsPage() {
       <div className="px-4 flex flex-col gap-4">
         {/* ─── ACTION CARDS (list view only) ─── */}
         {view === "list" && (
+          <>
           <div className="grid grid-cols-2 gap-3">
             <button onClick={handleTextInvite} disabled={inviteSending}
               className="flex flex-col items-center gap-2 p-4 rounded-2xl border border-border bg-card cursor-pointer hover:border-primary/30 hover:shadow-sm transition-all disabled:opacity-60">
@@ -259,6 +260,7 @@ export default function FriendsPage() {
             {linkCopied ? <Check size={15} className="text-primary" /> : <Copy size={15} />}
             <span>{linkCopied ? "Invite link copied!" : "Copy invite link"}</span>
           </button>
+          </>
         )}
         {/* ─── SEARCH / FIND VIEW ─── */}
         {view === "search" && (
