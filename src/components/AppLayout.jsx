@@ -12,8 +12,8 @@ const ROOT_PATHS = ["/profile", "/feed", "/friends", "/groups", "/inbox", "/stat
 // Header row height (px). Logo is 120px tall, centered in this row,
 // so it overflows 30px above and 30px below → content offset = ROW_H + 30.
 const ROW_H = 60;
-const LOGO_H = 120;
-const LOGO_OVERFLOW_BELOW = (LOGO_H - ROW_H) / 2; // 30px
+const LOGO_H = 88;
+const LOGO_OVERFLOW_BELOW = (LOGO_H - ROW_H) / 2; // 14px
 const BANNER_H = 44; // active-round return banner height
 
 export default function AppLayout() {
