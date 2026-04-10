@@ -421,6 +421,7 @@ export default function CrybabyFeed() {
   const [activeRound, setActiveRound] = useState(null);
 
   const refreshFeed = async () => {
+    if (!user) return;
     try {
       const data = await loadFeed();
       setPosts(data.posts);
@@ -430,11 +431,12 @@ export default function CrybabyFeed() {
       setComments(data.comments);
       setReactions(data.reactions);
     } catch (e) {
-      console.error("Failed to load feed:", e);
+      console.error("Failed to load feed:", e?.message ?? e);
     }
   };
 
   const refreshBroadcasts = async () => {
+    if (!user) return;
     try {
       const rounds = await loadBroadcastRounds();
       setBroadcastRounds(rounds);
@@ -451,9 +453,11 @@ export default function CrybabyFeed() {
   };
 
   useEffect(() => {
+    if (!user) { setLoading(false); return; }
+
     Promise.all([
       refreshFeed(),
-      loadProfile().then(p => setMyProfile(p)),
+      loadProfile().then(p => setMyProfile(p)).catch(() => {}),
       refreshBroadcasts(),
       loadActiveRound().then(r => setActiveRound(r)).catch(() => {}),
     ]).finally(() => setLoading(false));
@@ -468,7 +472,7 @@ export default function CrybabyFeed() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [user?.id]);
 
   const handlePost = async (text) => {
     await createPost({ content: text, postType: "trash_talk" });
