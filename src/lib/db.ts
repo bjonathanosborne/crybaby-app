@@ -192,6 +192,16 @@ export async function completeRound(roundId) {
   if (error) throw error;
 }
 
+// Cancel a round — permanent, irreversible, preserves scores for record
+export async function cancelRound(roundId) {
+  const { error } = await supabase
+    .from("rounds")
+    .update({ status: "canceled", canceled_at: new Date().toISOString() })
+    .eq("id", roundId);
+
+  if (error) throw error;
+}
+
 // Validation constants
 const MAX_POST_LENGTH = 10000;
 const MAX_COMMENT_LENGTH = 2000;

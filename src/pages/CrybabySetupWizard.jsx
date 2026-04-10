@@ -921,6 +921,10 @@ export default function CrybabSetupWizard() {
   const [saving, setSaving] = useState(false);
 
   const handleStartRound = async () => {
+    if (activeRound) {
+      toast({ title: "Round already in progress", description: "Resume or cancel your active round before starting a new one." });
+      return;
+    }
     setSaving(true);
     try {
       const roundId = await createRound({

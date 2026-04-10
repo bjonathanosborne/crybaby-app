@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import crybabyLogo from "@/assets/crybaby-logo.png";
 import { useNavigate, useSearchParams, useBlocker } from "react-router-dom";
-import { loadRound, updatePlayerScores, completeRound, createPost, saveAICommentary, insertSettlements, createRoundEvent, toggleBroadcast } from "@/lib/db";
+import { loadRound, updatePlayerScores, completeRound, cancelRound, createPost, saveAICommentary, insertSettlements, createRoundEvent, toggleBroadcast } from "@/lib/db";
 import { supabase } from "@/integrations/supabase/client";
 import RoundLiveFeed from "@/components/RoundLiveFeed";
 import {
@@ -861,9 +861,12 @@ export default function CrybabActiveRound() {
   const [showPressModal, setShowPressModal] = useState(false);
   const [settlementsSaved, setSettlementsSaved] = useState(false);
   const [totalsInitialized, setTotalsInitialized] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [canceling, setCanceling] = useState(false);
+  const [isCanceled, setIsCanceled] = useState(false);
 
-  // Round is considered complete once we're past hole 18 with results saved
-  const roundIsComplete = settlementsSaved || (currentHole >= 18 && holeResults.length >= 17);
+  // Round is considered complete once we're past hole 18 with results saved, or explicitly canceled
+  const roundIsComplete = settlementsSaved || isCanceled || (currentHole >= 18 && holeResults.length >= 17);
 
   // Block in-app navigation while round is active
   const blocker = useBlocker(({ currentLocation, nextLocation }) =>
@@ -877,6 +880,19 @@ export default function CrybabActiveRound() {
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [roundIsComplete]);
+
+  // Cancel round — permanent, preserves scores, clears from active state
+  const handleCancelRound = async () => {
+    setCanceling(true);
+    try {
+      await cancelRound(roundId);
+      setIsCanceled(true);
+      navigate("/feed", { replace: true });
+    } catch (err) {
+      console.error("Failed to cancel round:", err);
+      setCanceling(false);
+    }
+  };
 
   // Redirect if no round ID
   useEffect(() => {
@@ -1624,11 +1640,61 @@ export default function CrybabActiveRound() {
               </button>
               <button onClick={() => blocker.proceed()} style={{
                 flex: 1, padding: "14px", borderRadius: 14,
-                border: "none", background: "#DC2626",
-                fontFamily: FONT, fontSize: 15, fontWeight: 700,
-                color: "#fff", cursor: "pointer",
+                border: "2px solid #E5E7EB", background: "#F9FAFB",
+                fontFamily: FONT, fontSize: 14, fontWeight: 700,
+                color: "#6B7280", cursor: "pointer",
               }}>
-                Leave
+                Leave &amp; Resume Later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Round Confirmation Dialog */}
+      {showCancelConfirm && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)",
+          backdropFilter: "blur(8px)", zIndex: 9999,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: 20,
+        }}>
+          <div style={{
+            background: "#fff", borderRadius: 24, padding: "28px 24px",
+            maxWidth: 360, width: "100%",
+            boxShadow: "0 24px 48px rgba(0,0,0,0.18)",
+          }}>
+            <div style={{ fontSize: 32, textAlign: "center", marginBottom: 12 }}>🗑️</div>
+            <div style={{ fontFamily: FONT, fontSize: 18, fontWeight: 800, color: "#1A1A1A", textAlign: "center", marginBottom: 8 }}>
+              Cancel this round?
+            </div>
+            <div style={{ fontFamily: FONT, fontSize: 14, color: "#6B7280", textAlign: "center", marginBottom: 24, lineHeight: 1.5 }}>
+              Scores are preserved, but this round won&apos;t appear as active anymore. This cannot be undone.
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={() => setShowCancelConfirm(false)}
+                style={{
+                  flex: 1, padding: "14px", borderRadius: 14,
+                  border: "2px solid #E5E7EB", background: "#fff",
+                  fontFamily: FONT, fontSize: 15, fontWeight: 700,
+                  color: "#1A1A1A", cursor: "pointer",
+                }}
+              >
+                Keep Playing
+              </button>
+              <button
+                onClick={handleCancelRound}
+                disabled={canceling}
+                style={{
+                  flex: 1, padding: "14px", borderRadius: 14,
+                  border: "none", background: "#DC2626",
+                  fontFamily: FONT, fontSize: 15, fontWeight: 700,
+                  color: "#fff", cursor: canceling ? "not-allowed" : "pointer",
+                  opacity: canceling ? 0.7 : 1,
+                }}
+              >
+                {canceling ? "Canceling…" : "Cancel Round"}
               </button>
             </div>
           </div>
@@ -1699,6 +1765,17 @@ export default function CrybabActiveRound() {
                 }}
               >
                 📊
+              </button>
+              <button
+                onClick={() => setShowCancelConfirm(true)}
+                style={{
+                  padding: "6px 10px", borderRadius: 8, border: "none", cursor: "pointer",
+                  fontFamily: FONT, fontSize: 12, fontWeight: 700,
+                  background: "#FEF2F2", color: "#DC2626",
+                }}
+                title="Cancel Round"
+              >
+                ✕
               </button>
           </div>
         </div>
