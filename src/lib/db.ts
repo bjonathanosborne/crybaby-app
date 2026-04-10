@@ -882,6 +882,35 @@ export async function insertSettlements(roundId: string, settlements: { userId?:
   if (error) throw error;
 }
 
+// Save round game state (current hole, carry-over, running totals) to course_details JSONB.
+// Called after every hole so a killed/backgrounded app can resume from the right position.
+export async function saveGameState(roundId: string, state: { currentHole: number; carryOver: number; totals: Record<string, number> }): Promise<void> {
+  const { data: round, error: readError } = await supabase
+    .from("rounds")
+    .select("course_details")
+    .eq("id", roundId)
+    .single();
+  if (readError) throw readError;
+
+  const updated = { ...(round.course_details || {}), game_state: state };
+  const { error } = await supabase
+    .from("rounds")
+    .update({ course_details: updated })
+    .eq("id", roundId);
+  if (error) throw error;
+}
+
+// Load saved game state from course_details JSONB (returns null if no save exists).
+export async function loadGameState(roundId: string): Promise<{ currentHole: number; carryOver: number; totals: Record<string, number> } | null> {
+  const { data: round, error } = await supabase
+    .from("rounds")
+    .select("course_details")
+    .eq("id", roundId)
+    .single();
+  if (error) throw error;
+  return (round?.course_details as any)?.game_state ?? null;
+}
+
 // Add manual adjustment
 export async function addManualAdjustment(roundId: string, amount: number, notes: string) {
   const { data: { user } } = await supabase.auth.getUser();

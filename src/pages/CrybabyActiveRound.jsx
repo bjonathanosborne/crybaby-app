@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import crybabyLogo from "@/assets/crybaby-logo.png";
 import { useNavigate, useSearchParams, useBlocker } from "react-router-dom";
-import { loadRound, updatePlayerScores, completeRound, cancelRound, createPost, saveAICommentary, insertSettlements, createRoundEvent, toggleBroadcast } from "@/lib/db";
+import { loadRound, updatePlayerScores, completeRound, cancelRound, createPost, saveAICommentary, insertSettlements, createRoundEvent, toggleBroadcast, saveGameState } from "@/lib/db";
 import { supabase } from "@/integrations/supabase/client";
 import RoundLiveFeed from "@/components/RoundLiveFeed";
 import {
@@ -868,6 +868,7 @@ export default function CrybabActiveRound() {
   const [showPressModal, setShowPressModal] = useState(false);
   const [settlementsSaved, setSettlementsSaved] = useState(false);
   const [totalsInitialized, setTotalsInitialized] = useState(false);
+  const [lastSaveFailed, setLastSaveFailed] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [canceling, setCanceling] = useState(false);
   const [isCanceled, setIsCanceled] = useState(false);
@@ -987,7 +988,8 @@ export default function CrybabActiveRound() {
     },
   } : null;
 
-  // Initialize state once round loads
+  // Initialize state once round loads. If a saved game state exists (round was resumed),
+  // override the zero-initialized values so play continues from the right hole and totals.
   useEffect(() => {
     if (round && !totalsInitialized) {
       setTotals(Object.fromEntries(round.players.map(p => [p.id, 0])));
@@ -996,6 +998,14 @@ export default function CrybabActiveRound() {
       setWolfState(initWolfState(round.players));
       setNassauState(initNassauState(round.players));
       setTotalsInitialized(true);
+
+      // Resume from saved state if present
+      const saved = (dbRound?.course_details)?.game_state;
+      if (saved) {
+        if (saved.currentHole > 1) setCurrentHole(saved.currentHole);
+        if (saved.carryOver) setCarryOver(saved.carryOver);
+        if (saved.totals) setTotals(saved.totals);
+      }
     }
   }, [round, totalsInitialized]);
 
@@ -1353,6 +1363,17 @@ export default function CrybabActiveRound() {
           updatePlayerScores(p.id, playerHoleScores, newTotals[p.id] || 0)
             .catch(err => console.error("Failed to persist player scores:", err));
         });
+
+        // Save game state checkpoint so the round can be resumed if the app is killed.
+        // If offline, mark lastSaveFailed so the UI shows a warning badge.
+        const nextHole = currentHole < 18 ? currentHole + 1 : 18;
+        const newCarryOver = showResult.carryOver || 0;
+        saveGameState(roundId, { currentHole: nextHole, carryOver: newCarryOver, totals: newTotals })
+          .then(() => setLastSaveFailed(false))
+          .catch(err => {
+            console.error("Failed to save game state:", err);
+            setLastSaveFailed(true);
+          });
       }
 
       // Update nassau state
@@ -1462,15 +1483,21 @@ export default function CrybabActiveRound() {
     setNassauState(prev => ({ ...prev, presses: [...prev.presses, newPress] }));
   };
 
-  // Connectivity sim
+  // Wire isOnline to real network events so the offline badge reflects actual connectivity.
+  // On reconnect, clear the badge and trigger a game state re-save if a previous save failed.
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (pendingSync > 0 && isOnline) {
-        setPendingSync(0);
-      }
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [pendingSync, isOnline]);
+    const handleOnline = () => {
+      setIsOnline(true);
+      setPendingSync(0);
+    };
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   // Completed round
   if (currentHole >= 18 && holeResults.length >= 18) {
@@ -1678,6 +1705,38 @@ export default function CrybabActiveRound() {
       background: "#F7F7F5", fontFamily: FONT,
       paddingBottom: 140,
     }}>
+
+      {/* Offline / unsaved warning banner */}
+      {(!isOnline || lastSaveFailed) && (
+        <div style={{
+          position: "sticky", top: 0, zIndex: 100,
+          background: lastSaveFailed ? "#FEF3C7" : "#FEE2E2",
+          padding: "8px 16px",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+        }}>
+          <span style={{ fontFamily: FONT, fontSize: 13, fontWeight: 600, color: lastSaveFailed ? "#92400E" : "#991B1B" }}>
+            {lastSaveFailed ? "⚠️ Last save failed — scores are at risk" : "📶 No connection — saves paused"}
+          </span>
+          {lastSaveFailed && isOnline && (
+            <button
+              onClick={() => {
+                if (roundId) {
+                  saveGameState(roundId, { currentHole, carryOver, totals })
+                    .then(() => setLastSaveFailed(false))
+                    .catch(() => {});
+                }
+              }}
+              style={{
+                fontFamily: FONT, fontSize: 12, fontWeight: 700, padding: "4px 12px",
+                borderRadius: 8, border: "none", cursor: "pointer",
+                background: "#92400E", color: "#fff",
+              }}
+            >
+              Retry
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Leave Round Confirmation Dialog */}
       {blocker.state === "blocked" && (

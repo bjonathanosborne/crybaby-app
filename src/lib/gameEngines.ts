@@ -336,59 +336,6 @@ export function calculateNassauHoleResult(
   };
 }
 
-export function calculateNassauSettlement(
-  nassauState: NassauState,
-  players: Player[],
-  teams: TeamInfo | null,
-  holeValue: number,
-): { id: string; name: string; amount: number }[] {
-  // Nassau has 3 bets: front 9, back 9, overall
-  // Each bet = holeValue amount
-  // Winner of each bet = whoever won more holes in that segment
-  const betValue = holeValue * 9; // Total bet per segment = holeValue × 9 holes
-
-  if (!teams) {
-    // Individual Nassau
-    const totals: Record<string, number> = {};
-    players.forEach(p => { totals[p.id] = 0; });
-
-    // Front 9 bet
-    const frontResults = settleNassauBet(players, nassauState.frontMatch, betValue);
-    // Back 9 bet
-    const backResults = settleNassauBet(players, nassauState.backMatch, betValue);
-    // Overall bet
-    const overallResults = settleNassauBet(players, nassauState.overallMatch, betValue);
-
-    players.forEach(p => {
-      totals[p.id] = (frontResults[p.id] || 0) + (backResults[p.id] || 0) + (overallResults[p.id] || 0);
-    });
-
-    return players.map(p => ({ id: p.id, name: p.name, amount: totals[p.id] }));
-  }
-
-  return players.map(p => ({ id: p.id, name: p.name, amount: 0 }));
-}
-
-function settleNassauBet(players: Player[], holesWon: Record<string, number>, betValue: number): Record<string, number> {
-  const result: Record<string, number> = {};
-  players.forEach(p => { result[p.id] = 0; });
-
-  // Find who won the most holes
-  let maxWins = 0;
-  players.forEach(p => { if ((holesWon[p.id] || 0) > maxWins) maxWins = holesWon[p.id] || 0; });
-
-  const winners = players.filter(p => (holesWon[p.id] || 0) === maxWins && maxWins > 0);
-  if (winners.length === 1) {
-    const winner = winners[0];
-    const losers = players.filter(p => p.id !== winner.id);
-    const perLoser = Math.round(betValue / losers.length);
-    result[winner.id] = perLoser * losers.length;
-    losers.forEach(l => { result[l.id] = -perLoser; });
-  }
-
-  return result;
-}
-
 // --- WOLF SCORING ---
 export interface WolfState {
   wolfOrder: string[]; // player IDs in wolf rotation order
