@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { loadProfile, loadMyRounds, loadSettlements, loadUserStats } from "@/lib/db";
 import { format, parseISO, subMonths } from "date-fns";
-import { Loader2, TrendingUp, TrendingDown, Trophy, Target, DollarSign, BarChart3 } from "lucide-react";
+import { Loader2, BarChart3 } from "lucide-react";
 import {
   ResponsiveContainer, LineChart, Line, BarChart, Bar,
   XAxis, YAxis, Tooltip, CartesianGrid, Area, AreaChart,
@@ -148,20 +148,19 @@ export default function StatsPage() {
       <div className="px-4 flex flex-col gap-4 mt-2">
         {/* ── Summary Cards ── */}
         <div className="grid grid-cols-3 gap-2">
-          <StatCard icon={Target} label="Handicap" value={profile?.handicap != null ? String(profile.handicap) : "—"} />
-          <StatCard icon={Trophy} label="Best Score" value={stats.bestScore != null ? String(stats.bestScore) : "—"} />
-          <StatCard icon={BarChart3} label="Avg Score" value={stats.avgScore != null ? String(stats.avgScore) : "—"} />
+          <StatCard label="Handicap" value={profile?.handicap != null ? String(profile.handicap) : "—"} />
+          <StatCard label="Best Score" value={stats.bestScore != null ? String(stats.bestScore) : "—"} />
+          <StatCard label="Avg Score" value={stats.avgScore != null ? String(stats.avgScore) : "—"} />
         </div>
 
         <div className="grid grid-cols-3 gap-2">
           <StatCard
-            icon={DollarSign}
             label="Total P&L"
             value={`${stats.totalPL >= 0 ? "+" : ""}$${stats.totalPL.toFixed(0)}`}
             valueColor={stats.totalPL >= 0 ? "text-primary" : "text-destructive"}
           />
-          <StatCard icon={TrendingUp} label="Wins" value={String(stats.wins)} valueColor="text-primary" />
-          <StatCard icon={TrendingDown} label="Losses" value={String(stats.losses)} valueColor="text-destructive" />
+          <StatCard label="Wins" value={String(stats.wins)} valueColor="text-primary" />
+          <StatCard label="Losses" value={String(stats.losses)} valueColor="text-destructive" />
         </div>
 
         {/* ── Bird Scores ── */}
@@ -308,14 +307,11 @@ export default function StatsPage() {
   );
 }
 
-function StatCard({ icon: Icon, label, value, valueColor }: {
-  icon: any; label: string; value: string; valueColor?: string;
+function StatCard({ label, value, valueColor }: {
+  label: string; value: string; valueColor?: string;
 }) {
   return (
     <div className="bg-card rounded-2xl p-3 border border-border text-center">
-      <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center mx-auto mb-1.5">
-        <Icon size={14} className="text-primary" />
-      </div>
       <div className={`text-lg font-extrabold font-mono ${valueColor || "text-foreground"}`}>{value}</div>
       <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mt-0.5">{label}</div>
     </div>
