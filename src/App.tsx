@@ -35,12 +35,14 @@ const queryClient = new QueryClient();
 
 function RootRedirect() {
   const { user, loading } = useAuth();
+  if (import.meta.env.DEV) return <Navigate to="/feed" replace />;
   if (loading) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>Loading...</div>;
   return <Navigate to={user ? "/feed" : "/auth"} replace />;
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
+  if (import.meta.env.DEV) return <>{children}</>;
   if (loading) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>Loading...</div>;
   if (!user) return <Navigate to="/auth" replace />;
   return <>{children}</>;
