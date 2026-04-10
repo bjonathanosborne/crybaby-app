@@ -416,7 +416,7 @@ export default function ProfilePage() {
             fontSize: 13, fontWeight: 700, color: "#16A34A", cursor: "pointer",
             display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
           }}>
-            📊 View Full Stats Dashboard
+            View Full Stats Dashboard
           </button>
         </div>
 
