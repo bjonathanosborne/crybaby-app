@@ -908,12 +908,15 @@ export default function CrybabActiveRound() {
     }
   }, [roundId, navigate]);
 
-  // Load round from DB
+  // Load round from DB — 10-second timeout guards against silent hangs on golf courses
   useEffect(() => {
     if (!roundId) return;
     const load = async () => {
       try {
-        const data = await loadRound(roundId);
+        const timeout = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Load timed out — check your connection")), 10000)
+        );
+        const data = await Promise.race([loadRound(roundId), timeout]);
         if (!data) {
           setError("Round not found");
           setLoading(false);
@@ -936,7 +939,7 @@ export default function CrybabActiveRound() {
         setLoading(false);
       } catch (err) {
         console.error("Failed to load round:", err);
-        setError("Failed to load round");
+        setError(err.message || "Failed to load round");
         setLoading(false);
       }
     };
@@ -1054,18 +1057,29 @@ export default function CrybabActiveRound() {
   }
 
   if (error || !round) {
+    const isTimeout = error && error.includes("timed out");
     return (
       <div style={{ maxWidth: 420, margin: "0 auto", minHeight: "100vh", background: "#F7F7F5", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONT }}>
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>😬</div>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>{isTimeout ? "📶" : "😬"}</div>
           <div style={{ fontSize: 16, fontWeight: 600, color: "#6B7280", marginBottom: 16 }}>{error || "Round not found"}</div>
-          <button onClick={() => navigate("/setup")} style={{
-            padding: "12px 24px", borderRadius: 12, border: "none", cursor: "pointer",
-            fontFamily: FONT, fontSize: 14, fontWeight: 700,
-            background: "#1A1A1A", color: "#fff",
-          }}>
-            Start New Round
-          </button>
+          {isTimeout ? (
+            <button onClick={() => window.location.reload()} style={{
+              padding: "12px 24px", borderRadius: 12, border: "none", cursor: "pointer",
+              fontFamily: FONT, fontSize: 14, fontWeight: 700,
+              background: "#1A1A1A", color: "#fff",
+            }}>
+              Retry
+            </button>
+          ) : (
+            <button onClick={() => navigate("/setup")} style={{
+              padding: "12px 24px", borderRadius: 12, border: "none", cursor: "pointer",
+              fontFamily: FONT, fontSize: 14, fontWeight: 700,
+              background: "#1A1A1A", color: "#fff",
+            }}>
+              Start New Round
+            </button>
+          )}
         </div>
       </div>
     );

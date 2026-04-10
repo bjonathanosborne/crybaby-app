@@ -862,6 +862,15 @@ export async function insertSettlements(roundId: string, settlements: { userId?:
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
+  // Idempotency guard: if settlements already exist for this round, skip.
+  // Prevents duplicate rows if this is called twice (e.g. resume to a completed round).
+  const { count, error: countError } = await supabase
+    .from("round_settlements")
+    .select("*", { count: "exact", head: true })
+    .eq("round_id", roundId);
+  if (countError) throw countError;
+  if (count && count > 0) return;
+
   const inserts = settlements.map(s => ({
     round_id: roundId,
     user_id: s.userId || null,

@@ -149,14 +149,10 @@ function getDOCTeams(holeNumber: number, players: Player[]): TeamInfo | null {
       teamB: { name: 'Riders', players: riders, color: '#8B5CF6' },
     };
   } else if (holeNumber <= 10) {
-    const othersA = [
-      players.find(p => p.cart === 'A' && p.position === 'driver'),
-      players.find(p => p.cart === 'B' && p.position === 'rider'),
-    ].filter(Boolean) as Player[];
-    const othersB = [
-      players.find(p => p.cart === 'B' && p.position === 'driver'),
-      players.find(p => p.cart === 'A' && p.position === 'rider'),
-    ].filter(Boolean) as Player[];
+    // Others phase: teams split by cart assignment so all players are included.
+    // Previous find()-based approach excluded duplicate cart+position combos (Bug 2).
+    const othersA = players.filter(p => p.cart === 'A');
+    const othersB = players.filter(p => p.cart === 'B');
     return {
       teamA: { name: 'Others 1', players: othersA, color: '#F59E0B' },
       teamB: { name: 'Others 2', players: othersB, color: '#EC4899' },
