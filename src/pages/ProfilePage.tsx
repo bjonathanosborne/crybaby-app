@@ -14,8 +14,7 @@ const US_STATES = [
   "SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"
 ];
 
-const FONT = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
-const MONO = "'SF Mono', 'JetBrains Mono', monospace";
+const MONO = "'JetBrains Mono', 'SF Mono', monospace";
 
 type LedgerPeriod = "monthly" | "annual" | "all";
 
@@ -152,8 +151,29 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONT }}>
-        Loading...
+      <div className="max-w-[420px] mx-auto px-4 pt-4 flex flex-col gap-4 animate-pulse">
+        {/* Header skeleton */}
+        <div className="flex justify-between items-center pb-2">
+          <div className="h-7 w-20 bg-muted rounded-lg" />
+          <div className="h-8 w-16 bg-muted rounded-xl" />
+        </div>
+        {/* Profile card skeleton */}
+        <div className="bg-card rounded-2xl p-6 flex flex-col items-center gap-3 shadow-sm">
+          <div className="w-[72px] h-[72px] rounded-full bg-muted" />
+          <div className="h-5 w-32 bg-muted rounded-md" />
+          <div className="h-4 w-24 bg-muted rounded-md" />
+          <div className="flex gap-8 mt-2">
+            <div className="h-10 w-16 bg-muted rounded-lg" />
+            <div className="h-10 w-16 bg-muted rounded-lg" />
+            <div className="h-10 w-16 bg-muted rounded-lg" />
+          </div>
+        </div>
+        {/* Stats skeleton */}
+        <div className="bg-card rounded-2xl p-4 shadow-sm flex flex-col gap-3">
+          <div className="h-4 w-24 bg-muted rounded-md" />
+          <div className="h-4 w-full bg-muted rounded-md" />
+          <div className="h-4 w-3/4 bg-muted rounded-md" />
+        </div>
       </div>
     );
   }
@@ -174,19 +194,16 @@ export default function ProfilePage() {
 
       <div style={{ padding: "16px 16px", display: "flex", flexDirection: "column", gap: 16 }}>
         {/* Profile Card */}
-        <div style={{
-          background: "#fff", borderRadius: 20, padding: "24px 20px", textAlign: "center",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-        }}>
+        <div className="bg-card rounded-2xl shadow-sm" style={{ padding: "24px 20px", textAlign: "center" }}>
           <div style={{ position: "relative", display: "inline-block" }}>
             {profile?.avatar_url ? (
               <img src={profile.avatar_url} alt={profile.display_name}
                 style={{ width: 72, height: 72, borderRadius: 36, objectFit: "cover", display: "block", margin: "0 auto" }} />
             ) : (
-              <div style={{
-                width: 72, height: 72, borderRadius: 36, background: "#16A34A",
+              <div className="bg-primary text-primary-foreground" style={{
+                width: 72, height: 72, borderRadius: 36,
                 display: "flex", alignItems: "center", justifyContent: "center",
-                color: "#fff", fontSize: 28, fontWeight: 700, fontFamily: FONT,
+                fontSize: 28, fontWeight: 700,
                 margin: "0 auto",
               }}>
                 {(profile?.display_name || "?")[0].toUpperCase()}
@@ -199,7 +216,7 @@ export default function ProfilePage() {
               style={{
                 position: "absolute", bottom: -4, right: -4,
                 width: 26, height: 26, borderRadius: 13,
-                background: "#1A1A1A", border: "2px solid #fff",
+                background: "var(--foreground)", border: "2px solid var(--background)",
                 color: "#fff", fontSize: 12, cursor: "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 opacity: uploadingAvatar ? 0.5 : 1,
@@ -299,11 +316,11 @@ export default function ProfilePage() {
               <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={handleSaveProfile} style={{
                   flex: 1, padding: 10, borderRadius: 10, border: "none",
-                  background: "#16A34A", color: "#fff", fontWeight: 700, fontFamily: FONT, cursor: "pointer",
+                  background: "#16A34A", color: "#fff", fontWeight: 700, fontFamily: "inherit", cursor: "pointer",
                 }}>Save</button>
                 <button onClick={() => { setEditingProfile(false); setShowAddCourse(false); }} style={{
                   flex: 1, padding: 10, borderRadius: 10, border: "1px solid #E5E7EB",
-                  background: "#fff", color: "#6B7280", fontWeight: 600, fontFamily: FONT, cursor: "pointer",
+                  background: "#fff", color: "#6B7280", fontWeight: 600, fontFamily: "inherit", cursor: "pointer",
                 }}>Cancel</button>
               </div>
             </div>
@@ -329,7 +346,7 @@ export default function ProfilePage() {
               )}
               <button onClick={() => setEditingProfile(true)} style={{
                 marginTop: 12, padding: "8px 16px", borderRadius: 10, border: "1px solid #E5E7EB",
-                background: "#fff", fontFamily: FONT, fontSize: 12, fontWeight: 600, color: "#6B7280", cursor: "pointer",
+                background: "#fff", fontFamily: "inherit", fontSize: 12, fontWeight: 600, color: "#6B7280", cursor: "pointer",
               }}>Edit Profile</button>
             </>
           )}
@@ -337,7 +354,7 @@ export default function ProfilePage() {
 
         {/* Friends Strip */}
         {friendProfiles.length > 0 && (
-          <div style={{ background: "#fff", borderRadius: 20, padding: "18px 20px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+          <div style={{ background: "hsl(var(--card))", borderRadius: 20, padding: "18px 20px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
               <span style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                 Friends ({friendProfiles.length})
@@ -358,7 +375,7 @@ export default function ProfilePage() {
                       <img src={fp.avatar_url} alt={name}
                         style={{ width: 48, height: 48, borderRadius: 24, objectFit: "cover" }} />
                     ) : (
-                      <div style={{ width: 48, height: 48, borderRadius: 24, background: "#16A34A", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 18, fontWeight: 700 }}>
+                      <div className="bg-primary text-primary-foreground" style={{ width: 48, height: 48, borderRadius: 24, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 700 }}>
                         {initial}
                       </div>
                     )}
@@ -374,7 +391,7 @@ export default function ProfilePage() {
 
         {/* Quick Stats */}
         <div style={{
-          background: "#fff", borderRadius: 20, padding: "18px 20px",
+          background: "hsl(var(--card))", borderRadius: 20, padding: "18px 20px",
           boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
         }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>
@@ -387,7 +404,7 @@ export default function ProfilePage() {
               { label: "Active Rounds", value: rounds.filter(r => r.status === "active").length.toString() },
               { label: "Avg Per Round", value: completedRounds.length ? `$${(totalWinnings / completedRounds.length).toFixed(0)}` : "$0" },
             ].map(s => (
-              <div key={s.label} style={{ padding: "12px 14px", background: "#F9FAFB", borderRadius: 12, textAlign: "center" }}>
+              <div key={s.label} style={{ padding: "12px 14px", background: "hsl(var(--muted))", borderRadius: 12, textAlign: "center" }}>
                 <div style={{ fontFamily: MONO, fontSize: 20, fontWeight: 800, color: (s as any).color || "#1A1A1A" }}>{s.value}</div>
                 <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 2 }}>{s.label}</div>
               </div>
@@ -395,7 +412,7 @@ export default function ProfilePage() {
           </div>
           <button onClick={() => navigate("/stats")} style={{
             width: "100%", marginTop: 14, padding: "10px 0", borderRadius: 10,
-            border: "1px solid #E5E7EB", background: "#fff", fontFamily: FONT,
+            border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", fontFamily: "inherit",
             fontSize: 13, fontWeight: 700, color: "#16A34A", cursor: "pointer",
             display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
           }}>
@@ -405,7 +422,7 @@ export default function ProfilePage() {
 
         {/* Ledger */}
         <div style={{
-          background: "#fff", borderRadius: 20, padding: "18px 20px",
+          background: "hsl(var(--card))", borderRadius: 20, padding: "18px 20px",
           boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
@@ -416,7 +433,7 @@ export default function ProfilePage() {
               {(["monthly", "annual", "all"] as LedgerPeriod[]).map(p => (
                 <button key={p} onClick={() => setLedgerPeriod(p)} style={{
                   padding: "4px 10px", borderRadius: 6, border: "none", cursor: "pointer",
-                  fontFamily: FONT, fontSize: 11, fontWeight: 600,
+                  fontFamily: "inherit", fontSize: 11, fontWeight: 600,
                   background: ledgerPeriod === p ? "#1A1A1A" : "#F3F4F6",
                   color: ledgerPeriod === p ? "#fff" : "#9CA3AF",
                 }}>{p === "monthly" ? "Mo" : p === "annual" ? "Yr" : "All"}</button>
@@ -443,7 +460,7 @@ export default function ProfilePage() {
                 {period.rounds.map((s: any, j: number) => (
                   <div key={j} style={{
                     display: "flex", justifyContent: "space-between", alignItems: "center",
-                    padding: "8px 12px", background: "#F9FAFB", borderRadius: 8, marginBottom: 4,
+                    padding: "8px 12px", background: "hsl(var(--muted))", borderRadius: 8, marginBottom: 4,
                     fontSize: 12,
                   }}>
                     <div>
@@ -473,7 +490,7 @@ export default function ProfilePage() {
 
         {/* Round History */}
         <div style={{
-          background: "#fff", borderRadius: 20, padding: "18px 20px",
+          background: "hsl(var(--card))", borderRadius: 20, padding: "18px 20px",
           boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
         }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>
