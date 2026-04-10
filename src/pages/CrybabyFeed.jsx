@@ -314,7 +314,7 @@ function BroadcastCard({ round, onFollow, onDecline, navigate }) {
     <div className="bg-card rounded-2xl overflow-hidden border-2 border-primary/20 shadow-md">
       <div className="bg-primary/5 px-4 py-3 flex items-center gap-2 border-b border-primary/10">
         <Radio size={14} className="text-primary animate-pulse" />
-        <span className="text-xs font-bold text-primary uppercase tracking-wider">Live Round</span>
+        <span className="text-xs font-bold text-primary uppercase tracking-wider">{stakes ? "💰 Money Round" : "Live Round"}</span>
       </div>
       <div className="p-4">
         <div className="flex gap-3 items-start mb-3">
@@ -323,16 +323,22 @@ function BroadcastCard({ round, onFollow, onDecline, navigate }) {
             <div className="text-sm font-bold text-foreground truncate">
               {profileName(profile)}
             </div>
-            <div className="text-xs text-muted-foreground">started a round</div>
+            <div className="text-xs text-muted-foreground">{stakes ? "put money on the table" : "started a round"}</div>
           </div>
         </div>
         <div className="bg-muted/50 rounded-xl p-3 mb-3">
           <div className="text-sm font-semibold text-foreground flex items-center gap-1.5 mb-1">
             <span className="text-primary">⛳</span> {round.course}
           </div>
-          <div className="text-xs text-muted-foreground">
-            {round.game_type?.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
-            {stakes ? ` · ${stakes}` : ""}
+          <div className="flex items-center gap-2 flex-wrap mt-0.5">
+            <span className="text-xs text-muted-foreground">
+              {round.game_type?.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
+            </span>
+            {stakes && (
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20">
+                💰 {stakes}
+              </span>
+            )}
           </div>
           {playerNames.length > 0 && (
             <div className="text-xs text-muted-foreground mt-1.5">
@@ -515,12 +521,17 @@ export default function CrybabyFeed() {
   return (
     <div className="max-w-[420px] mx-auto min-h-screen bg-background pb-24">
       {/* Page header */}
-      <div className="px-4 pt-4 pb-2 flex justify-between items-center">
-        <h1 className="text-2xl font-extrabold text-foreground tracking-tight">Feed</h1>
-        <button onClick={() => navigate("/setup")}
-          className="px-5 py-2.5 rounded-xl border-none cursor-pointer text-sm font-extrabold bg-primary text-primary-foreground hover:opacity-90 transition-opacity shadow-sm">
-          + New Round
-        </button>
+      <div className="px-4 pt-4 pb-3">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-extrabold text-foreground tracking-tight">Action</h1>
+            <p className="text-[11px] text-muted-foreground font-medium tracking-wide">golf's money game</p>
+          </div>
+          <button onClick={() => navigate("/setup")}
+            className="px-4 py-2.5 rounded-xl border-none cursor-pointer text-sm font-extrabold bg-primary text-primary-foreground hover:opacity-90 transition-opacity shadow-md flex items-center gap-1.5">
+            💰 Start Action
+          </button>
+        </div>
       </div>
 
       {/* Active Round Resume Banner */}
@@ -541,7 +552,16 @@ export default function CrybabyFeed() {
 
       {/* Content */}
       <div className="p-4 flex flex-col gap-3.5">
-        <NewPostComposer profile={myProfile} onPost={handlePost} />
+        {/* 💰 Live Action — pending broadcasts come FIRST */}
+        {(pendingBroadcasts.length > 0 || activeBroadcasts.length > 0) && (
+          <div className="text-[10px] font-bold text-primary uppercase tracking-widest flex items-center gap-1.5 px-1">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-60" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+            </span>
+            Live Action
+          </div>
+        )}
 
         {/* Pending broadcast announcements */}
         {pendingBroadcasts.map(round => (
@@ -581,17 +601,21 @@ export default function CrybabyFeed() {
           );
         })}
 
+        <NewPostComposer profile={myProfile} onPost={handlePost} />
+
         {loading ? (
           <div className="text-center py-10 text-muted-foreground text-sm">Loading...</div>
         ) : posts.length === 0 && pendingBroadcasts.length === 0 ? (
-          <div className="bg-card rounded-2xl p-10 text-center border border-border">
-            <div className="text-4xl mb-3">⛳</div>
-            <div className="text-sm font-semibold text-muted-foreground">
-              No posts yet
+          <div className="bg-card rounded-2xl p-8 text-center border border-border">
+            <div className="text-4xl mb-3">💰</div>
+            <div className="text-base font-extrabold text-foreground mb-1">No action yet</div>
+            <div className="text-sm text-muted-foreground mb-4">
+              Start a round, put money on it, and let the trash talk begin.
             </div>
-            <div className="text-xs text-muted-foreground mt-1 italic">
-              Play a round or talk some trash to get things started.
-            </div>
+            <button onClick={() => navigate("/setup")}
+              className="px-6 py-3 rounded-2xl border-none cursor-pointer text-sm font-extrabold bg-primary text-primary-foreground hover:opacity-90 transition-opacity shadow-md">
+              💰 Start Action
+            </button>
           </div>
         ) : (
           posts.map(post => (
@@ -612,7 +636,7 @@ export default function CrybabyFeed() {
 
         {posts.length > 0 && (
           <div className="text-center py-5 text-[13px] text-muted-foreground italic">
-            That's all for now. Go play a round and give the people something to talk about.
+            That's all the action. Go put some money on the line.
           </div>
         )}
       </div>
