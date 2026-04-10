@@ -1,8 +1,7 @@
-import { useState } from "react";
 import { Outlet, NavLink, Navigate, useNavigate } from "react-router-dom";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useAuth } from "@/contexts/AuthContext";
-import { Users, BarChart3, Settings, Shield, ChevronLeft, Layers, Menu, X } from "lucide-react";
+import { Users, BarChart3, Settings, Shield, ChevronLeft, Layers } from "lucide-react";
 import crybabyLogo from "@/assets/crybaby-logo.png";
 
 const adminNav = [
@@ -17,7 +16,6 @@ export default function AdminLayout() {
   const { isAdmin, loading } = useIsAdmin();
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   if (authLoading || loading) {
     return (

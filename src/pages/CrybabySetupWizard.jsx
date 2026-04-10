@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 import { createRound, loadActiveRound, loadProfile } from "@/lib/db";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -734,7 +733,6 @@ function ReviewSection({ label, value, icon }) {
 // MAIN COMPONENT
 // ============================================================
 export default function CrybabSetupWizard() {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   const font = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
@@ -937,7 +935,7 @@ export default function CrybabSetupWizard() {
         privacy,
         scorekeeperMode: true,
       });
-      navigate(`/round?id=${roundId}`);
+      window.location.href = `/round?id=${roundId}`;
     } catch (err) {
       console.error("Failed to create round:", err);
       toast({ title: "Failed to start round", description: "Please try again.", variant: "destructive" });
@@ -980,7 +978,7 @@ export default function CrybabSetupWizard() {
             </div>
           </div>
           <button
-            onClick={() => navigate(`/round?id=${activeRound.id}`)}
+            onClick={() => { window.location.href = `/round?id=${activeRound.id}`; }}
             style={{
               padding: "9px 14px", borderRadius: 12, border: "none",
               background: "#16A34A", color: "#fff",

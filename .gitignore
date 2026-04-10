@@ -27,3 +27,4 @@ ios/.swiftpm
 *.njsproj
 *.sln
 *.sw?
+.gstack/

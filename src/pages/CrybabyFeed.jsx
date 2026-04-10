@@ -532,7 +532,7 @@ export default function CrybabyFeed() {
             <div className="text-sm font-semibold text-foreground truncate">{activeRound.course}</div>
           </div>
           <button
-            onClick={() => navigate(`/round?id=${activeRound.id}`)}
+            onClick={() => { window.location.href = `/round?id=${activeRound.id}`; }}
             className="px-3 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold border-none cursor-pointer whitespace-nowrap hover:opacity-90">
             Resume →
           </button>
