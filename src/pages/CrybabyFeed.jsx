@@ -528,7 +528,7 @@ export default function CrybabyFeed() {
             <p className="text-[11px] text-muted-foreground font-medium tracking-wide">golf's money game</p>
           </div>
           <button onClick={() => navigate("/setup")}
-            className="px-4 py-2.5 rounded-xl border-none cursor-pointer text-sm font-extrabold bg-primary text-primary-foreground hover:opacity-90 transition-opacity shadow-md flex items-center gap-1.5">
+            className="px-4 py-3 min-h-[44px] rounded-xl border-none cursor-pointer text-sm font-extrabold bg-primary text-primary-foreground hover:opacity-90 transition-opacity shadow-md flex items-center gap-1.5">
             💰 Start Action
           </button>
         </div>
