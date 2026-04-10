@@ -991,12 +991,12 @@ export default function CrybabActiveRound() {
 
   // Show wolf modal at the start of each hole for wolf game
   useEffect(() => {
-    if (round?.gameMode === 'wolf' && !showResult && !showCrybabSetup) {
+    if (round?.gameMode === 'wolf' && !showResult && !showWolfModal && !showCrybabSetup) {
       setWolfPartner(null);
       setIsLoneWolf(false);
       setShowWolfModal(true);
     }
-  }, [currentHole, round?.gameMode]);
+  }, [currentHole, round?.gameMode, showResult, showWolfModal]);
 
   // Check if entering crybaby phase
   useEffect(() => {
@@ -1212,7 +1212,11 @@ export default function CrybabActiveRound() {
     }
 
     // Team-based games (DOC, Flip) — use inline team logic
-    if (!teams) return null;
+    if (!teams) {
+      // DOC crybaby phase (holes 16–18) has no team structure — fall back to
+      // individual skins scoring so the hole can always be completed
+      return calculateSkinsResult(players, cs, par, currentHole, round.holeValue, carryOver, round.settings, lowestHandicap, holeHandicap);
+    }
 
     // Calculate net scores using the imported getStrokesOnHole
     const netScores = {};
@@ -1315,6 +1319,18 @@ export default function CrybabActiveRound() {
       setShowResult(null);
       setPendingSync(ps => ps + 1);
 
+      // Persist scores + money totals to DB after every hole — guards against app kill / backgrounding
+      if (roundId) {
+        players.forEach(p => {
+          const playerHoleScores = {};
+          Object.entries(scores).forEach(([hole, holeScores]) => {
+            if (holeScores[p.id] != null) playerHoleScores[hole] = holeScores[p.id];
+          });
+          updatePlayerScores(p.id, playerHoleScores, newTotals[p.id] || 0)
+            .catch(err => console.error("Failed to persist player scores:", err));
+        });
+      }
+
       // Update nassau state
       if (round.gameMode === 'nassau' && !showResult.push) {
         setNassauState(prev => {
@@ -1416,7 +1432,10 @@ export default function CrybabActiveRound() {
   const handleNassauPress = (startHole) => {
     const init = {};
     players.forEach(p => { init[p.id] = 0; });
-    setNassauPresses(prev => [...prev, { startHole, match: init }]);
+    const newPress = { startHole, match: init };
+    // Keep both in sync — advanceHole reads nassauState.presses to track holes won per press
+    setNassauPresses(prev => [...prev, newPress]);
+    setNassauState(prev => ({ ...prev, presses: [...prev.presses, newPress] }));
   };
 
   // Connectivity sim
