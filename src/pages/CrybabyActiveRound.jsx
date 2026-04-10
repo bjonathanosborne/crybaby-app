@@ -116,7 +116,7 @@ function HoleHeader({ holeNumber, par, handicap, yardage, phase }) {
   return (
     <div style={{
       display: "flex", alignItems: "center", justifyContent: "space-between",
-      padding: "14px 20px", background: "#fff", borderBottom: "1px solid #F3F4F6",
+      padding: "14px 20px", background: "#FAF5EC", borderBottom: "1px solid #F3F4F6",
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
         <div style={{
@@ -212,7 +212,7 @@ function ScoreInput({ player, par, score, strokes, onScoreChange }) {
   return (
     <div style={{
       display: "flex", alignItems: "center", gap: 12, padding: "12px 16px",
-      background: "#fff", borderRadius: 14,
+      background: "#FAF5EC", borderRadius: 14,
       boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
     }}>
       <div style={{
@@ -253,7 +253,7 @@ function ScoreInput({ player, par, score, strokes, onScoreChange }) {
           background: score !== null ? (diff < 0 ? "#EEF5E5" : diff > 0 ? "#FEF2F2" : "#FAF5EC") : "#FAF5EC",
           display: "flex", alignItems: "center", justifyContent: "center",
           fontFamily: MONO, fontSize: 22, fontWeight: 800, color: diffColor,
-          border: score !== null ? `2px solid ${diffColor}20` : "2px solid #E5E7EB",
+          border: score !== null ? `2px solid ${diffColor}20` : "2px solid #DDD0BB",
           transition: "all 0.2s ease",
         }}>
           {score !== null ? score : "–"}
@@ -276,7 +276,7 @@ function Leaderboard({ players, totals, currentCrybaby }) {
   const sorted = [...players].sort((a, b) => (totals[b.id] || 0) - (totals[a.id] || 0));
   return (
     <div style={{
-      background: "#fff", borderRadius: 16, overflow: "hidden",
+      background: "#FAF5EC", borderRadius: 16, overflow: "hidden",
       boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
     }}>
       <div style={{
@@ -296,7 +296,7 @@ function Leaderboard({ players, totals, currentCrybaby }) {
         return (
           <div key={player.id} style={{
             display: "flex", alignItems: "center", gap: 10, padding: "10px 16px",
-            borderBottom: i < sorted.length - 1 ? "1px solid #F9FAFB" : "none",
+            borderBottom: i < sorted.length - 1 ? "1px solid #FAF5EC" : "none",
             background: isCrybaby ? "#FEF2F2" : "transparent",
           }}>
             <span style={{
@@ -338,7 +338,7 @@ function HammerModal({ teams, currentValue, hammerDepth, lastHammerBy, onThrow, 
       padding: 20,
     }}>
       <div style={{
-        background: "#fff", borderRadius: 24, padding: "32px 28px", maxWidth: 360, width: "100%",
+        background: "#FAF5EC", borderRadius: 24, padding: "32px 28px", maxWidth: 360, width: "100%",
         textAlign: "center",
       }}>
         <div style={{ fontSize: 56, marginBottom: 12 }}>{"🔨".repeat(Math.min(hammerDepth + 1, 5))}</div>
@@ -430,7 +430,7 @@ function HoleResultCard({ result, onDismiss }) {
       padding: 20,
     }}>
       <div style={{
-        background: "#fff", borderRadius: 24, padding: "28px 24px", maxWidth: 360, width: "100%",
+        background: "#FAF5EC", borderRadius: 24, padding: "28px 24px", maxWidth: 360, width: "100%",
         textAlign: "center",
       }}>
         <div style={{ fontSize: 40, marginBottom: 8 }}>
@@ -471,7 +471,7 @@ function HoleResultCard({ result, onDismiss }) {
         <div style={{
           padding: "10px 14px", background: "#EEF5E5", borderRadius: 10, marginBottom: 20, marginTop: 12,
           fontFamily: FONT, fontSize: 13, color: "#1A3009", fontStyle: "italic",
-          borderLeft: "3px solid #16A34A",
+          borderLeft: "3px solid #2D5016",
           textAlign: "left",
         }}>
           💬 {result.quip}
@@ -504,7 +504,7 @@ function CrybabSetupModal({ players, totals, onConfirm }) {
       padding: 20,
     }}>
       <div style={{
-        background: "#fff", borderRadius: 24, padding: "28px 24px", maxWidth: 380, width: "100%",
+        background: "#FAF5EC", borderRadius: 24, padding: "28px 24px", maxWidth: 380, width: "100%",
       }}>
         <div style={{ textAlign: "center", marginBottom: 20 }}>
           <div style={{ fontSize: 48, marginBottom: 8 }}>🍼</div>
@@ -619,7 +619,7 @@ function FlipTeamModal({ players, onConfirm }) {
       padding: 20,
     }}>
       <div style={{
-        background: "#fff", borderRadius: 24, padding: "28px 24px", maxWidth: 380, width: "100%",
+        background: "#FAF5EC", borderRadius: 24, padding: "28px 24px", maxWidth: 380, width: "100%",
         textAlign: "center",
       }}>
         <div style={{ fontSize: 48, marginBottom: 8 }}>🪙</div>
@@ -708,7 +708,7 @@ function WolfPartnerModal({ wolfPlayer, otherPlayers, holeNumber, holeValue, onS
       padding: 20,
     }}>
       <div style={{
-        background: "#fff", borderRadius: 24, padding: "28px 24px", maxWidth: 380, width: "100%",
+        background: "#FAF5EC", borderRadius: 24, padding: "28px 24px", maxWidth: 380, width: "100%",
         textAlign: "center",
       }}>
         <div style={{ fontSize: 48, marginBottom: 8 }}>🐺</div>
@@ -781,7 +781,7 @@ function NassauPressModal({ currentHole, holeValue, nassauPresses, onPress, onCl
       padding: 20,
     }}>
       <div style={{
-        background: "#fff", borderRadius: 24, padding: "28px 24px", maxWidth: 360, width: "100%",
+        background: "#FAF5EC", borderRadius: 24, padding: "28px 24px", maxWidth: 360, width: "100%",
         textAlign: "center",
       }}>
         <div style={{ fontSize: 48, marginBottom: 8 }}>📌</div>
@@ -1507,7 +1507,7 @@ export default function CrybabActiveRound() {
     return (
       <div style={{ maxWidth: 420, margin: "0 auto", minHeight: "100vh", background: "#F5EFE0", fontFamily: FONT }}>
         <div style={{
-          background: "linear-gradient(135deg, #1A1A1A 0%, #374151 100%)",
+          background: "linear-gradient(135deg, #1E130A 0%, #374151 100%)",
           padding: "60px 24px 32px", borderRadius: "0 0 32px 32px", textAlign: "center",
         }}>
           <div style={{ fontSize: 48, marginBottom: 8 }}>🏆</div>
@@ -1525,7 +1525,7 @@ export default function CrybabActiveRound() {
               <div key={p.id} style={{
                 display: "flex", alignItems: "center", gap: 14, padding: "16px 18px",
                 background: isCrybab ? "#FEF2F2" : "#fff", borderRadius: 16,
-                boxShadow: i === 0 ? "0 0 0 2px #16A34A, 0 4px 12px rgba(22,163,74,0.15)" : "0 1px 3px rgba(0,0,0,0.06)",
+                boxShadow: i === 0 ? "0 0 0 2px #2D5016, 0 4px 12px rgba(45,80,22,0.15)" : "0 1px 3px rgba(0,0,0,0.06)",
               }}>
                 <div style={{ fontSize: 20, width: 32, textAlign: "center" }}>{i === 0 ? "🏆" : isCrybab ? "🍼" : `#${i + 1}`}</div>
                 <div style={{
@@ -1550,7 +1550,7 @@ export default function CrybabActiveRound() {
           {/* Nassau summary */}
           {round.gameMode === 'nassau' && (
             <div style={{
-              background: "#fff", borderRadius: 16, padding: 20,
+              background: "#FAF5EC", borderRadius: 16, padding: 20,
               boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
             }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>
@@ -1582,7 +1582,7 @@ export default function CrybabActiveRound() {
 
           {/* Settlement */}
           <div style={{
-            background: "#fff", borderRadius: 16, padding: 20, marginTop: 8,
+            background: "#FAF5EC", borderRadius: 16, padding: 20, marginTop: 8,
             boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
           }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>
@@ -1665,7 +1665,7 @@ export default function CrybabActiveRound() {
           {/* Recap */}
           <div style={{
             background: "#EEF5E5", borderRadius: 16, padding: "16px 18px",
-            borderLeft: "4px solid #16A34A",
+            borderLeft: "4px solid #2D5016",
           }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: "#1A3009", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
               Round Recap
@@ -1747,7 +1747,7 @@ export default function CrybabActiveRound() {
           padding: "0 0 24px",
         }}>
           <div style={{
-            background: "#fff", borderRadius: 24, padding: "28px 24px",
+            background: "#FAF5EC", borderRadius: 24, padding: "28px 24px",
             maxWidth: 380, width: "calc(100% - 32px)",
             boxShadow: "0 24px 48px rgba(0,0,0,0.18)",
           }}>
@@ -1761,7 +1761,7 @@ export default function CrybabActiveRound() {
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={() => blocker.reset()} style={{
                 flex: 1, padding: "14px", borderRadius: 14,
-                border: "2px solid #E5E7EB", background: "#fff",
+                border: "2px solid #DDD0BB", background: "#FAF5EC",
                 fontFamily: FONT, fontSize: 15, fontWeight: 700,
                 color: "#1E130A", cursor: "pointer",
               }}>
@@ -1769,7 +1769,7 @@ export default function CrybabActiveRound() {
               </button>
               <button onClick={() => blocker.proceed()} style={{
                 flex: 1, padding: "14px", borderRadius: 14,
-                border: "2px solid #E5E7EB", background: "#FAF5EC",
+                border: "2px solid #DDD0BB", background: "#FAF5EC",
                 fontFamily: FONT, fontSize: 14, fontWeight: 700,
                 color: "#8B7355", cursor: "pointer",
               }}>
@@ -1789,7 +1789,7 @@ export default function CrybabActiveRound() {
           padding: 20,
         }}>
           <div style={{
-            background: "#fff", borderRadius: 24, padding: "28px 24px",
+            background: "#FAF5EC", borderRadius: 24, padding: "28px 24px",
             maxWidth: 360, width: "100%",
             boxShadow: "0 24px 48px rgba(0,0,0,0.18)",
           }}>
@@ -1805,7 +1805,7 @@ export default function CrybabActiveRound() {
                 onClick={() => setShowCancelConfirm(false)}
                 style={{
                   flex: 1, padding: "14px", borderRadius: 14,
-                  border: "2px solid #E5E7EB", background: "#fff",
+                  border: "2px solid #DDD0BB", background: "#FAF5EC",
                   fontFamily: FONT, fontSize: 15, fontWeight: 700,
                   color: "#1E130A", cursor: "pointer",
                 }}
@@ -1833,7 +1833,7 @@ export default function CrybabActiveRound() {
       {/* Top Bar */}
       <div style={{
         padding: "50px 20px 0",
-        background: "#fff",
+        background: "#FAF5EC",
         position: "sticky", top: 0, zIndex: 10,
         borderBottom: "1px solid #F3F4F6",
       }}>
@@ -1856,7 +1856,7 @@ export default function CrybabActiveRound() {
               style={{
                 padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer",
                 fontFamily: FONT, fontSize: 12, fontWeight: 700,
-                background: isBroadcast ? "#16A34A20" : "#EDE7D9",
+                background: isBroadcast ? "#2D501620" : "#EDE7D9",
                 color: isBroadcast ? "#2D5016" : "#A8957B",
               }}
               title={isBroadcast ? "Broadcasting to friends" : "Broadcast this round"}
@@ -2015,7 +2015,7 @@ export default function CrybabActiveRound() {
           <button onClick={() => setShowPressModal(true)} style={{
             padding: "14px 18px", borderRadius: 14, border: "none", cursor: "pointer",
             fontFamily: FONT, fontSize: 14, fontWeight: 700,
-            background: "#16A34A20", color: "#2D5016",
+            background: "#2D501620", color: "#2D5016",
           }}>
             📌 Press
           </button>
@@ -2055,7 +2055,7 @@ export default function CrybabActiveRound() {
         position: "fixed", bottom: 68, left: 0, right: 0,
         padding: "12px 20px", paddingBottom: "max(12px, env(safe-area-inset-bottom))",
         background: "rgba(247,247,245,0.95)", backdropFilter: "blur(12px)",
-        borderTop: "1px solid #E5E7EB",
+        borderTop: "1px solid #DDD0BB",
       }}>
         {pendingSync > 0 && (
           <div style={{

@@ -5,7 +5,7 @@ function Fallback({ error, resetErrorBoundary }: { error: Error; resetErrorBound
     <div style={{
       maxWidth: 420, margin: "0 auto", minHeight: "100vh",
       background: "#F5EFE0", display: "flex", alignItems: "center", justifyContent: "center",
-      fontFamily: "'SF Pro Display', -apple-system, sans-serif", padding: 24,
+      fontFamily: "'Lato', -apple-system, sans-serif", padding: 24,
     }}>
       <div style={{ textAlign: "center" }}>
         <div style={{ fontSize: 40, marginBottom: 12 }}>😬</div>

@@ -46,7 +46,7 @@ export default function ResetPassword() {
         <input
           type="password" placeholder="New password" value={password}
           onChange={(e) => setPassword(e.target.value)} required minLength={6}
-          style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1px solid #E5E7EB", fontSize: 15, boxSizing: "border-box" }}
+          style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1px solid #DDD0BB", fontSize: 15, boxSizing: "border-box" }}
         />
         <button type="submit" disabled={loading} style={{
           padding: "12px 16px", borderRadius: 12, border: "none",

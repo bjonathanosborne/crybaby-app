@@ -177,9 +177,9 @@ export default function AddClubModal({ onClose, onSaved }: Props) {
   // ─── Styles ────────────────────────────────────────────────────────────────
   const font = "'Inter', sans-serif";
   const inputStyle: React.CSSProperties = {
-    width: "100%", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #E5E7EB",
+    width: "100%", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #DDD0BB",
     fontFamily: font, fontSize: 14, outline: "none", boxSizing: "border-box",
-    background: "#fff", color: "#1E130A",
+    background: "#FAF5EC", color: "#1E130A",
   };
   const labelStyle: React.CSSProperties = {
     fontSize: 11, fontWeight: 700, color: "#8B7355", textTransform: "uppercase",
@@ -187,8 +187,8 @@ export default function AddClubModal({ onClose, onSaved }: Props) {
   };
   const cellStyle: React.CSSProperties = {
     width: 36, textAlign: "center", padding: "6px 0", borderRadius: 8,
-    border: "1.5px solid #E5E7EB", fontFamily: font, fontSize: 13, fontWeight: 600,
-    background: "#fff", color: "#1E130A", outline: "none",
+    border: "1.5px solid #DDD0BB", fontFamily: font, fontSize: 13, fontWeight: 600,
+    background: "#FAF5EC", color: "#1E130A", outline: "none",
   };
 
   // ─── Render ────────────────────────────────────────────────────────────────
@@ -202,7 +202,7 @@ export default function AddClubModal({ onClose, onSaved }: Props) {
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div style={{
-        background: "#fff", borderRadius: "20px 20px 0 0",
+        background: "#FAF5EC", borderRadius: "20px 20px 0 0",
         width: "100%", maxWidth: 480, maxHeight: "92vh",
         display: "flex", flexDirection: "column",
         boxShadow: "0 -8px 40px rgba(0,0,0,0.15)",
@@ -277,8 +277,8 @@ export default function AddClubModal({ onClose, onSaved }: Props) {
               <button
                 onClick={() => setStep("confirm")}
                 style={{
-                  padding: "14px", borderRadius: 12, border: "1.5px solid #E5E7EB",
-                  background: "#fff", fontFamily: font, fontSize: 14, fontWeight: 600,
+                  padding: "14px", borderRadius: 12, border: "1.5px solid #DDD0BB",
+                  background: "#FAF5EC", fontFamily: font, fontSize: 14, fontWeight: 600,
                   color: "#374151", cursor: "pointer",
                 }}
               >
@@ -442,7 +442,7 @@ export default function AddClubModal({ onClose, onSaved }: Props) {
                   {course.tees.map((tee, i) => (
                     <div key={i} style={{
                       background: "#FAF5EC", borderRadius: 12, padding: "12px",
-                      border: "1.5px solid #E5E7EB",
+                      border: "1.5px solid #DDD0BB",
                     }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                         <input
@@ -493,8 +493,8 @@ export default function AddClubModal({ onClose, onSaved }: Props) {
             <button
               onClick={() => setStep("upload")}
               style={{
-                flex: 1, padding: "14px", borderRadius: 12, border: "1.5px solid #E5E7EB",
-                background: "#fff", fontFamily: font, fontSize: 14, fontWeight: 600,
+                flex: 1, padding: "14px", borderRadius: 12, border: "1.5px solid #DDD0BB",
+                background: "#FAF5EC", fontFamily: font, fontSize: 14, fontWeight: 600,
                 color: "#374151", cursor: "pointer",
               }}
             >Try Another Photo</button>

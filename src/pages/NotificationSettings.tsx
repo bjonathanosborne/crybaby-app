@@ -33,7 +33,7 @@ export default function NotificationSettings() {
       {/* Header */}
       <div style={{
         padding: "52px 20px 20px", background: "#fff",
-        borderBottom: "1px solid #E5E7EB",
+        borderBottom: "1px solid #DDD0BB",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <button onClick={() => navigate(-1)} style={{

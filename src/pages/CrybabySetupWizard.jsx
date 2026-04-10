@@ -185,7 +185,7 @@ function GameCard({ game, selected, onSelect, playerCount }) {
         width: "100%", textAlign: "left", border: "none", cursor: fits || playerCount === 0 ? "pointer" : "not-allowed",
         background: isSelected ? "#EEF5E5" : "#fff",
         borderRadius: 16, padding: "16px 18px",
-        boxShadow: isSelected ? "0 0 0 2px #16A34A, 0 2px 8px rgba(22,163,74,0.12)" : "0 1px 3px rgba(0,0,0,0.06)",
+        boxShadow: isSelected ? "0 0 0 2px #2D5016, 0 2px 8px rgba(45,80,22,0.12)" : "0 1px 3px rgba(0,0,0,0.06)",
         opacity: !fits && playerCount > 0 ? 0.4 : 1,
         transition: "all 0.2s ease",
         transform: isSelected ? "scale(1.01)" : "scale(1)",
@@ -332,10 +332,10 @@ function PlayerRow({ player, index, onUpdate, onRemove, showCarts, cartOptions, 
   return (
     <div style={{
       display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px",
-      background: "#fff", borderRadius: 12,
+      background: "#FAF5EC", borderRadius: 12,
       boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
       transition: "all 0.2s ease",
-      border: isLinkedUser ? "1.5px solid #16A34A" : "1px solid transparent",
+      border: isLinkedUser ? "1.5px solid #2D5016" : "1px solid transparent",
     }}>
       <div style={{
         width: 32, height: 32, borderRadius: 16, marginTop: 6,
@@ -368,7 +368,7 @@ function PlayerRow({ player, index, onUpdate, onRemove, showCarts, cartOptions, 
             placeholder={`Search or type Player ${index + 1}`}
             style={{
               fontFamily: font, fontSize: 16, fontWeight: 500, color: "#1E130A",
-              border: "1px solid #E5E7EB", background: "#FAF5EC", borderRadius: 8,
+              border: "1px solid #DDD0BB", background: "#FAF5EC", borderRadius: 8,
               outline: "none", padding: "10px 12px", width: "100%",
               minHeight: 44, boxSizing: "border-box",
             }}
@@ -379,8 +379,8 @@ function PlayerRow({ player, index, onUpdate, onRemove, showCarts, cartOptions, 
         {showDropdown && searchResults.length > 0 && (
           <div style={{
             position: "absolute", top: 48, left: 0, right: 0, zIndex: 50,
-            background: "#fff", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
-            border: "1px solid #E5E7EB", maxHeight: 240, overflowY: "auto",
+            background: "#FAF5EC", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+            border: "1px solid #DDD0BB", maxHeight: 240, overflowY: "auto",
           }}>
             {searchResults.map((u, i) => (
               <button key={u.user_id} onClick={() => selectUser(u)} style={{
@@ -425,7 +425,7 @@ function PlayerRow({ player, index, onUpdate, onRemove, showCarts, cartOptions, 
         {showDropdown && searching && (
           <div style={{
             position: "absolute", top: 48, left: 0, right: 0, zIndex: 50,
-            background: "#fff", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+            background: "#FAF5EC", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
             padding: "14px", textAlign: "center", fontFamily: font, fontSize: 13, color: "#A8957B",
           }}>
             Searching…
@@ -450,7 +450,7 @@ function PlayerRow({ player, index, onUpdate, onRemove, showCarts, cartOptions, 
             step="0.5"
             style={{
               fontFamily: mono, fontSize: 13, color: "#8B7355",
-              border: "1px solid #E5E7EB", borderRadius: 6, padding: "8px 10px",
+              border: "1px solid #DDD0BB", borderRadius: 6, padding: "8px 10px",
               width: 72, background: "#FAF5EC", outline: "none",
               minHeight: 36, boxSizing: "border-box",
             }}
@@ -461,7 +461,7 @@ function PlayerRow({ player, index, onUpdate, onRemove, showCarts, cartOptions, 
               onChange={e => onUpdate(index, { ...player, cart: e.target.value })}
               style={{
                 fontFamily: font, fontSize: 12, color: "#8B7355",
-                border: "1px solid #E5E7EB", borderRadius: 6, padding: "8px 10px",
+                border: "1px solid #DDD0BB", borderRadius: 6, padding: "8px 10px",
                 background: "#FAF5EC", outline: "none",
                 minHeight: 36, boxSizing: "border-box",
                 flex: 1, minWidth: 80,
@@ -501,7 +501,7 @@ function CourseCard({ course, selected, onSelect }) {
         width: "100%", textAlign: "left", border: "none", cursor: "pointer",
         background: isSelected ? "#EEF5E5" : "#fff", borderRadius: 14,
         padding: "14px 16px",
-        boxShadow: isSelected ? "0 0 0 2px #16A34A, 0 2px 8px rgba(22,163,74,0.12)" : "0 1px 3px rgba(0,0,0,0.06)",
+        boxShadow: isSelected ? "0 0 0 2px #2D5016, 0 2px 8px rgba(45,80,22,0.12)" : "0 1px 3px rgba(0,0,0,0.06)",
         transition: "all 0.2s ease",
       }}
     >
@@ -555,7 +555,7 @@ function MechanicToggle({ id, config, enabled, onToggle, expanded, onExpand, set
   return (
     <div style={{
       background: enabled ? "#EEF5E5" : "#fff", borderRadius: 14, overflow: "hidden",
-      boxShadow: enabled ? "0 0 0 1.5px #16A34A20, 0 1px 3px rgba(0,0,0,0.06)" : "0 1px 3px rgba(0,0,0,0.06)",
+      boxShadow: enabled ? "0 0 0 1.5px #2D501620, 0 1px 3px rgba(0,0,0,0.06)" : "0 1px 3px rgba(0,0,0,0.06)",
       transition: "all 0.2s ease",
     }}>
       <div style={{
@@ -575,7 +575,7 @@ function MechanicToggle({ id, config, enabled, onToggle, expanded, onExpand, set
           }}
         >
           <div style={{
-            width: 24, height: 24, borderRadius: 12, background: "#fff",
+            width: 24, height: 24, borderRadius: 12, background: "#FAF5EC",
             boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
             transform: enabled ? "translateX(20px)" : "translateX(0)",
             transition: "transform 0.2s ease",
@@ -711,7 +711,7 @@ function ReviewSection({ label, value, icon }) {
   return (
     <div style={{
       display: "flex", alignItems: "center", gap: 12, padding: "12px 16px",
-      background: "#fff", borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+      background: "#FAF5EC", borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
     }}>
       <span style={{ fontSize: 18 }}>{icon}</span>
       <div style={{ flex: 1 }}>
@@ -1001,7 +1001,7 @@ export default function CrybabSetupWizard() {
         background: "rgba(255,255,255,0.95)",
         backdropFilter: "blur(12px)",
         WebkitBackdropFilter: "blur(12px)",
-        borderBottom: "1px solid #E5E7EB",
+        borderBottom: "1px solid #DDD0BB",
         position: "sticky", top: 0, zIndex: 10,
       }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
@@ -1142,10 +1142,10 @@ export default function CrybabSetupWizard() {
                 onChange={e => { setSelectedCourse(e.target.value || null); setSelectedTee(null); }}
                 style={{
                   width: "100%", padding: "14px 40px 14px 16px", borderRadius: 12,
-                  border: selectedCourse ? "2px solid #16A34A" : "1px solid #E5E7EB",
+                  border: selectedCourse ? "2px solid #2D5016" : "1px solid #DDD0BB",
                   fontFamily: font, fontSize: 14, fontWeight: selectedCourse ? 600 : 400,
                   color: selectedCourse ? "#1E130A" : "#A8957B",
-                  background: "#fff", outline: "none", boxSizing: "border-box",
+                  background: "#FAF5EC", outline: "none", boxSizing: "border-box",
                   appearance: "none", cursor: "pointer",
                   WebkitAppearance: "none", MozAppearance: "none",
                 }}
@@ -1196,9 +1196,9 @@ export default function CrybabSetupWizard() {
             {/* Selected course info card */}
             {course && (
               <div style={{
-                background: "#fff", borderRadius: 14, padding: "14px 16px",
+                background: "#FAF5EC", borderRadius: 14, padding: "14px 16px",
                 boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-                border: "1px solid #E5E7EB",
+                border: "1px solid #DDD0BB",
               }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                   <div style={{ fontFamily: font, fontSize: 15, fontWeight: 700, color: "#1E130A" }}>
@@ -1225,7 +1225,7 @@ export default function CrybabSetupWizard() {
                       flex: 1, padding: "12px 14px", borderRadius: 12, border: "none", cursor: "pointer",
                       background: selectedTee === tee.name ? "#2D5016" : "#FAF5EC",
                       color: selectedTee === tee.name ? "#fff" : "#1E130A",
-                      boxShadow: selectedTee === tee.name ? "0 2px 8px rgba(22,163,74,0.2)" : "none",
+                      boxShadow: selectedTee === tee.name ? "0 2px 8px rgba(45,80,22,0.2)" : "none",
                       transition: "all 0.2s ease", textAlign: "center",
                     }}>
                       <div style={{ fontFamily: font, fontSize: 14, fontWeight: 700 }}>{tee.name}</div>
@@ -1238,7 +1238,7 @@ export default function CrybabSetupWizard() {
             )}
             {selectedCourse && selectedTee && (
               <div style={{
-                marginTop: 4, background: "#fff", borderRadius: 14, padding: 16,
+                marginTop: 4, background: "#FAF5EC", borderRadius: 14, padding: 16,
                 boxShadow: "0 1px 3px rgba(0,0,0,0.06)", overflow: "auto",
               }}>
                 <div style={{ fontSize: 12, fontWeight: 600, color: "#8B7355", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>
@@ -1270,7 +1270,7 @@ export default function CrybabSetupWizard() {
 
             {/* Hole Value */}
             <div style={{
-              background: "#fff", borderRadius: 16, padding: "20px 20px",
+              background: "#FAF5EC", borderRadius: 16, padding: "20px 20px",
               boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
             }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>
@@ -1331,7 +1331,7 @@ export default function CrybabSetupWizard() {
 
             {/* Privacy */}
             <div style={{
-              marginTop: 4, background: "#fff", borderRadius: 14, padding: 16,
+              marginTop: 4, background: "#FAF5EC", borderRadius: 14, padding: 16,
               boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
             }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
@@ -1393,7 +1393,7 @@ export default function CrybabSetupWizard() {
             {/* Rules summary */}
             {enabledMechanics.size > 0 && (
               <div style={{
-                background: "#fff", borderRadius: 14, padding: 16,
+                background: "#FAF5EC", borderRadius: 14, padding: 16,
                 boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
               }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
@@ -1453,7 +1453,7 @@ export default function CrybabSetupWizard() {
         padding: "12px 16px", paddingBottom: "max(12px, env(safe-area-inset-bottom))",
         background: "rgba(247,247,245,0.95)", backdropFilter: "blur(12px)",
         WebkitBackdropFilter: "blur(12px)",
-        borderTop: "1px solid #E5E7EB",
+        borderTop: "1px solid #DDD0BB",
         display: "flex", justifyContent: "center",
       }}>
         <button

@@ -246,7 +246,7 @@ export default function GroupsPage() {
         {view === "join" && (
           <>
             <div style={{
-              background: "#fff", borderRadius: 20, padding: "24px 20px",
+              background: "#FAF5EC", borderRadius: 20, padding: "24px 20px",
               boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
             }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: "#1E130A", marginBottom: 12 }}>
@@ -261,7 +261,7 @@ export default function GroupsPage() {
                   maxLength={8}
                   style={{
                     flex: 1, padding: "14px 16px", borderRadius: 12,
-                    border: "1px solid #E5E7EB", background: "#FAF5EC",
+                    border: "1px solid #DDD0BB", background: "#FAF5EC",
                     fontFamily: MONO, fontSize: 18, fontWeight: 800,
                     textAlign: "center", letterSpacing: "0.15em",
                     outline: "none", textTransform: "uppercase",
@@ -280,7 +280,7 @@ export default function GroupsPage() {
 
             {foundGroup && (
               <div style={{
-                background: "#fff", borderRadius: 20, padding: "20px",
+                background: "#FAF5EC", borderRadius: 20, padding: "20px",
                 boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
@@ -326,7 +326,7 @@ export default function GroupsPage() {
                 <div style={{ fontSize: 13, fontWeight: 700, color: "#8B7355", marginBottom: -8 }}>Your Groups</div>
                 {myGroups.length === 0 ? (
                   <div style={{
-                    background: "#fff", borderRadius: 20, padding: "32px 20px", textAlign: "center",
+                    background: "#FAF5EC", borderRadius: 20, padding: "32px 20px", textAlign: "center",
                     boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
                   }}>
                     <div style={{ fontSize: 36, marginBottom: 8 }}>👥</div>
@@ -358,7 +358,7 @@ export default function GroupsPage() {
         {/* ==================== CREATE VIEW ==================== */}
         {view === "create" && (
           <div style={{
-            background: "#fff", borderRadius: 20, padding: "24px 20px",
+            background: "#FAF5EC", borderRadius: 20, padding: "24px 20px",
             boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
           }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -395,7 +395,7 @@ export default function GroupsPage() {
           <>
             {/* Group Info */}
             <div style={{
-              background: "#fff", borderRadius: 20, padding: "24px 20px", textAlign: "center",
+              background: "#FAF5EC", borderRadius: 20, padding: "24px 20px", textAlign: "center",
               boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
             }}>
               <div style={{ position: "relative", display: "inline-block" }}>
@@ -468,7 +468,7 @@ export default function GroupsPage() {
             {/* Invite Code Card */}
             {isMember && (
               <div style={{
-                background: "#fff", borderRadius: 20, padding: "18px 20px",
+                background: "#FAF5EC", borderRadius: 20, padding: "18px 20px",
                 boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
               }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>
@@ -513,7 +513,7 @@ export default function GroupsPage() {
                 {(myRole === "owner" || myRole === "admin") && (
                   <button onClick={handleRegenCode} style={{
                     display: "block", margin: "10px auto 0", padding: "6px 12px",
-                    borderRadius: 6, border: "1px solid #E5E7EB", background: "#fff",
+                    borderRadius: 6, border: "1px solid #DDD0BB", background: "#FAF5EC",
                     fontFamily: FONT, fontSize: 11, fontWeight: 600, color: "#A8957B",
                     cursor: "pointer",
                   }}>🔄 Regenerate code</button>
@@ -523,7 +523,7 @@ export default function GroupsPage() {
 
             {/* Leaderboard */}
             <div style={{
-              background: "#fff", borderRadius: 20, padding: "18px 20px",
+              background: "#FAF5EC", borderRadius: 20, padding: "18px 20px",
               boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
             }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>
@@ -584,7 +584,7 @@ export default function GroupsPage() {
 
             {/* Members List */}
             <div style={{
-              background: "#fff", borderRadius: 20, padding: "18px 20px",
+              background: "#FAF5EC", borderRadius: 20, padding: "18px 20px",
               boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
             }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>
@@ -646,8 +646,8 @@ function GroupCard({ group, onClick }: { group: any; onClick: () => void }) {
   const memberCount = group.group_members?.[0]?.count || 0;
   return (
     <div onClick={onClick} style={{
-      background: "#fff", borderRadius: 16, padding: "16px 18px", cursor: "pointer",
-      boxShadow: "0 2px 8px rgba(0,0,0,0.06)", border: "1px solid #E5E7EB",
+      background: "#FAF5EC", borderRadius: 16, padding: "16px 18px", cursor: "pointer",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.06)", border: "1px solid #DDD0BB",
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
         {group.avatar_url ? (
@@ -676,7 +676,7 @@ function GroupCard({ group, onClick }: { group: any; onClick: () => void }) {
 
 const inputStyle: React.CSSProperties = {
   width: "100%", padding: "12px 14px", borderRadius: 12,
-  border: "1px solid #E5E7EB", background: "#fff",
+  border: "1px solid #DDD0BB", background: "#FAF5EC",
   fontFamily: "'Lato', -apple-system, sans-serif",
   fontSize: 14, outline: "none", boxSizing: "border-box",
 };

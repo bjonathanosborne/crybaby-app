@@ -19,7 +19,7 @@ const MONO = "'SF Mono', 'JetBrains Mono', monospace";
 
 const inputStyle: React.CSSProperties = {
   width: "100%", padding: "10px 12px", borderRadius: 10,
-  border: "1px solid #E5E7EB", background: "#fff",
+  border: "1px solid #DDD0BB", background: "#FAF5EC",
   fontFamily: "'Lato', -apple-system, sans-serif",
   fontSize: 14, outline: "none", boxSizing: "border-box",
 };

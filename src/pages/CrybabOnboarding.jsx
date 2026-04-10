@@ -104,7 +104,7 @@ function SplashScreen({ onContinue }) {
         border: "none", cursor: "pointer",
         fontFamily: FONT, fontSize: 17, fontWeight: 700,
         background: "#2D5016", color: "#fff",
-        boxShadow: "0 4px 20px rgba(22,163,74,0.4)",
+        boxShadow: "0 4px 20px rgba(45,80,22,0.4)",
         transition: "transform 0.15s ease",
       }}>
         Get Started
@@ -154,7 +154,7 @@ function AuthScreen({ onGoogleAuth, onEmailAuth }) {
           {/* Google OAuth */}
           <button onClick={onGoogleAuth} style={{
             width: "100%", padding: "16px 20px", borderRadius: 14,
-            border: "1px solid #E5E7EB", background: "#fff", cursor: "pointer",
+            border: "1px solid #DDD0BB", background: "#FAF5EC", cursor: "pointer",
             display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
             fontFamily: FONT, fontSize: 15, fontWeight: 600, color: "#1E130A",
             boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
@@ -171,7 +171,7 @@ function AuthScreen({ onGoogleAuth, onEmailAuth }) {
           {/* Apple (placeholder) */}
           <button style={{
             width: "100%", padding: "16px 20px", borderRadius: 14,
-            border: "1px solid #E5E7EB", background: "#fff", cursor: "pointer",
+            border: "1px solid #DDD0BB", background: "#FAF5EC", cursor: "pointer",
             display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
             fontFamily: FONT, fontSize: 15, fontWeight: 600, color: "#1E130A",
             boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
@@ -245,8 +245,8 @@ function AuthScreen({ onGoogleAuth, onEmailAuth }) {
             <input value={name} onChange={e => setName(e.target.value)} placeholder="What do people call you on the course?"
               style={{
                 width: "100%", padding: "14px 16px", borderRadius: 12,
-                border: "1px solid #E5E7EB", fontFamily: FONT, fontSize: 15,
-                background: "#fff", outline: "none", boxSizing: "border-box",
+                border: "1px solid #DDD0BB", fontFamily: FONT, fontSize: 15,
+                background: "#FAF5EC", outline: "none", boxSizing: "border-box",
               }} />
           </div>
         )}
@@ -258,8 +258,8 @@ function AuthScreen({ onGoogleAuth, onEmailAuth }) {
           <input value={email} onChange={e => setEmail(e.target.value)} placeholder="you@email.com" type="email"
             style={{
               width: "100%", padding: "14px 16px", borderRadius: 12,
-              border: "1px solid #E5E7EB", fontFamily: FONT, fontSize: 15,
-              background: "#fff", outline: "none", boxSizing: "border-box",
+              border: "1px solid #DDD0BB", fontFamily: FONT, fontSize: 15,
+              background: "#FAF5EC", outline: "none", boxSizing: "border-box",
             }} />
         </div>
 
@@ -270,8 +270,8 @@ function AuthScreen({ onGoogleAuth, onEmailAuth }) {
           <input value={password} onChange={e => setPassword(e.target.value)} placeholder="At least 8 characters" type="password"
             style={{
               width: "100%", padding: "14px 16px", borderRadius: 12,
-              border: "1px solid #E5E7EB", fontFamily: FONT, fontSize: 15,
-              background: "#fff", outline: "none", boxSizing: "border-box",
+              border: "1px solid #DDD0BB", fontFamily: FONT, fontSize: 15,
+              background: "#FAF5EC", outline: "none", boxSizing: "border-box",
             }} />
         </div>
 
@@ -355,9 +355,9 @@ function GHINScreen({ userName, onVerified, onSkip }) {
               maxLength={10}
               style={{
                 flex: 1, padding: "14px 16px", borderRadius: 12,
-                border: status === "verified" ? "2px solid #16A34A" : "1px solid #E5E7EB",
+                border: status === "verified" ? "2px solid #2D5016" : "1px solid #DDD0BB",
                 fontFamily: MONO, fontSize: 18, fontWeight: 600, letterSpacing: "0.08em",
-                background: "#fff", outline: "none", boxSizing: "border-box",
+                background: "#FAF5EC", outline: "none", boxSizing: "border-box",
                 transition: "border 0.2s ease",
               }}
             />
@@ -381,7 +381,7 @@ function GHINScreen({ userName, onVerified, onSkip }) {
         {/* Checking State */}
         {status === "checking" && (
           <div style={{
-            padding: "20px", background: "#fff", borderRadius: 16, textAlign: "center",
+            padding: "20px", background: "#FAF5EC", borderRadius: 16, textAlign: "center",
             boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
           }}>
             <div style={{ fontSize: 32, marginBottom: 8 }}>🔍</div>
@@ -397,7 +397,7 @@ function GHINScreen({ userName, onVerified, onSkip }) {
         {/* Verified State */}
         {status === "verified" && (
           <div style={{
-            background: "#fff", borderRadius: 20, overflow: "hidden",
+            background: "#FAF5EC", borderRadius: 20, overflow: "hidden",
             boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
           }}>
             <div style={{
@@ -473,7 +473,7 @@ function GHINScreen({ userName, onVerified, onSkip }) {
         {/* Don't have GHIN / Manual entry */}
         {(status === "idle" || status === "not_found") && (
           <div style={{
-            background: "#fff", borderRadius: 16, padding: "18px 20px",
+            background: "#FAF5EC", borderRadius: 16, padding: "18px 20px",
             boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
           }}>
             <div style={{ fontFamily: FONT, fontSize: 14, fontWeight: 700, color: "#1E130A", marginBottom: 8 }}>
@@ -489,7 +489,7 @@ function GHINScreen({ userName, onVerified, onSkip }) {
                 placeholder="Enter handicap"
                 style={{
                   flex: 1, padding: "12px 14px", borderRadius: 10,
-                  border: "1px solid #E5E7EB", fontFamily: MONO, fontSize: 16, fontWeight: 600,
+                  border: "1px solid #DDD0BB", fontFamily: MONO, fontSize: 16, fontWeight: 600,
                   background: "#FAF5EC", outline: "none", boxSizing: "border-box",
                 }}
               />
@@ -526,7 +526,7 @@ function GHINScreen({ userName, onVerified, onSkip }) {
             width: "100%", padding: "18px", borderRadius: 14, border: "none", cursor: "pointer",
             fontFamily: FONT, fontSize: 16, fontWeight: 700,
             background: "#2D5016", color: "#fff",
-            boxShadow: "0 4px 12px rgba(22,163,74,0.25)",
+            boxShadow: "0 4px 12px rgba(45,80,22,0.25)",
           }}>
             Looks right — Continue →
           </button>
@@ -606,7 +606,7 @@ function ProfileSetupScreen({ userName, handicap, ghinVerified, onComplete }) {
           <div style={{
             position: "absolute", bottom: -2, right: -2,
             width: 28, height: 28, borderRadius: 14,
-            background: "#2D5016", border: "2px solid #1A1A1A",
+            background: "#2D5016", border: "2px solid #1E130A",
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 13,
           }}>
@@ -650,7 +650,7 @@ function ProfileSetupScreen({ userName, handicap, ghinVerified, onComplete }) {
             {AVATAR_COLORS.map(color => (
               <button key={color} onClick={() => { setAvatarColor(color); }} style={{
                 width: 40, height: 40, borderRadius: 20, background: color,
-                border: avatarColor === color && !avatarImage ? "3px solid #1A1A1A" : "3px solid transparent",
+                border: avatarColor === color && !avatarImage ? "3px solid #1E130A" : "3px solid transparent",
                 cursor: "pointer", transition: "all 0.15s ease",
                 transform: avatarColor === color && !avatarImage ? "scale(1.1)" : "scale(1)",
                 boxShadow: avatarColor === color && !avatarImage ? "0 2px 8px rgba(0,0,0,0.2)" : "none",
@@ -681,8 +681,8 @@ function ProfileSetupScreen({ userName, handicap, ghinVerified, onComplete }) {
               placeholder="Search courses..."
               style={{
                 width: "100%", padding: "14px 16px 14px 40px", borderRadius: 12,
-                border: "1px solid #E5E7EB", fontFamily: FONT, fontSize: 14,
-                background: "#fff", outline: "none", boxSizing: "border-box",
+                border: "1px solid #DDD0BB", fontFamily: FONT, fontSize: 14,
+                background: "#FAF5EC", outline: "none", boxSizing: "border-box",
               }}
             />
             <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 16 }}>🔍</span>
@@ -704,8 +704,8 @@ function ProfileSetupScreen({ userName, handicap, ghinVerified, onComplete }) {
 
           {courseSearch && (
             <div style={{
-              marginTop: 6, background: "#fff", borderRadius: 14, overflow: "hidden",
-              boxShadow: "0 4px 16px rgba(0,0,0,0.08)", border: "1px solid #E5E7EB",
+              marginTop: 6, background: "#FAF5EC", borderRadius: 14, overflow: "hidden",
+              boxShadow: "0 4px 16px rgba(0,0,0,0.08)", border: "1px solid #DDD0BB",
               maxHeight: 220, overflowY: "auto",
             }}>
               {filteredCourses.map(c => (
@@ -745,8 +745,8 @@ function ProfileSetupScreen({ userName, handicap, ghinVerified, onComplete }) {
             placeholder="Austin, TX"
             style={{
               width: "100%", padding: "14px 16px", borderRadius: 12,
-              border: "1px solid #E5E7EB", fontFamily: FONT, fontSize: 14,
-              background: "#fff", outline: "none", boxSizing: "border-box",
+              border: "1px solid #DDD0BB", fontFamily: FONT, fontSize: 14,
+              background: "#FAF5EC", outline: "none", boxSizing: "border-box",
             }}
           />
         </div>
@@ -789,7 +789,7 @@ function WelcomeScreen({ userName, handicap, ghinVerified, homeCourse, onStart, 
       opacity: visible ? 1 : 0, transition: "opacity 0.6s ease",
     }}>
       <div style={{
-        background: "linear-gradient(135deg, #16A34A 0%, #15803D 100%)",
+        background: "linear-gradient(135deg, #2D5016 0%, #1A3009 100%)",
         padding: "60px 32px 36px", borderRadius: "0 0 36px 36px", textAlign: "center",
       }}>
         <div style={{ fontSize: 56, marginBottom: 12 }}>🎉</div>
@@ -817,7 +817,7 @@ function WelcomeScreen({ userName, handicap, ghinVerified, homeCourse, onStart, 
         {tips.map((tip, i) => (
           <div key={i} style={{
             display: "flex", gap: 14, alignItems: "center",
-            padding: "14px 16px", background: "#fff", borderRadius: 14,
+            padding: "14px 16px", background: "#FAF5EC", borderRadius: 14,
             boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
             opacity: visible ? 1 : 0,
             transform: visible ? "translateY(0)" : "translateY(10px)",

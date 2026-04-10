@@ -268,7 +268,7 @@ export default function ProfilePage() {
                   <option value="__add_new__">+ Add a Course / Club</option>
                 </select>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: 12, borderRadius: 10, border: "1px solid #E5E7EB", background: "#FAF5EC" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: 12, borderRadius: 10, border: "1px solid #DDD0BB", background: "#FAF5EC" }}>
                   <span style={{ fontSize: 11, fontWeight: 700, color: "#8B7355" }}>Add New Course</span>
                   <input value={newCourseName} onChange={e => setNewCourseName(e.target.value)}
                     placeholder="Course / Club Name" style={inputStyle} />
@@ -294,7 +294,7 @@ export default function ProfilePage() {
                       Add
                     </button>
                     <button onClick={() => { setShowAddCourse(false); setNewCourseName(""); setNewCourseCity(""); }}
-                      style={{ flex: 1, padding: 8, borderRadius: 8, border: "1px solid #E5E7EB", background: "#fff", color: "#8B7355", fontWeight: 600, fontSize: 12, cursor: "pointer" }}>
+                      style={{ flex: 1, padding: 8, borderRadius: 8, border: "1px solid #DDD0BB", background: "#FAF5EC", color: "#8B7355", fontWeight: 600, fontSize: 12, cursor: "pointer" }}>
                       Cancel
                     </button>
                   </div>
@@ -319,8 +319,8 @@ export default function ProfilePage() {
                   background: "#2D5016", color: "#fff", fontWeight: 700, fontFamily: "inherit", cursor: "pointer",
                 }}>Save</button>
                 <button onClick={() => { setEditingProfile(false); setShowAddCourse(false); }} style={{
-                  flex: 1, padding: 10, borderRadius: 10, border: "1px solid #E5E7EB",
-                  background: "#fff", color: "#8B7355", fontWeight: 600, fontFamily: "inherit", cursor: "pointer",
+                  flex: 1, padding: 10, borderRadius: 10, border: "1px solid #DDD0BB",
+                  background: "#FAF5EC", color: "#8B7355", fontWeight: 600, fontFamily: "inherit", cursor: "pointer",
                 }}>Cancel</button>
               </div>
             </div>
@@ -345,8 +345,8 @@ export default function ProfilePage() {
                 <div style={{ fontSize: 12, color: "#A8957B", marginTop: 6 }}>{profile.home_course}</div>
               )}
               <button onClick={() => setEditingProfile(true)} style={{
-                marginTop: 12, padding: "8px 16px", borderRadius: 10, border: "1px solid #E5E7EB",
-                background: "#fff", fontFamily: "inherit", fontSize: 12, fontWeight: 600, color: "#8B7355", cursor: "pointer",
+                marginTop: 12, padding: "8px 16px", borderRadius: 10, border: "1px solid #DDD0BB",
+                background: "#FAF5EC", fontFamily: "inherit", fontSize: 12, fontWeight: 600, color: "#8B7355", cursor: "pointer",
               }}>Edit Profile</button>
             </>
           )}
@@ -530,7 +530,7 @@ export default function ProfilePage() {
 
 const inputStyle: React.CSSProperties = {
   width: "100%", padding: "10px 12px", borderRadius: 10,
-  border: "1px solid #E5E7EB", background: "#fff",
+  border: "1px solid #DDD0BB", background: "#FAF5EC",
   fontFamily: "'Lato', -apple-system, sans-serif",
   fontSize: 14, outline: "none", boxSizing: "border-box",
 };
