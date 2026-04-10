@@ -591,16 +591,22 @@ function CrybabSetupModal({ players, totals, onConfirm }) {
 function FlipTeamModal({ players, onConfirm }) {
   const [teams, setTeams] = useState(() => generateFlipTeams(players));
   const [animating, setAnimating] = useState(false);
+  const intervalRef = useRef(null);
+
+  useEffect(() => {
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, []);
 
   const reshuffle = () => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
     setAnimating(true);
-    // Quick shuffle animation
     let count = 0;
-    const interval = setInterval(() => {
+    intervalRef.current = setInterval(() => {
       setTeams(generateFlipTeams(players));
       count++;
       if (count >= 6) {
-        clearInterval(interval);
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
         setAnimating(false);
       }
     }, 120);
@@ -856,6 +862,7 @@ export default function CrybabActiveRound() {
   const [wolfPartner, setWolfPartner] = useState(null);
   const [isLoneWolf, setIsLoneWolf] = useState(false);
   const [showWolfModal, setShowWolfModal] = useState(false);
+  const [wolfModalShownForHole, setWolfModalShownForHole] = useState(0);
   const [nassauState, setNassauState] = useState({ frontMatch: {}, backMatch: {}, overallMatch: {}, presses: [] });
   const [nassauPresses, setNassauPresses] = useState([]);
   const [showPressModal, setShowPressModal] = useState(false);
@@ -865,8 +872,8 @@ export default function CrybabActiveRound() {
   const [canceling, setCanceling] = useState(false);
   const [isCanceled, setIsCanceled] = useState(false);
 
-  // Round is considered complete once we're past hole 18 with results saved, or explicitly canceled
-  const roundIsComplete = settlementsSaved || isCanceled || (currentHole >= 18 && holeResults.length >= 17);
+  // Round is considered complete once all 18 holes have results saved, or explicitly canceled
+  const roundIsComplete = settlementsSaved || isCanceled || (currentHole >= 18 && holeResults.length >= 18);
 
   // Block in-app navigation while round is active
   const blocker = useBlocker(({ currentLocation, nextLocation }) =>
@@ -945,7 +952,7 @@ export default function CrybabActiveRound() {
       pars: dbRound.course_details?.pars || [],
       handicaps: dbRound.course_details?.handicaps || [],
     },
-    holeValue: dbRound.course_details?.holeValue || 5,
+    holeValue: dbRound.course_details?.holeValue ?? 5,
     players: dbPlayers.map((p, i) => {
       const profile = p.user_id ? playerProfiles[p.user_id] : null;
       const config = dbRound.course_details?.playerConfig?.[i] || {};
@@ -989,14 +996,17 @@ export default function CrybabActiveRound() {
     }
   }, [round, totalsInitialized]);
 
-  // Show wolf modal at the start of each hole for wolf game
+  // Show wolf modal at the start of each hole for wolf game.
+  // wolfModalShownForHole tracks whether we've already shown it this hole,
+  // preventing it from re-firing when showWolfModal or showCrybabSetup change.
   useEffect(() => {
-    if (round?.gameMode === 'wolf' && !showResult && !showWolfModal && !showCrybabSetup) {
+    if (round?.gameMode === 'wolf' && wolfModalShownForHole !== currentHole && !showCrybabSetup) {
       setWolfPartner(null);
       setIsLoneWolf(false);
       setShowWolfModal(true);
+      setWolfModalShownForHole(currentHole);
     }
-  }, [currentHole, round?.gameMode, showResult, showWolfModal]);
+  }, [currentHole, round?.gameMode, showCrybabSetup, wolfModalShownForHole]);
 
   // Check if entering crybaby phase
   useEffect(() => {
@@ -1008,7 +1018,7 @@ export default function CrybabActiveRound() {
   // Auto-save settlements when round completes
   useEffect(() => {
     if (!round) return;
-    const isComplete = currentHole >= 18 && holeResults.length >= 17;
+    const isComplete = currentHole >= 18 && holeResults.length >= 18;
     if (!isComplete || settlementsSaved) return;
 
     const saveRoundSettlements = async () => {
@@ -1449,7 +1459,7 @@ export default function CrybabActiveRound() {
   }, [pendingSync, isOnline]);
 
   // Completed round
-  if (currentHole >= 18 && holeResults.length >= 17) {
+  if (currentHole >= 18 && holeResults.length >= 18) {
     const sorted = [...players].sort((a, b) => (totals[b.id] || 0) - (totals[a.id] || 0));
     const crybabyPlayer = sorted[sorted.length - 1];
     const winner = sorted[0];
@@ -1575,11 +1585,38 @@ export default function CrybabActiveRound() {
                 </div>
               ));
             })()}
-            <button style={{
-              width: "100%", padding: "14px", borderRadius: 12, border: "none", marginTop: 14,
-              fontFamily: FONT, fontSize: 14, fontWeight: 700,
-              background: "#16A34A", color: "#fff", cursor: "pointer",
-            }}>
+            <button
+              onClick={() => {
+                const balances = players.map(p => ({ ...p, balance: totals[p.id] || 0 }));
+                const debtors = balances.filter(p => p.balance < 0).sort((a, b) => a.balance - b.balance);
+                const creditors = balances.filter(p => p.balance > 0).sort((a, b) => b.balance - a.balance);
+                let di = 0, ci = 0;
+                const deb = debtors.map(d => ({ ...d, owed: -d.balance }));
+                const cred = creditors.map(c => ({ ...c, owed: c.balance }));
+                const lines = [];
+                while (di < deb.length && ci < cred.length) {
+                  const amount = Math.min(deb[di].owed, cred[ci].owed);
+                  if (amount > 0) lines.push(`${deb[di].name} owes ${cred[ci].name} $${amount}`);
+                  deb[di].owed -= amount;
+                  cred[ci].owed -= amount;
+                  if (deb[di].owed === 0) di++;
+                  if (cred[ci].owed === 0) ci++;
+                }
+                const text = lines.length
+                  ? `Crybaby Golf — ${round.gameName} at ${course.name}\n\n${lines.join("\n")}`
+                  : `Crybaby Golf — ${round.gameName} at ${course.name}\n\nAll square — nobody owes anything.`;
+                if (navigator.share) {
+                  navigator.share({ title: "Crybaby Golf Settlement", text }).catch(() => {});
+                } else {
+                  navigator.clipboard?.writeText(text).then(() => alert("Settlement copied to clipboard!")).catch(() => {});
+                }
+              }}
+              style={{
+                width: "100%", padding: "14px", borderRadius: 12, border: "none", marginTop: 14,
+                fontFamily: FONT, fontSize: 14, fontWeight: 700,
+                background: "#16A34A", color: "#fff", cursor: "pointer",
+              }}
+            >
               Send Reminders 📲
             </button>
           </div>
