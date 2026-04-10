@@ -35,7 +35,7 @@ export default function HamburgerMenu() {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <button className="flex items-center justify-center w-10 h-10 rounded-xl bg-card border border-border text-foreground hover:bg-accent transition-colors cursor-pointer">
+        <button className="flex items-center justify-center w-11 h-11 rounded-xl bg-card border border-border text-foreground hover:bg-accent transition-colors cursor-pointer">
           <Menu size={20} />
         </button>
       </SheetTrigger>
