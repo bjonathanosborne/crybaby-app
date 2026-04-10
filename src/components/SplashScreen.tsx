@@ -19,7 +19,7 @@ export default function SplashScreen({ onDone }: { onDone: () => void }) {
         position: "fixed",
         inset: 0,
         zIndex: 9999,
-        background: "#ffffff",
+        background: "#F5EFE0",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -48,7 +48,7 @@ export default function SplashScreen({ onDone }: { onDone: () => void }) {
           bottom: 0,
           left: 0,
           height: 3,
-          background: "#16A34A",
+          background: "#2D5016",
           animation: "splashProgress 3s cubic-bezier(0.25, 0.1, 0.25, 1) forwards",
         }}
       />

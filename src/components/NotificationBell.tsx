@@ -10,7 +10,7 @@ import {
 } from "@/lib/db";
 import { formatDistanceToNow, parseISO } from "date-fns";
 
-const FONT = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+const FONT = "'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 
 export default function NotificationBell() {
   const { user } = useAuth();

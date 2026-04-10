@@ -12,7 +12,7 @@ import {
 import { formatDistanceToNow, parseISO } from "date-fns";
 import { CrybIcon } from "@/components/icons/CrybIcons";
 
-const FONT = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+const FONT = "'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 const REACTION_OPTIONS = ["🔥", "😂", "💀", "🍼", "👏"];
 
 const EVENT_COLORS = {
@@ -179,7 +179,7 @@ export default function RoundSpectateView() {
       <div style={{ fontFamily: FONT, maxWidth: 480, margin: "0 auto", padding: "40px 20px", textAlign: "center" }}>
         <div style={{ fontSize: 40, marginBottom: 12 }}>⛳</div>
         <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>Round not found</div>
-        <button onClick={() => navigate("/feed")} style={{ marginTop: 16, padding: "10px 20px", borderRadius: 12, border: "none", background: "#16A34A", color: "#fff", fontFamily: FONT, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+        <button onClick={() => navigate("/feed")} style={{ marginTop: 16, padding: "10px 20px", borderRadius: 12, border: "none", background: "#2D5016", color: "#fff", fontFamily: FONT, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
           Back to Feed
         </button>
       </div>
@@ -197,7 +197,7 @@ export default function RoundSpectateView() {
       }}>
         <button
           onClick={() => navigate(-1)}
-          style={{ fontSize: 14, fontWeight: 600, color: "#16A34A", background: "none", border: "none", cursor: "pointer", padding: "6px 0" }}
+          style={{ fontSize: 14, fontWeight: 600, color: "#2D5016", background: "none", border: "none", cursor: "pointer", padding: "6px 0" }}
         >
           ← Back
         </button>
@@ -214,13 +214,13 @@ export default function RoundSpectateView() {
           <button
             onClick={handleFollow}
             disabled={followLoading}
-            style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#16A34A", border: "none", borderRadius: 10, padding: "7px 12px", cursor: "pointer" }}
+            style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#2D5016", border: "none", borderRadius: 10, padding: "7px 12px", cursor: "pointer" }}
           >
             📡 Follow
           </button>
         )}
         {followStatus === "following" && (
-          <span style={{ fontSize: 12, fontWeight: 600, color: "#16A34A" }}>Following ✓</span>
+          <span style={{ fontSize: 12, fontWeight: 600, color: "#2D5016" }}>Following ✓</span>
         )}
         {followStatus === "declined" && (
           <button onClick={handleFollow} style={{ fontSize: 12, fontWeight: 600, color: "hsl(var(--muted-foreground))", background: "none", border: "none", cursor: "pointer" }}>
@@ -273,7 +273,7 @@ export default function RoundSpectateView() {
                     borderBottom: i < scoreboard.length - 1 ? "1px solid hsl(var(--border))" : "none",
                   }}
                 >
-                  <div style={{ width: 20, fontSize: 12, fontWeight: 700, color: i === 0 ? "#16A34A" : "hsl(var(--muted-foreground))", textAlign: "center" }}>
+                  <div style={{ width: 20, fontSize: 12, fontWeight: 700, color: i === 0 ? "#2D5016" : "hsl(var(--muted-foreground))", textAlign: "center" }}>
                     {i + 1}
                   </div>
                   <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: "hsl(var(--foreground))", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</div>
@@ -282,7 +282,7 @@ export default function RoundSpectateView() {
                   </div>
                   <div style={{
                     fontSize: 15, fontWeight: 800, minWidth: 32, textAlign: "right",
-                    color: total === 0 ? "hsl(var(--muted-foreground))" : total < 0 ? "#16A34A" : "hsl(var(--destructive))",
+                    color: total === 0 ? "hsl(var(--muted-foreground))" : total < 0 ? "#2D5016" : "hsl(var(--destructive))",
                   }}>
                     {total > 0 ? `+${total}` : total === 0 ? "E" : total}
                   </div>

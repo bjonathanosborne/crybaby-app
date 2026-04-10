@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
-const FONT = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+const FONT = "'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 
 export default function ResetPassword() {
   const navigate = useNavigate();
@@ -50,7 +50,7 @@ export default function ResetPassword() {
         />
         <button type="submit" disabled={loading} style={{
           padding: "12px 16px", borderRadius: 12, border: "none",
-          background: "#16A34A", color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer",
+          background: "#2D5016", color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer",
         }}>
           {loading ? "..." : "Update Password"}
         </button>

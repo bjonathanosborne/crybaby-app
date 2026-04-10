@@ -127,7 +127,7 @@ const COURSE_GROUPS = [
   { label: "🏌️ Public / Daily Fee", types: ["public"] },
 ];
 
-const TYPE_COLORS = { municipal: "#059669", public: "#16A34A", private: "#7C3AED", "semi-private": "#3B82F6", resort: "#F59E0B" };
+const TYPE_COLORS = { municipal: "#059669", public: "#2D5016", private: "#7C3AED", "semi-private": "#3B82F6", resort: "#F59E0B" };
 
 const MECHANICS_CONFIG = {
   hammer: { label: "Hammer", icon: "🔨", description: "Double-or-nothing mid-hole challenge" },
@@ -153,9 +153,9 @@ function StepIndicator({ steps, currentStep }) {
             width: 28, height: 28, borderRadius: 14,
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 11, fontWeight: 600,
-            fontFamily: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-            background: i <= currentStep ? "#16A34A" : "#E5E7EB",
-            color: i <= currentStep ? "#fff" : "#9CA3AF",
+            fontFamily: "'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+            background: i <= currentStep ? "#2D5016" : "#DDD0BB",
+            color: i <= currentStep ? "#fff" : "#A8957B",
             transition: "all 0.3s ease",
           }}>
             {i < currentStep ? "✓" : i + 1}
@@ -163,7 +163,7 @@ function StepIndicator({ steps, currentStep }) {
           {i < steps.length - 1 && (
             <div style={{
               flex: 1, height: 2, margin: "0 4px",
-              background: i < currentStep ? "#16A34A" : "#E5E7EB",
+              background: i < currentStep ? "#2D5016" : "#DDD0BB",
               transition: "background 0.3s ease",
             }} />
           )}
@@ -183,7 +183,7 @@ function GameCard({ game, selected, onSelect, playerCount }) {
       disabled={!fits && playerCount > 0}
       style={{
         width: "100%", textAlign: "left", border: "none", cursor: fits || playerCount === 0 ? "pointer" : "not-allowed",
-        background: isSelected ? "#F0FDF4" : "#fff",
+        background: isSelected ? "#EEF5E5" : "#fff",
         borderRadius: 16, padding: "16px 18px",
         boxShadow: isSelected ? "0 0 0 2px #16A34A, 0 2px 8px rgba(22,163,74,0.12)" : "0 1px 3px rgba(0,0,0,0.06)",
         opacity: !fits && playerCount > 0 ? 0.4 : 1,
@@ -195,14 +195,14 @@ function GameCard({ game, selected, onSelect, playerCount }) {
         <span style={{ fontSize: 28, lineHeight: 1 }}>{game.icon}</span>
         <div style={{ flex: 1 }}>
           <div style={{
-            fontFamily: "'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-            fontSize: 16, fontWeight: 600, color: "#1A1A1A", marginBottom: 4,
+            fontFamily: "'Lato', -apple-system, BlinkMacSystemFont, sans-serif",
+            fontSize: 16, fontWeight: 600, color: "#1E130A", marginBottom: 4,
           }}>
             {game.name}
           </div>
           <div style={{
-            fontFamily: "'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-            fontSize: 13, color: "#6B7280", lineHeight: 1.4,
+            fontFamily: "'Lato', -apple-system, BlinkMacSystemFont, sans-serif",
+            fontSize: 13, color: "#8B7355", lineHeight: 1.4,
           }}>
             {game.description}
           </div>
@@ -211,7 +211,7 @@ function GameCard({ game, selected, onSelect, playerCount }) {
           }}>
             <span style={{
               fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 6,
-              background: "#F3F4F6", color: "#6B7280",
+              background: "#EDE7D9", color: "#8B7355",
               fontFamily: "'SF Mono', 'JetBrains Mono', monospace",
             }}>
               {game.players.min === game.players.max ? `${game.players.min}P` : `${game.players.min}-${game.players.max}P`}
@@ -220,7 +220,7 @@ function GameCard({ game, selected, onSelect, playerCount }) {
               <span key={m} style={{
                 fontSize: 11, fontWeight: 500, padding: "3px 8px", borderRadius: 6,
                 background: "#FEF3C7", color: "#92400E",
-                fontFamily: "'SF Pro Display', -apple-system, sans-serif",
+                fontFamily: "'Lato', -apple-system, sans-serif",
               }}>
                 {MECHANICS_CONFIG[m]?.icon} {MECHANICS_CONFIG[m]?.label}
               </span>
@@ -229,7 +229,7 @@ function GameCard({ game, selected, onSelect, playerCount }) {
         </div>
         {isSelected && (
           <div style={{
-            width: 24, height: 24, borderRadius: 12, background: "#16A34A",
+            width: 24, height: 24, borderRadius: 12, background: "#2D5016",
             display: "flex", alignItems: "center", justifyContent: "center",
             color: "#fff", fontSize: 14, fontWeight: 700, flexShrink: 0,
           }}>✓</div>
@@ -241,7 +241,7 @@ function GameCard({ game, selected, onSelect, playerCount }) {
 
 // --- PLAYER ROW ---
 function PlayerRow({ player, index, onUpdate, onRemove, showCarts, cartOptions, canRemove, currentUserId }) {
-  const font = "'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif";
+  const font = "'Lato', -apple-system, BlinkMacSystemFont, sans-serif";
   const mono = "'SF Mono', 'JetBrains Mono', monospace";
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -339,7 +339,7 @@ function PlayerRow({ player, index, onUpdate, onRemove, showCarts, cartOptions, 
     }}>
       <div style={{
         width: 32, height: 32, borderRadius: 16, marginTop: 6,
-        background: isLinkedUser ? "#16A34A" : ["#16A34A", "#3B82F6", "#F59E0B", "#DC2626", "#8B5CF6", "#EC4899"][index % 6],
+        background: isLinkedUser ? "#2D5016" : ["#2D5016", "#3B82F6", "#F59E0B", "#DC2626", "#8B5CF6", "#EC4899"][index % 6],
         display: "flex", alignItems: "center", justifyContent: "center",
         color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: font, flexShrink: 0,
       }}>
@@ -349,10 +349,10 @@ function PlayerRow({ player, index, onUpdate, onRemove, showCarts, cartOptions, 
         {isLinkedUser ? (
           <div style={{
             display: "flex", alignItems: "center", gap: 8, padding: "10px 12px",
-            background: "#F0FDF4", borderRadius: 8, border: "1px solid #BBF7D0",
+            background: "#EEF5E5", borderRadius: 8, border: "1px solid #BBF7D0",
             minHeight: 44, boxSizing: "border-box",
           }}>
-            <span style={{ fontFamily: font, fontSize: 16, fontWeight: 600, color: "#1A1A1A", flex: 1 }}>
+            <span style={{ fontFamily: font, fontSize: 16, fontWeight: 600, color: "#1E130A", flex: 1 }}>
               {player.name}
             </span>
             <button onClick={clearLinkedUser} style={{
@@ -367,8 +367,8 @@ function PlayerRow({ player, index, onUpdate, onRemove, showCarts, cartOptions, 
             onChange={e => handleNameChange(e.target.value)}
             placeholder={`Search or type Player ${index + 1}`}
             style={{
-              fontFamily: font, fontSize: 16, fontWeight: 500, color: "#1A1A1A",
-              border: "1px solid #E5E7EB", background: "#F9FAFB", borderRadius: 8,
+              fontFamily: font, fontSize: 16, fontWeight: 500, color: "#1E130A",
+              border: "1px solid #E5E7EB", background: "#FAF5EC", borderRadius: 8,
               outline: "none", padding: "10px 12px", width: "100%",
               minHeight: 44, boxSizing: "border-box",
             }}
@@ -393,21 +393,21 @@ function PlayerRow({ player, index, onUpdate, onRemove, showCarts, cartOptions, 
                   <img src={u.avatar_url} alt="" style={{ width: 28, height: 28, borderRadius: 14, objectFit: "cover" }} />
                 ) : (
                   <div style={{
-                    width: 28, height: 28, borderRadius: 14, background: "#E5E7EB",
+                    width: 28, height: 28, borderRadius: 14, background: "#DDD0BB",
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 12, fontWeight: 700, color: "#6B7280",
+                    fontSize: 12, fontWeight: 700, color: "#8B7355",
                   }}>
                     {(u.display_name || "?")[0].toUpperCase()}
                   </div>
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: font, fontSize: 14, fontWeight: 600, color: "#1A1A1A", display: "flex", alignItems: "center", gap: 6 }}>
+                  <div style={{ fontFamily: font, fontSize: 14, fontWeight: 600, color: "#1E130A", display: "flex", alignItems: "center", gap: 6 }}>
                     {[u.first_name, u.last_name].filter(Boolean).join(" ") || u.display_name}
                     {u.isFriend && (
                       <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 4, background: "#DBEAFE", color: "#2563EB" }}>Friend</span>
                     )}
                   </div>
-                  <div style={{ fontFamily: font, fontSize: 11, color: "#9CA3AF", display: "flex", gap: 8 }}>
+                  <div style={{ fontFamily: font, fontSize: 11, color: "#A8957B", display: "flex", gap: 8 }}>
                     {u.handicap != null && <span>HCP {u.handicap}</span>}
                     {u.home_course && <span>{u.home_course}</span>}
                   </div>
@@ -416,7 +416,7 @@ function PlayerRow({ player, index, onUpdate, onRemove, showCarts, cartOptions, 
             ))}
             <div style={{
               padding: "8px 14px", borderTop: "1px solid #F3F4F6",
-              fontFamily: font, fontSize: 11, color: "#9CA3AF", textAlign: "center",
+              fontFamily: font, fontSize: 11, color: "#A8957B", textAlign: "center",
             }}>
               Or just type a name for a guest player
             </div>
@@ -426,7 +426,7 @@ function PlayerRow({ player, index, onUpdate, onRemove, showCarts, cartOptions, 
           <div style={{
             position: "absolute", top: 48, left: 0, right: 0, zIndex: 50,
             background: "#fff", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
-            padding: "14px", textAlign: "center", fontFamily: font, fontSize: 13, color: "#9CA3AF",
+            padding: "14px", textAlign: "center", fontFamily: font, fontSize: 13, color: "#A8957B",
           }}>
             Searching…
           </div>
@@ -449,9 +449,9 @@ function PlayerRow({ player, index, onUpdate, onRemove, showCarts, cartOptions, 
             max="54"
             step="0.5"
             style={{
-              fontFamily: mono, fontSize: 13, color: "#6B7280",
+              fontFamily: mono, fontSize: 13, color: "#8B7355",
               border: "1px solid #E5E7EB", borderRadius: 6, padding: "8px 10px",
-              width: 72, background: "#F9FAFB", outline: "none",
+              width: 72, background: "#FAF5EC", outline: "none",
               minHeight: 36, boxSizing: "border-box",
             }}
           />
@@ -460,9 +460,9 @@ function PlayerRow({ player, index, onUpdate, onRemove, showCarts, cartOptions, 
               value={player.cart || ""}
               onChange={e => onUpdate(index, { ...player, cart: e.target.value })}
               style={{
-                fontFamily: font, fontSize: 12, color: "#6B7280",
+                fontFamily: font, fontSize: 12, color: "#8B7355",
                 border: "1px solid #E5E7EB", borderRadius: 6, padding: "8px 10px",
-                background: "#F9FAFB", outline: "none",
+                background: "#FAF5EC", outline: "none",
                 minHeight: 36, boxSizing: "border-box",
                 flex: 1, minWidth: 80,
               }}
@@ -493,13 +493,13 @@ function PlayerRow({ player, index, onUpdate, onRemove, showCarts, cartOptions, 
 // --- COURSE CARD ---
 function CourseCard({ course, selected, onSelect }) {
   const isSelected = selected === course.id;
-  const typeColors = { public: "#16A34A", private: "#7C3AED", "semi-private": "#3B82F6", resort: "#F59E0B" };
+  const typeColors = { public: "#2D5016", private: "#7C3AED", "semi-private": "#3B82F6", resort: "#F59E0B" };
   return (
     <button
       onClick={() => onSelect(course.id)}
       style={{
         width: "100%", textAlign: "left", border: "none", cursor: "pointer",
-        background: isSelected ? "#F0FDF4" : "#fff", borderRadius: 14,
+        background: isSelected ? "#EEF5E5" : "#fff", borderRadius: 14,
         padding: "14px 16px",
         boxShadow: isSelected ? "0 0 0 2px #16A34A, 0 2px 8px rgba(22,163,74,0.12)" : "0 1px 3px rgba(0,0,0,0.06)",
         transition: "all 0.2s ease",
@@ -508,26 +508,26 @@ function CourseCard({ course, selected, onSelect }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <div style={{
-            fontFamily: "'SF Pro Display', -apple-system, sans-serif",
-            fontSize: 15, fontWeight: 600, color: "#1A1A1A", marginBottom: 3,
+            fontFamily: "'Lato', -apple-system, sans-serif",
+            fontSize: 15, fontWeight: 600, color: "#1E130A", marginBottom: 3,
           }}>{course.name}</div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <span style={{
-              fontFamily: "'SF Pro Display', -apple-system, sans-serif",
-              fontSize: 12, color: "#6B7280",
+              fontFamily: "'Lato', -apple-system, sans-serif",
+              fontSize: 12, color: "#8B7355",
             }}>{course.city}</span>
             <span style={{
               fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4,
               background: typeColors[course.type] + "18",
               color: typeColors[course.type],
-              fontFamily: "'SF Pro Display', -apple-system, sans-serif",
+              fontFamily: "'Lato', -apple-system, sans-serif",
               textTransform: "uppercase", letterSpacing: "0.05em",
             }}>{course.type}</span>
           </div>
         </div>
         {isSelected && (
           <div style={{
-            width: 24, height: 24, borderRadius: 12, background: "#16A34A",
+            width: 24, height: 24, borderRadius: 12, background: "#2D5016",
             display: "flex", alignItems: "center", justifyContent: "center",
             color: "#fff", fontSize: 14, fontWeight: 700,
           }}>✓</div>
@@ -538,7 +538,7 @@ function CourseCard({ course, selected, onSelect }) {
           {course.tees.map(tee => (
             <span key={tee.name} style={{
               fontFamily: "'SF Mono', monospace", fontSize: 11, padding: "3px 8px",
-              borderRadius: 6, background: "#F3F4F6", color: "#6B7280",
+              borderRadius: 6, background: "#EDE7D9", color: "#8B7355",
             }}>
               {tee.name} · {tee.yardage}y · {tee.slope}/{tee.rating}
             </span>
@@ -551,10 +551,10 @@ function CourseCard({ course, selected, onSelect }) {
 
 // --- MECHANIC TOGGLE ---
 function MechanicToggle({ id, config, enabled, onToggle, expanded, onExpand, settings, onSettings }) {
-  const font = "'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif";
+  const font = "'Lato', -apple-system, BlinkMacSystemFont, sans-serif";
   return (
     <div style={{
-      background: enabled ? "#F0FDF4" : "#fff", borderRadius: 14, overflow: "hidden",
+      background: enabled ? "#EEF5E5" : "#fff", borderRadius: 14, overflow: "hidden",
       boxShadow: enabled ? "0 0 0 1.5px #16A34A20, 0 1px 3px rgba(0,0,0,0.06)" : "0 1px 3px rgba(0,0,0,0.06)",
       transition: "all 0.2s ease",
     }}>
@@ -563,14 +563,14 @@ function MechanicToggle({ id, config, enabled, onToggle, expanded, onExpand, set
       }} onClick={() => onToggle(id)}>
         <span style={{ fontSize: 20 }}>{config.icon}</span>
         <div style={{ flex: 1 }}>
-          <div style={{ fontFamily: font, fontSize: 14, fontWeight: 600, color: "#1A1A1A" }}>{config.label}</div>
-          <div style={{ fontFamily: font, fontSize: 12, color: "#6B7280" }}>{config.description}</div>
+          <div style={{ fontFamily: font, fontSize: 14, fontWeight: 600, color: "#1E130A" }}>{config.label}</div>
+          <div style={{ fontFamily: font, fontSize: 12, color: "#8B7355" }}>{config.description}</div>
         </div>
         <div
           onClick={e => { e.stopPropagation(); onToggle(id); }}
           style={{
             width: 48, height: 28, borderRadius: 14, padding: 2, cursor: "pointer",
-            background: enabled ? "#16A34A" : "#D1D5DB", transition: "background 0.2s ease",
+            background: enabled ? "#2D5016" : "#CEC0AA", transition: "background 0.2s ease",
             display: "flex", alignItems: "center",
           }}
         >
@@ -589,20 +589,20 @@ function MechanicToggle({ id, config, enabled, onToggle, expanded, onExpand, set
               <button key={opt} onClick={() => onSettings(id, { ...settings, initiator: opt })} style={{
                 flex: 1, padding: "8px 12px", borderRadius: 8, border: "none", cursor: "pointer",
                 fontFamily: font, fontSize: 12, fontWeight: 600,
-                background: settings?.initiator === opt ? "#16A34A" : "#F3F4F6",
-                color: settings?.initiator === opt ? "#fff" : "#6B7280",
+                background: settings?.initiator === opt ? "#2D5016" : "#EDE7D9",
+                color: settings?.initiator === opt ? "#fff" : "#8B7355",
                 transition: "all 0.15s ease",
               }}>{opt}</button>
             ))}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontFamily: font, fontSize: 12, color: "#6B7280" }}>Max depth:</span>
+            <span style={{ fontFamily: font, fontSize: 12, color: "#8B7355" }}>Max depth:</span>
             {[1, 2, 3, "∞"].map(d => (
               <button key={d} onClick={() => onSettings(id, { ...settings, maxDepth: d })} style={{
                 width: 36, height: 36, borderRadius: 8, border: "none", cursor: "pointer",
                 fontFamily: "'SF Mono', monospace", fontSize: 13, fontWeight: 600,
-                background: settings?.maxDepth === d ? "#16A34A" : "#F3F4F6",
-                color: settings?.maxDepth === d ? "#fff" : "#6B7280",
+                background: settings?.maxDepth === d ? "#2D5016" : "#EDE7D9",
+                color: settings?.maxDepth === d ? "#fff" : "#8B7355",
               }}>{d}</button>
             ))}
           </div>
@@ -611,13 +611,13 @@ function MechanicToggle({ id, config, enabled, onToggle, expanded, onExpand, set
       {enabled && id === "crybaby" && (
         <div style={{ padding: "0 16px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontFamily: font, fontSize: 12, color: "#6B7280" }}>Crybaby holes:</span>
+            <span style={{ fontFamily: font, fontSize: 12, color: "#8B7355" }}>Crybaby holes:</span>
             {[1, 2, 3, 4, 5].map(n => (
               <button key={n} onClick={() => onSettings(id, { ...settings, holes: n })} style={{
                 width: 36, height: 36, borderRadius: 8, border: "none", cursor: "pointer",
                 fontFamily: "'SF Mono', monospace", fontSize: 13, fontWeight: 600,
-                background: settings?.holes === n ? "#16A34A" : "#F3F4F6",
-                color: settings?.holes === n ? "#fff" : "#6B7280",
+                background: settings?.holes === n ? "#2D5016" : "#EDE7D9",
+                color: settings?.holes === n ? "#fff" : "#8B7355",
               }}>{n}</button>
             ))}
           </div>
@@ -626,8 +626,8 @@ function MechanicToggle({ id, config, enabled, onToggle, expanded, onExpand, set
               <button key={opt} onClick={() => onSettings(id, { ...settings, hammerRule: opt })} style={{
                 flex: 1, padding: "8px 12px", borderRadius: 8, border: "none", cursor: "pointer",
                 fontFamily: font, fontSize: 11, fontWeight: 600,
-                background: settings?.hammerRule === opt ? "#3B82F6" : "#F3F4F6",
-                color: settings?.hammerRule === opt ? "#fff" : "#6B7280",
+                background: settings?.hammerRule === opt ? "#3B82F6" : "#EDE7D9",
+                color: settings?.hammerRule === opt ? "#fff" : "#8B7355",
               }}>{opt}</button>
             ))}
           </div>
@@ -635,13 +635,13 @@ function MechanicToggle({ id, config, enabled, onToggle, expanded, onExpand, set
       )}
       {enabled && id === "birdie_bonus" && (
         <div style={{ padding: "0 16px 14px", display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontFamily: font, fontSize: 12, color: "#6B7280" }}>Multiplier:</span>
+          <span style={{ fontFamily: font, fontSize: 12, color: "#8B7355" }}>Multiplier:</span>
           {["2x", "3x", "4x"].map(m => (
             <button key={m} onClick={() => onSettings(id, { ...settings, multiplier: m })} style={{
               padding: "8px 16px", borderRadius: 8, border: "none", cursor: "pointer",
               fontFamily: "'SF Mono', monospace", fontSize: 13, fontWeight: 600,
-              background: settings?.multiplier === m ? "#16A34A" : "#F3F4F6",
-              color: settings?.multiplier === m ? "#fff" : "#6B7280",
+              background: settings?.multiplier === m ? "#2D5016" : "#EDE7D9",
+              color: settings?.multiplier === m ? "#fff" : "#8B7355",
             }}>{m}</button>
           ))}
         </div>
@@ -649,20 +649,20 @@ function MechanicToggle({ id, config, enabled, onToggle, expanded, onExpand, set
       {enabled && id === "carry_overs" && (
         <div style={{ padding: "0 16px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontFamily: font, fontSize: 12, color: "#6B7280" }}>Max carry-overs:</span>
+            <span style={{ fontFamily: font, fontSize: 12, color: "#8B7355" }}>Max carry-overs:</span>
             {["None", 1, 2, 3, 5, "∞"].map(c => (
               <button key={c} onClick={() => onSettings(id, { ...settings, cap: c })} style={{
                 minWidth: 36, height: 36, borderRadius: 8, border: "none", cursor: "pointer",
                 padding: "0 8px",
                 fontFamily: c === "None" || c === "∞" ? font : "'SF Mono', monospace",
                 fontSize: c === "None" ? 11 : 13, fontWeight: 600,
-                background: settings?.cap === c ? "#16A34A" : "#F3F4F6",
-                color: settings?.cap === c ? "#fff" : "#6B7280",
+                background: settings?.cap === c ? "#2D5016" : "#EDE7D9",
+                color: settings?.cap === c ? "#fff" : "#8B7355",
               }}>{c}</button>
             ))}
           </div>
           {settings?.cap === "None" && (
-            <div style={{ fontFamily: font, fontSize: 11, color: "#9CA3AF", fontStyle: "italic" }}>
+            <div style={{ fontFamily: font, fontSize: 11, color: "#A8957B", fontStyle: "italic" }}>
               Pushes reset — no value carries forward. Keeps things predictable.
             </div>
           )}
@@ -674,8 +674,8 @@ function MechanicToggle({ id, config, enabled, onToggle, expanded, onExpand, set
             <button key={opt} onClick={() => onSettings(id, { ...settings, autoPress: opt })} style={{
               flex: 1, padding: "8px 12px", borderRadius: 8, border: "none", cursor: "pointer",
               fontFamily: font, fontSize: 12, fontWeight: 600,
-              background: settings?.autoPress === opt ? "#16A34A" : "#F3F4F6",
-              color: settings?.autoPress === opt ? "#fff" : "#6B7280",
+              background: settings?.autoPress === opt ? "#2D5016" : "#EDE7D9",
+              color: settings?.autoPress === opt ? "#fff" : "#8B7355",
             }}>{opt}</button>
           ))}
         </div>
@@ -683,18 +683,18 @@ function MechanicToggle({ id, config, enabled, onToggle, expanded, onExpand, set
       {enabled && id === "pops" && (
         <div style={{ padding: "0 16px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontFamily: font, fontSize: 12, color: "#6B7280" }}>Handicap %:</span>
+            <span style={{ fontFamily: font, fontSize: 12, color: "#8B7355" }}>Handicap %:</span>
             {[60, 70, 80, 90, 100].map(pct => (
               <button key={pct} onClick={() => onSettings(id, { ...settings, handicapPercent: pct })} style={{
                 minWidth: 42, height: 36, borderRadius: 8, border: "none", cursor: "pointer",
                 fontFamily: "'SF Mono', 'JetBrains Mono', monospace", fontSize: 12, fontWeight: 600,
-                background: (settings?.handicapPercent || 100) === pct ? "#16A34A" : "#F3F4F6",
-                color: (settings?.handicapPercent || 100) === pct ? "#fff" : "#6B7280",
+                background: (settings?.handicapPercent || 100) === pct ? "#2D5016" : "#EDE7D9",
+                color: (settings?.handicapPercent || 100) === pct ? "#fff" : "#8B7355",
                 transition: "all 0.15s ease",
               }}>{pct}%</button>
             ))}
           </div>
-          <div style={{ fontFamily: font, fontSize: 11, color: "#9CA3AF", fontStyle: "italic" }}>
+          <div style={{ fontFamily: font, fontSize: 11, color: "#A8957B", fontStyle: "italic" }}>
             {(settings?.handicapPercent || 100) === 100
               ? "Full handicap — strokes based on 100% of each player's index."
               : `Playing at ${settings?.handicapPercent}% — a ${20} HCP gets ${Math.round(20 * (settings?.handicapPercent || 100) / 100)} strokes.`
@@ -716,13 +716,13 @@ function ReviewSection({ label, value, icon }) {
       <span style={{ fontSize: 18 }}>{icon}</span>
       <div style={{ flex: 1 }}>
         <div style={{
-          fontFamily: "'SF Pro Display', -apple-system, sans-serif",
-          fontSize: 11, fontWeight: 600, color: "#9CA3AF",
+          fontFamily: "'Lato', -apple-system, sans-serif",
+          fontSize: 11, fontWeight: 600, color: "#A8957B",
           textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2,
         }}>{label}</div>
         <div style={{
-          fontFamily: "'SF Pro Display', -apple-system, sans-serif",
-          fontSize: 14, fontWeight: 600, color: "#1A1A1A",
+          fontFamily: "'Lato', -apple-system, sans-serif",
+          fontSize: 14, fontWeight: 600, color: "#1E130A",
         }}>{value}</div>
       </div>
     </div>
@@ -735,7 +735,7 @@ function ReviewSection({ label, value, icon }) {
 export default function CrybabSetupWizard() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const font = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+  const font = "'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
   const mono = "'SF Mono', 'JetBrains Mono', monospace";
 
   const [step, setStep] = useState(0);
@@ -957,7 +957,7 @@ export default function CrybabSetupWizard() {
     <>
     <div style={{
       maxWidth: 420, margin: "0 auto", minHeight: "100vh",
-      background: "#F7F7F5", fontFamily: font,
+      background: "#F5EFE0", fontFamily: font,
       paddingBottom: 140,
     }}>
       {/* Active Round Resume Banner */}
@@ -977,7 +977,7 @@ export default function CrybabSetupWizard() {
             <div style={{ fontSize: 11, fontWeight: 700, color: "#A16207", textTransform: "uppercase", letterSpacing: "0.05em" }}>
               Round In Progress
             </div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: "#1A1A1A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: "#1E130A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {activeRound.course}
             </div>
           </div>
@@ -985,7 +985,7 @@ export default function CrybabSetupWizard() {
             onClick={() => { window.location.href = `/round?id=${activeRound.id}`; }}
             style={{
               padding: "9px 14px", borderRadius: 12, border: "none",
-              background: "#16A34A", color: "#fff",
+              background: "#2D5016", color: "#fff",
               fontFamily: font, fontSize: 13, fontWeight: 700,
               cursor: "pointer", whiteSpace: "nowrap",
             }}
@@ -1005,12 +1005,12 @@ export default function CrybabSetupWizard() {
         position: "sticky", top: 0, zIndex: 10,
       }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: "#9CA3AF" }}>New Round</span>
+          <span style={{ fontSize: 14, fontWeight: 600, color: "#A8957B" }}>New Round</span>
           {step > 0 && (
             <button
               onClick={() => setStep(step - 1)}
               style={{
-                fontFamily: font, fontSize: 14, fontWeight: 600, color: "#16A34A",
+                fontFamily: font, fontSize: 14, fontWeight: 600, color: "#2D5016",
                 background: "none", border: "none", cursor: "pointer",
                 padding: "6px 12px", margin: "-6px -12px",
               }}
@@ -1022,8 +1022,8 @@ export default function CrybabSetupWizard() {
         <StepIndicator steps={steps} currentStep={step} />
         {/* Commentator */}
         <div style={{
-          padding: "8px 12px", background: "#F7F7F5", borderRadius: 8,
-          fontFamily: font, fontSize: 12, color: "#6B7280", fontStyle: "italic",
+          padding: "8px 12px", background: "#F5EFE0", borderRadius: 8,
+          fontFamily: font, fontSize: 12, color: "#8B7355", fontStyle: "italic",
           borderLeft: "3px solid #F59E0B",
         }}>
           💬 {quip}
@@ -1036,7 +1036,7 @@ export default function CrybabSetupWizard() {
         {step === 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <div style={{
-              fontSize: 18, fontWeight: 700, color: "#1A1A1A",
+              fontSize: 18, fontWeight: 700, color: "#1E130A",
               letterSpacing: "-0.02em", marginBottom: 4,
             }}>
               Choose Your Game
@@ -1058,10 +1058,10 @@ export default function CrybabSetupWizard() {
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
               <div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: "#1A1A1A", letterSpacing: "-0.02em" }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: "#1E130A", letterSpacing: "-0.02em" }}>
                   Add Players
                 </div>
-                <div style={{ fontSize: 13, color: "#9CA3AF", marginTop: 2 }}>
+                <div style={{ fontSize: 13, color: "#A8957B", marginTop: 2 }}>
                   {format?.players.min === format?.players.max
                     ? `Exactly ${format.players.min} players required`
                     : `${format?.players.min}-${format?.players.max} players`
@@ -1072,15 +1072,15 @@ export default function CrybabSetupWizard() {
                 <span style={{
                   fontFamily: mono, fontSize: 13, fontWeight: 700,
                   padding: "4px 10px", borderRadius: 8,
-                  background: players.filter(p => p.name.trim()).length === format.players.min ? "#F0FDF4" : "#FEF3C7",
-                  color: players.filter(p => p.name.trim()).length === format.players.min ? "#16A34A" : "#92400E",
+                  background: players.filter(p => p.name.trim()).length === format.players.min ? "#EEF5E5" : "#FEF3C7",
+                  color: players.filter(p => p.name.trim()).length === format.players.min ? "#2D5016" : "#92400E",
                 }}>
                   {players.filter(p => p.name.trim()).length}/{format.players.min} locked
                 </span>
               ) : (
                 <span style={{
                   fontFamily: mono, fontSize: 13, fontWeight: 700,
-                  color: players.filter(p => p.name.trim()).length >= (format?.players.min || 2) ? "#16A34A" : "#9CA3AF",
+                  color: players.filter(p => p.name.trim()).length >= (format?.players.min || 2) ? "#2D5016" : "#A8957B",
                 }}>
                   {players.filter(p => p.name.trim()).length}/{format?.players.max || 6}
                 </span>
@@ -1105,7 +1105,7 @@ export default function CrybabSetupWizard() {
               <button onClick={addPlayer} style={{
                 width: "100%", padding: "14px", borderRadius: 14, border: "2px dashed #D1D5DB",
                 background: "transparent", cursor: "pointer",
-                fontFamily: font, fontSize: 14, fontWeight: 600, color: "#9CA3AF",
+                fontFamily: font, fontSize: 14, fontWeight: 600, color: "#A8957B",
                 transition: "all 0.15s ease",
               }}>
                 + Add Player
@@ -1125,7 +1125,7 @@ export default function CrybabSetupWizard() {
         {step === 2 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-              <div style={{ fontSize: 18, fontWeight: 700, color: "#1A1A1A", letterSpacing: "-0.02em" }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "#1E130A", letterSpacing: "-0.02em" }}>
                 Select Course
               </div>
               <span style={{
@@ -1144,7 +1144,7 @@ export default function CrybabSetupWizard() {
                   width: "100%", padding: "14px 40px 14px 16px", borderRadius: 12,
                   border: selectedCourse ? "2px solid #16A34A" : "1px solid #E5E7EB",
                   fontFamily: font, fontSize: 14, fontWeight: selectedCourse ? 600 : 400,
-                  color: selectedCourse ? "#1A1A1A" : "#9CA3AF",
+                  color: selectedCourse ? "#1E130A" : "#A8957B",
                   background: "#fff", outline: "none", boxSizing: "border-box",
                   appearance: "none", cursor: "pointer",
                   WebkitAppearance: "none", MozAppearance: "none",
@@ -1176,7 +1176,7 @@ export default function CrybabSetupWizard() {
               </select>
               <span style={{
                 position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)",
-                fontSize: 12, color: "#9CA3AF", pointerEvents: "none",
+                fontSize: 12, color: "#A8957B", pointerEvents: "none",
               }}>▼</span>
             </div>
 
@@ -1185,7 +1185,7 @@ export default function CrybabSetupWizard() {
               onClick={() => setShowAddClub(true)}
               style={{
                 background: "none", border: "none", padding: "4px 0",
-                fontFamily: font, fontSize: 13, color: "#16A34A", fontWeight: 600,
+                fontFamily: font, fontSize: 13, color: "#2D5016", fontWeight: 600,
                 cursor: "pointer", textAlign: "left", textDecoration: "underline",
                 textUnderlineOffset: 3,
               }}
@@ -1201,30 +1201,30 @@ export default function CrybabSetupWizard() {
                 border: "1px solid #E5E7EB",
               }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <div style={{ fontFamily: font, fontSize: 15, fontWeight: 700, color: "#1A1A1A" }}>
+                  <div style={{ fontFamily: font, fontSize: 15, fontWeight: 700, color: "#1E130A" }}>
                     {course.name}
                   </div>
                   <span style={{
                     fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4,
-                    background: (TYPE_COLORS[course.type] || "#6B7280") + "18",
-                    color: TYPE_COLORS[course.type] || "#6B7280",
+                    background: (TYPE_COLORS[course.type] || "#8B7355") + "18",
+                    color: TYPE_COLORS[course.type] || "#8B7355",
                     textTransform: "uppercase", letterSpacing: "0.05em",
                   }}>{course.type}</span>
                 </div>
-                <div style={{ fontFamily: font, fontSize: 12, color: "#6B7280", marginBottom: 12 }}>
+                <div style={{ fontFamily: font, fontSize: 12, color: "#8B7355", marginBottom: 12 }}>
                   {course.city}{course.holes === 9 ? " · 9 holes" : " · 18 holes"}
                 </div>
 
                 {/* Tee selection */}
-                <div style={{ fontSize: 11, fontWeight: 600, color: "#6B7280", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#8B7355", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                   Select Tees
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
                   {course.tees.map(tee => (
                     <button key={tee.name} onClick={() => setSelectedTee(tee.name)} style={{
                       flex: 1, padding: "12px 14px", borderRadius: 12, border: "none", cursor: "pointer",
-                      background: selectedTee === tee.name ? "#16A34A" : "#F9FAFB",
-                      color: selectedTee === tee.name ? "#fff" : "#1A1A1A",
+                      background: selectedTee === tee.name ? "#2D5016" : "#FAF5EC",
+                      color: selectedTee === tee.name ? "#fff" : "#1E130A",
                       boxShadow: selectedTee === tee.name ? "0 2px 8px rgba(22,163,74,0.2)" : "none",
                       transition: "all 0.2s ease", textAlign: "center",
                     }}>
@@ -1241,18 +1241,18 @@ export default function CrybabSetupWizard() {
                 marginTop: 4, background: "#fff", borderRadius: 14, padding: 16,
                 boxShadow: "0 1px 3px rgba(0,0,0,0.06)", overflow: "auto",
               }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "#6B7280", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "#8B7355", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                   Scorecard Preview
                 </div>
                 <div style={{ display: "flex", gap: 4, overflowX: "auto", paddingBottom: 4 }}>
                   {course.pars.map((par, i) => (
                     <div key={i} style={{
                       minWidth: 36, textAlign: "center", padding: "6px 4px",
-                      background: i < 9 ? "#F9FAFB" : "#F3F4F6", borderRadius: 8,
+                      background: i < 9 ? "#FAF5EC" : "#EDE7D9", borderRadius: 8,
                     }}>
-                      <div style={{ fontFamily: mono, fontSize: 10, color: "#9CA3AF", fontWeight: 700 }}>{i + 1}</div>
-                      <div style={{ fontFamily: mono, fontSize: 13, color: "#1A1A1A", fontWeight: 700 }}>{par}</div>
-                      <div style={{ fontFamily: mono, fontSize: 9, color: "#6B7280" }}>H{course.handicaps[i]}</div>
+                      <div style={{ fontFamily: mono, fontSize: 10, color: "#A8957B", fontWeight: 700 }}>{i + 1}</div>
+                      <div style={{ fontFamily: mono, fontSize: 13, color: "#1E130A", fontWeight: 700 }}>{par}</div>
+                      <div style={{ fontFamily: mono, fontSize: 9, color: "#8B7355" }}>H{course.handicaps[i]}</div>
                     </div>
                   ))}
                 </div>
@@ -1264,7 +1264,7 @@ export default function CrybabSetupWizard() {
         {/* STEP 3: RULES */}
         {step === 3 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div style={{ fontSize: 18, fontWeight: 700, color: "#1A1A1A", letterSpacing: "-0.02em" }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: "#1E130A", letterSpacing: "-0.02em" }}>
               Set the Stakes
             </div>
 
@@ -1273,24 +1273,24 @@ export default function CrybabSetupWizard() {
               background: "#fff", borderRadius: 16, padding: "20px 20px",
               boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
             }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>
                 Hole Value
               </div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20 }}>
                 <button onClick={() => setHoleValue(Math.max(1, holeValue - 1))} style={{
                   width: 48, height: 48, borderRadius: 24, border: "none",
-                  background: "#F3F4F6", cursor: "pointer", fontSize: 22, fontWeight: 700, color: "#6B7280",
+                  background: "#EDE7D9", cursor: "pointer", fontSize: 22, fontWeight: 700, color: "#8B7355",
                   display: "flex", alignItems: "center", justifyContent: "center",
                 }}>−</button>
                 <div style={{
-                  fontFamily: mono, fontSize: 48, fontWeight: 800, color: "#1A1A1A",
+                  fontFamily: mono, fontSize: 48, fontWeight: 800, color: "#1E130A",
                   letterSpacing: "-0.03em", minWidth: 100, textAlign: "center",
                 }}>
                   ${holeValue}
                 </div>
                 <button onClick={() => setHoleValue(holeValue + 1)} style={{
                   width: 48, height: 48, borderRadius: 24, border: "none",
-                  background: "#16A34A", cursor: "pointer", fontSize: 22, fontWeight: 700, color: "#fff",
+                  background: "#2D5016", cursor: "pointer", fontSize: 22, fontWeight: 700, color: "#fff",
                   display: "flex", alignItems: "center", justifyContent: "center",
                 }}>+</button>
               </div>
@@ -1299,22 +1299,22 @@ export default function CrybabSetupWizard() {
                   <button key={v} onClick={() => setHoleValue(v)} style={{
                     padding: "6px 14px", borderRadius: 8, border: "none", cursor: "pointer",
                     fontFamily: mono, fontSize: 12, fontWeight: 700,
-                    background: holeValue === v ? "#1A1A1A" : "#F3F4F6",
-                    color: holeValue === v ? "#fff" : "#6B7280",
+                    background: holeValue === v ? "#1E130A" : "#EDE7D9",
+                    color: holeValue === v ? "#fff" : "#8B7355",
                     transition: "all 0.15s ease",
                   }}>${v}</button>
                 ))}
               </div>
               <div style={{
                 marginTop: 14, textAlign: "center",
-                fontFamily: mono, fontSize: 12, color: "#9CA3AF",
+                fontFamily: mono, fontSize: 12, color: "#A8957B",
               }}>
                 Max exposure: ~${holeValue * (format?.defaultHoles || 18) * 3}
               </div>
             </div>
 
             {/* Mechanics */}
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 4 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 4 }}>
               Game Mechanics
             </div>
             {Object.entries(MECHANICS_CONFIG).map(([id, config]) => (
@@ -1334,7 +1334,7 @@ export default function CrybabSetupWizard() {
               marginTop: 4, background: "#fff", borderRadius: 14, padding: 16,
               boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
             }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
                 Round Visibility
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -1346,8 +1346,8 @@ export default function CrybabSetupWizard() {
                 ].map(opt => (
                   <button key={opt.value} onClick={() => setPrivacy(opt.value)} style={{
                     flex: 1, minWidth: 70, padding: "10px 8px", borderRadius: 10, border: "none", cursor: "pointer",
-                    background: privacy === opt.value ? "#1A1A1A" : "#F3F4F6",
-                    color: privacy === opt.value ? "#fff" : "#6B7280",
+                    background: privacy === opt.value ? "#1E130A" : "#EDE7D9",
+                    color: privacy === opt.value ? "#fff" : "#8B7355",
                     fontFamily: font, fontSize: 12, fontWeight: 600,
                     transition: "all 0.15s ease", textAlign: "center",
                   }}>
@@ -1363,7 +1363,7 @@ export default function CrybabSetupWizard() {
         {/* STEP 4: REVIEW */}
         {step === 4 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={{ fontSize: 18, fontWeight: 700, color: "#1A1A1A", letterSpacing: "-0.02em", marginBottom: 4 }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: "#1E130A", letterSpacing: "-0.02em", marginBottom: 4 }}>
               Review & Start
             </div>
 
@@ -1396,47 +1396,47 @@ export default function CrybabSetupWizard() {
                 background: "#fff", borderRadius: 14, padding: 16,
                 boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
               }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
                   House Rules
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {enabledMechanics.has("hammer") && (
-                    <div style={{ fontFamily: font, fontSize: 13, color: "#6B7280" }}>
+                    <div style={{ fontFamily: font, fontSize: 13, color: "#8B7355" }}>
                       🔨 Hammer: {mechanicSettings.hammer.initiator}, max depth {mechanicSettings.hammer.maxDepth}
                     </div>
                   )}
                   {enabledMechanics.has("crybaby") && (
-                    <div style={{ fontFamily: font, fontSize: 13, color: "#6B7280" }}>
+                    <div style={{ fontFamily: font, fontSize: 13, color: "#8B7355" }}>
                       🍼 Crybaby: {mechanicSettings.crybaby.holes} holes, {mechanicSettings.crybaby.hammerRule.toLowerCase()}
                     </div>
                   )}
                   {enabledMechanics.has("birdie_bonus") && (
-                    <div style={{ fontFamily: font, fontSize: 13, color: "#6B7280" }}>
+                    <div style={{ fontFamily: font, fontSize: 13, color: "#8B7355" }}>
                       🐦 Birdies: {mechanicSettings.birdie_bonus.multiplier} hole value
                     </div>
                   )}
                   {enabledMechanics.has("presses") && (
-                    <div style={{ fontFamily: font, fontSize: 13, color: "#6B7280" }}>
+                    <div style={{ fontFamily: font, fontSize: 13, color: "#8B7355" }}>
                       📈 Presses: {mechanicSettings.presses.autoPress}
                     </div>
                   )}
                   {enabledMechanics.has("pops") && (
-                    <div style={{ fontFamily: font, fontSize: 13, color: "#6B7280" }}>
+                    <div style={{ fontFamily: font, fontSize: 13, color: "#8B7355" }}>
                       🎯 Handicap strokes at {mechanicSettings.pops?.handicapPercent || 100}%{enabledMechanics.has("no_pops_par3") ? " (no pops on par 3s)" : ""}
                     </div>
                   )}
                   {enabledMechanics.has("carry_overs") && (
-                    <div style={{ fontFamily: font, fontSize: 13, color: "#6B7280" }}>
+                    <div style={{ fontFamily: font, fontSize: 13, color: "#8B7355" }}>
                       ➡️ Carry-overs enabled
                     </div>
                   )}
                   {enabledMechanics.has("greenies") && (
-                    <div style={{ fontFamily: font, fontSize: 13, color: "#6B7280" }}>
+                    <div style={{ fontFamily: font, fontSize: 13, color: "#8B7355" }}>
                       🟢 Greenies enabled
                     </div>
                   )}
                   {enabledMechanics.has("sandies") && (
-                    <div style={{ fontFamily: font, fontSize: 13, color: "#6B7280" }}>
+                    <div style={{ fontFamily: font, fontSize: 13, color: "#8B7355" }}>
                       ⛱️ Sandies enabled
                     </div>
                   )}
@@ -1472,11 +1472,11 @@ export default function CrybabSetupWizard() {
             fontWeight: step < 4 ? 700 : 800,
             letterSpacing: step < 4 ? "-0.01em" : "-0.02em",
             background: !canProceed()
-              ? "#D1D5DB"
+              ? "#CEC0AA"
               : step < 4
-              ? "#1A1A1A"
+              ? "#1E130A"
               : "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
-            color: canProceed() ? "#fff" : "#9CA3AF",
+            color: canProceed() ? "#fff" : "#A8957B",
             transition: "all 0.2s ease",
             minHeight: step < 4 ? 50 : 60,
             boxShadow: canProceed() && step === 4

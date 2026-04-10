@@ -18,10 +18,10 @@ import {
 // Core scoring interface — one scorekeeper, hole-by-hole
 // ============================================================
 
-const FONT = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+const FONT = "'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 const MONO = "'SF Mono', 'JetBrains Mono', monospace";
 
-const PLAYER_COLORS = ["#16A34A", "#3B82F6", "#F59E0B", "#DC2626", "#8B5CF6", "#EC4899"];
+const PLAYER_COLORS = ["#2D5016", "#3B82F6", "#F59E0B", "#DC2626", "#8B5CF6", "#EC4899"];
 
 // --- COMMENTATOR ---
 const QUIPS = {
@@ -120,14 +120,14 @@ function HoleHeader({ holeNumber, par, handicap, yardage, phase }) {
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
         <div style={{
-          width: 44, height: 44, borderRadius: 12, background: "#1A1A1A",
+          width: 44, height: 44, borderRadius: 12, background: "#1E130A",
           display: "flex", alignItems: "center", justifyContent: "center",
           fontFamily: MONO, fontSize: 18, fontWeight: 800, color: "#fff",
         }}>{holeNumber}</div>
         <div>
           <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
-            <span style={{ fontFamily: FONT, fontSize: 14, fontWeight: 700, color: "#1A1A1A" }}>Par {par}</span>
-            <span style={{ fontFamily: MONO, fontSize: 11, color: "#9CA3AF" }}>HCP {handicap}</span>
+            <span style={{ fontFamily: FONT, fontSize: 14, fontWeight: 700, color: "#1E130A" }}>Par {par}</span>
+            <span style={{ fontFamily: MONO, fontSize: 11, color: "#A8957B" }}>HCP {handicap}</span>
           </div>
             <span style={{
               fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 5,
@@ -140,7 +140,7 @@ function HoleHeader({ holeNumber, par, handicap, yardage, phase }) {
         </div>
       </div>
       <div style={{ textAlign: "right" }}>
-        <div style={{ fontFamily: MONO, fontSize: 11, color: "#9CA3AF" }}>
+        <div style={{ fontFamily: MONO, fontSize: 11, color: "#A8957B" }}>
           {holeNumber}/18
         </div>
       </div>
@@ -163,7 +163,7 @@ function TeamBanner({ teams, holeValue, hammerDepth }) {
         <div style={{ fontFamily: FONT, fontSize: 11, fontWeight: 700, color: teams.teamA.color, textTransform: "uppercase", letterSpacing: "0.05em" }}>
           {teams.teamA.name}
         </div>
-        <div style={{ fontFamily: FONT, fontSize: 13, color: "#1A1A1A", fontWeight: 500, marginTop: 3 }}>
+        <div style={{ fontFamily: FONT, fontSize: 13, color: "#1E130A", fontWeight: 500, marginTop: 3 }}>
           {teams.teamA.players.map(p => p.name).join(" & ")}
         </div>
       </div>
@@ -171,10 +171,10 @@ function TeamBanner({ teams, holeValue, hammerDepth }) {
         display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
         minWidth: 56,
       }}>
-        <div style={{ fontFamily: FONT, fontSize: 10, color: "#9CA3AF", fontWeight: 600 }}>HOLE</div>
+        <div style={{ fontFamily: FONT, fontSize: 10, color: "#A8957B", fontWeight: 600 }}>HOLE</div>
         <div style={{
           fontFamily: MONO, fontSize: hammerDepth >= 3 ? 16 : 18, fontWeight: 800,
-          color: hammerDepth >= 3 ? "#7F1D1D" : hammerDepth >= 2 ? "#DC2626" : hammerDepth >= 1 ? "#F59E0B" : "#1A1A1A",
+          color: hammerDepth >= 3 ? "#7F1D1D" : hammerDepth >= 2 ? "#DC2626" : hammerDepth >= 1 ? "#F59E0B" : "#1E130A",
           transition: "all 0.3s ease",
         }}>
           ${effectiveValue}
@@ -197,7 +197,7 @@ function TeamBanner({ teams, holeValue, hammerDepth }) {
         <div style={{ fontFamily: FONT, fontSize: 11, fontWeight: 700, color: teams.teamB.color, textTransform: "uppercase", letterSpacing: "0.05em" }}>
           {teams.teamB.name}
         </div>
-        <div style={{ fontFamily: FONT, fontSize: 13, color: "#1A1A1A", fontWeight: 500, marginTop: 3 }}>
+        <div style={{ fontFamily: FONT, fontSize: 13, color: "#1E130A", fontWeight: 500, marginTop: 3 }}>
           {teams.teamB.players.map(p => p.name).join(" & ")}
         </div>
       </div>
@@ -208,7 +208,7 @@ function TeamBanner({ teams, holeValue, hammerDepth }) {
 function ScoreInput({ player, par, score, strokes, onScoreChange }) {
   const netScore = score !== null ? score - strokes : null;
   const diff = netScore !== null ? netScore - par : null;
-  const diffColor = diff === null ? "#9CA3AF" : diff < 0 ? "#16A34A" : diff > 0 ? "#DC2626" : "#1A1A1A";
+  const diffColor = diff === null ? "#A8957B" : diff < 0 ? "#2D5016" : diff > 0 ? "#DC2626" : "#1E130A";
   return (
     <div style={{
       display: "flex", alignItems: "center", gap: 12, padding: "12px 16px",
@@ -222,7 +222,7 @@ function ScoreInput({ player, par, score, strokes, onScoreChange }) {
       }}>{player.name[0]}</div>
       <div style={{ flex: 1 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ fontFamily: FONT, fontSize: 14, fontWeight: 600, color: "#1A1A1A" }}>{player.name}</span>
+          <span style={{ fontFamily: FONT, fontSize: 14, fontWeight: 600, color: "#1E130A" }}>{player.name}</span>
           {strokes > 0 && (
             <span style={{
               fontFamily: MONO, fontSize: 10, fontWeight: 700, padding: "1px 5px", borderRadius: 4,
@@ -233,7 +233,7 @@ function ScoreInput({ player, par, score, strokes, onScoreChange }) {
           )}
         </div>
         {netScore !== null && score !== netScore && (
-          <div style={{ fontFamily: MONO, fontSize: 11, color: "#9CA3AF", marginTop: 1 }}>
+          <div style={{ fontFamily: MONO, fontSize: 11, color: "#A8957B", marginTop: 1 }}>
             gross {score} → net {netScore}
           </div>
         )}
@@ -243,14 +243,14 @@ function ScoreInput({ player, par, score, strokes, onScoreChange }) {
           onClick={() => onScoreChange(player.id, Math.max(1, (score || par) - 1))}
           style={{
             width: 40, height: 40, borderRadius: 12, border: "none",
-            background: "#F3F4F6", cursor: "pointer",
-            fontSize: 20, fontWeight: 600, color: "#6B7280",
+            background: "#EDE7D9", cursor: "pointer",
+            fontSize: 20, fontWeight: 600, color: "#8B7355",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}
         >−</button>
         <div style={{
           width: 48, height: 48, borderRadius: 14,
-          background: score !== null ? (diff < 0 ? "#F0FDF4" : diff > 0 ? "#FEF2F2" : "#F9FAFB") : "#F9FAFB",
+          background: score !== null ? (diff < 0 ? "#EEF5E5" : diff > 0 ? "#FEF2F2" : "#FAF5EC") : "#FAF5EC",
           display: "flex", alignItems: "center", justifyContent: "center",
           fontFamily: MONO, fontSize: 22, fontWeight: 800, color: diffColor,
           border: score !== null ? `2px solid ${diffColor}20` : "2px solid #E5E7EB",
@@ -262,8 +262,8 @@ function ScoreInput({ player, par, score, strokes, onScoreChange }) {
           onClick={() => onScoreChange(player.id, (score || par) + 1)}
           style={{
             width: 40, height: 40, borderRadius: 12, border: "none",
-            background: "#F3F4F6", cursor: "pointer",
-            fontSize: 20, fontWeight: 600, color: "#6B7280",
+            background: "#EDE7D9", cursor: "pointer",
+            fontSize: 20, fontWeight: 600, color: "#8B7355",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}
         >+</button>
@@ -280,13 +280,13 @@ function Leaderboard({ players, totals, currentCrybaby }) {
       boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
     }}>
       <div style={{
-        padding: "12px 16px", background: "#F9FAFB", borderBottom: "1px solid #F3F4F6",
+        padding: "12px 16px", background: "#FAF5EC", borderBottom: "1px solid #F3F4F6",
         display: "flex", justifyContent: "space-between", alignItems: "center",
       }}>
-        <span style={{ fontFamily: FONT, fontSize: 12, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+        <span style={{ fontFamily: FONT, fontSize: 12, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em" }}>
           Standings
         </span>
-        <span style={{ fontFamily: FONT, fontSize: 11, color: "#9CA3AF" }}>
+        <span style={{ fontFamily: FONT, fontSize: 11, color: "#A8957B" }}>
           P&L
         </span>
       </div>
@@ -300,7 +300,7 @@ function Leaderboard({ players, totals, currentCrybaby }) {
             background: isCrybaby ? "#FEF2F2" : "transparent",
           }}>
             <span style={{
-              fontFamily: MONO, fontSize: 11, fontWeight: 700, color: "#D1D5DB",
+              fontFamily: MONO, fontSize: 11, fontWeight: 700, color: "#CEC0AA",
               width: 18, textAlign: "center",
             }}>{i + 1}</span>
             <div style={{
@@ -309,12 +309,12 @@ function Leaderboard({ players, totals, currentCrybaby }) {
               color: "#fff", fontSize: 11, fontWeight: 700, fontFamily: FONT,
             }}>{player.name[0]}</div>
             <div style={{ flex: 1 }}>
-              <span style={{ fontFamily: FONT, fontSize: 13, fontWeight: 600, color: "#1A1A1A" }}>{player.name}</span>
+              <span style={{ fontFamily: FONT, fontSize: 13, fontWeight: 600, color: "#1E130A" }}>{player.name}</span>
               {isCrybaby && <span style={{ marginLeft: 6, fontSize: 12 }}>🍼</span>}
             </div>
             <span style={{
               fontFamily: MONO, fontSize: 15, fontWeight: 800,
-              color: amount > 0 ? "#16A34A" : amount < 0 ? "#DC2626" : "#9CA3AF",
+              color: amount > 0 ? "#2D5016" : amount < 0 ? "#DC2626" : "#A8957B",
             }}>
               {amount >= 0 ? "+" : ""}${amount}
             </span>
@@ -342,13 +342,13 @@ function HammerModal({ teams, currentValue, hammerDepth, lastHammerBy, onThrow, 
         textAlign: "center",
       }}>
         <div style={{ fontSize: 56, marginBottom: 12 }}>{"🔨".repeat(Math.min(hammerDepth + 1, 5))}</div>
-        <div style={{ fontFamily: FONT, fontSize: 22, fontWeight: 800, color: "#1A1A1A", marginBottom: 4 }}>
+        <div style={{ fontFamily: FONT, fontSize: 22, fontWeight: 800, color: "#1E130A", marginBottom: 4 }}>
           {hammerDepth === 0 ? "HAMMER" : hammerDepth === 1 ? "HAMMER BACK" : `HAMMER ${"BACK ".repeat(Math.min(hammerDepth, 3))}`.trim()}
         </div>
 
         {!isPending ? (
           <>
-            <div style={{ fontFamily: FONT, fontSize: 14, color: "#6B7280", marginBottom: 20 }}>
+            <div style={{ fontFamily: FONT, fontSize: 14, color: "#8B7355", marginBottom: 20 }}>
               Which team is throwing the hammer?
             </div>
             <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
@@ -360,7 +360,7 @@ function HammerModal({ teams, currentValue, hammerDepth, lastHammerBy, onThrow, 
                 <div style={{ fontSize: 11, fontWeight: 700, color: teams.teamA.color, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                   {teams.teamA.name}
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#1A1A1A", marginTop: 4 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#1E130A", marginTop: 4 }}>
                   {teams.teamA.players.map(p => p.name).join(" & ")}
                 </div>
               </button>
@@ -372,7 +372,7 @@ function HammerModal({ teams, currentValue, hammerDepth, lastHammerBy, onThrow, 
                 <div style={{ fontSize: 11, fontWeight: 700, color: teams.teamB.color, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                   {teams.teamB.name}
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#1A1A1A", marginTop: 4 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#1E130A", marginTop: 4 }}>
                   {teams.teamB.players.map(p => p.name).join(" & ")}
                 </div>
               </button>
@@ -380,15 +380,15 @@ function HammerModal({ teams, currentValue, hammerDepth, lastHammerBy, onThrow, 
             <button onClick={onFold} style={{
               width: "100%", padding: "12px", borderRadius: 12, border: "none", cursor: "pointer",
               fontFamily: FONT, fontSize: 13, fontWeight: 600,
-              background: "#F3F4F6", color: "#9CA3AF",
+              background: "#EDE7D9", color: "#A8957B",
             }}>Cancel</button>
           </>
         ) : (
           <>
-            <div style={{ fontFamily: FONT, fontSize: 14, color: "#6B7280", marginBottom: 6 }}>
+            <div style={{ fontFamily: FONT, fontSize: 14, color: "#8B7355", marginBottom: 6 }}>
               <span style={{ fontWeight: 700, color: throwingTeam.color }}>{throwingTeam.name}</span> {isHammerBack ? "hammered back!" : "threw the hammer!"}
             </div>
-            <div style={{ fontFamily: FONT, fontSize: 14, color: "#6B7280", marginBottom: 20 }}>
+            <div style={{ fontFamily: FONT, fontSize: 14, color: "#8B7355", marginBottom: 20 }}>
               Hole value {isHammerBack ? "doubles again" : "doubles"} to <span style={{ fontFamily: MONO, fontWeight: 800, color: "#F59E0B" }}>${currentValue * 2}</span>
             </div>
             <div style={{
@@ -402,7 +402,7 @@ function HammerModal({ teams, currentValue, hammerDepth, lastHammerBy, onThrow, 
               <button onClick={() => onFold()} style={{
                 flex: 1, padding: "16px", borderRadius: 14, border: "none", cursor: "pointer",
                 fontFamily: FONT, fontSize: 15, fontWeight: 700,
-                background: "#F3F4F6", color: "#6B7280",
+                background: "#EDE7D9", color: "#8B7355",
               }}>
                 🐔 Fold
               </button>
@@ -436,11 +436,11 @@ function HoleResultCard({ result, onDismiss }) {
         <div style={{ fontSize: 40, marginBottom: 8 }}>
           {result.push ? "🤝" : "🏆"}
         </div>
-        <div style={{ fontFamily: FONT, fontSize: 20, fontWeight: 800, color: "#1A1A1A", marginBottom: 4 }}>
+        <div style={{ fontFamily: FONT, fontSize: 20, fontWeight: 800, color: "#1E130A", marginBottom: 4 }}>
           {result.push ? "Push" : `${result.winnerName} Win`}
         </div>
         {!result.push && (
-          <div style={{ fontFamily: MONO, fontSize: 28, fontWeight: 800, color: "#16A34A", marginBottom: 4 }}>
+          <div style={{ fontFamily: MONO, fontSize: 28, fontWeight: 800, color: "#2D5016", marginBottom: 4 }}>
             ${result.amount}
           </div>
         )}
@@ -450,7 +450,7 @@ function HoleResultCard({ result, onDismiss }) {
           </div>
         )}
         <div style={{
-          padding: "12px 16px", background: "#F7F7F5", borderRadius: 12, marginBottom: 4,
+          padding: "12px 16px", background: "#F5EFE0", borderRadius: 12, marginBottom: 4,
           textAlign: "left",
         }}>
           {result.playerResults.map(pr => (
@@ -458,10 +458,10 @@ function HoleResultCard({ result, onDismiss }) {
               display: "flex", justifyContent: "space-between", padding: "4px 0",
               fontFamily: FONT, fontSize: 13,
             }}>
-              <span style={{ color: "#6B7280" }}>{pr.name}</span>
+              <span style={{ color: "#8B7355" }}>{pr.name}</span>
               <span style={{
                 fontFamily: MONO, fontWeight: 700,
-                color: pr.amount > 0 ? "#16A34A" : pr.amount < 0 ? "#DC2626" : "#9CA3AF",
+                color: pr.amount > 0 ? "#2D5016" : pr.amount < 0 ? "#DC2626" : "#A8957B",
               }}>
                 {pr.amount >= 0 ? "+" : ""}${pr.amount}
               </span>
@@ -469,8 +469,8 @@ function HoleResultCard({ result, onDismiss }) {
           ))}
         </div>
         <div style={{
-          padding: "10px 14px", background: "#F0FDF4", borderRadius: 10, marginBottom: 20, marginTop: 12,
-          fontFamily: FONT, fontSize: 13, color: "#166534", fontStyle: "italic",
+          padding: "10px 14px", background: "#EEF5E5", borderRadius: 10, marginBottom: 20, marginTop: 12,
+          fontFamily: FONT, fontSize: 13, color: "#1A3009", fontStyle: "italic",
           borderLeft: "3px solid #16A34A",
           textAlign: "left",
         }}>
@@ -479,7 +479,7 @@ function HoleResultCard({ result, onDismiss }) {
         <button onClick={onDismiss} style={{
           width: "100%", padding: "16px", borderRadius: 14, border: "none", cursor: "pointer",
           fontFamily: FONT, fontSize: 15, fontWeight: 700,
-          background: "#1A1A1A", color: "#fff",
+          background: "#1E130A", color: "#fff",
         }}>
           Next Hole →
         </button>
@@ -508,10 +508,10 @@ function CrybabSetupModal({ players, totals, onConfirm }) {
       }}>
         <div style={{ textAlign: "center", marginBottom: 20 }}>
           <div style={{ fontSize: 48, marginBottom: 8 }}>🍼</div>
-          <div style={{ fontFamily: FONT, fontSize: 22, fontWeight: 800, color: "#1A1A1A" }}>
+          <div style={{ fontFamily: FONT, fontSize: 22, fontWeight: 800, color: "#1E130A" }}>
             Crybaby Time
           </div>
-          <div style={{ fontFamily: FONT, fontSize: 14, color: "#6B7280", marginTop: 4 }}>
+          <div style={{ fontFamily: FONT, fontSize: 14, color: "#8B7355", marginTop: 4 }}>
             {crybaby.name} is down <span style={{ fontFamily: MONO, fontWeight: 800, color: "#DC2626" }}>${crybabAmount}</span>
           </div>
         </div>
@@ -525,13 +525,13 @@ function CrybabSetupModal({ players, totals, onConfirm }) {
         </div>
 
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontFamily: FONT, fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+          <div style={{ fontFamily: FONT, fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
             Crybaby Bet (max ${maxBet})
           </div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16 }}>
             <button onClick={() => setBet(Math.max(1, bet - 1))} style={{
-              width: 40, height: 40, borderRadius: 12, border: "none", background: "#F3F4F6",
-              cursor: "pointer", fontSize: 18, fontWeight: 700, color: "#6B7280",
+              width: 40, height: 40, borderRadius: 12, border: "none", background: "#EDE7D9",
+              cursor: "pointer", fontSize: 18, fontWeight: 700, color: "#8B7355",
               display: "flex", alignItems: "center", justifyContent: "center",
             }}>−</button>
             <div style={{ fontFamily: MONO, fontSize: 36, fontWeight: 800, color: "#DC2626", minWidth: 80, textAlign: "center" }}>
@@ -546,20 +546,20 @@ function CrybabSetupModal({ players, totals, onConfirm }) {
         </div>
 
         <div style={{ marginBottom: 20 }}>
-          <div style={{ fontFamily: FONT, fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+          <div style={{ fontFamily: FONT, fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
             Choose Partner
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             {others.map(p => (
               <button key={p.id} onClick={() => setPartner(p.id)} style={{
                 flex: 1, padding: "12px 8px", borderRadius: 12, border: "none", cursor: "pointer",
-                background: partner === p.id ? "#1A1A1A" : "#F3F4F6",
-                color: partner === p.id ? "#fff" : "#6B7280",
+                background: partner === p.id ? "#1E130A" : "#EDE7D9",
+                color: partner === p.id ? "#fff" : "#8B7355",
                 textAlign: "center", transition: "all 0.15s ease",
               }}>
                 <div style={{
                   width: 32, height: 32, borderRadius: 16, background: partner === p.id ? "#fff" : p.color,
-                  color: partner === p.id ? "#1A1A1A" : "#fff",
+                  color: partner === p.id ? "#1E130A" : "#fff",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   fontFamily: FONT, fontSize: 13, fontWeight: 700, margin: "0 auto 6px",
                 }}>{p.name[0]}</div>
@@ -576,8 +576,8 @@ function CrybabSetupModal({ players, totals, onConfirm }) {
             width: "100%", padding: "16px", borderRadius: 14, border: "none",
             cursor: partner ? "pointer" : "not-allowed",
             fontFamily: FONT, fontSize: 15, fontWeight: 700,
-            background: partner ? "#DC2626" : "#D1D5DB",
-            color: partner ? "#fff" : "#9CA3AF",
+            background: partner ? "#DC2626" : "#CEC0AA",
+            color: partner ? "#fff" : "#A8957B",
           }}
         >
           Lock In Crybaby 🍼
@@ -623,10 +623,10 @@ function FlipTeamModal({ players, onConfirm }) {
         textAlign: "center",
       }}>
         <div style={{ fontSize: 48, marginBottom: 8 }}>🪙</div>
-        <div style={{ fontFamily: FONT, fontSize: 22, fontWeight: 800, color: "#1A1A1A", marginBottom: 4 }}>
+        <div style={{ fontFamily: FONT, fontSize: 22, fontWeight: 800, color: "#1E130A", marginBottom: 4 }}>
           Flip Teams
         </div>
-        <div style={{ fontFamily: FONT, fontSize: 14, color: "#6B7280", marginBottom: 20 }}>
+        <div style={{ fontFamily: FONT, fontSize: 14, color: "#8B7355", marginBottom: 20 }}>
           Randomly paired — tap to re-flip
         </div>
 
@@ -648,12 +648,12 @@ function FlipTeamModal({ players, onConfirm }) {
                   display: "flex", alignItems: "center", justifyContent: "center",
                   color: "#fff", fontSize: 11, fontWeight: 700, fontFamily: FONT,
                 }}>{p.name[0]}</div>
-                <span style={{ fontFamily: FONT, fontSize: 13, fontWeight: 600, color: "#1A1A1A" }}>{p.name}</span>
+                <span style={{ fontFamily: FONT, fontSize: 13, fontWeight: 600, color: "#1E130A" }}>{p.name}</span>
               </div>
             ))}
           </div>
           <div style={{ display: "flex", alignItems: "center" }}>
-            <span style={{ fontFamily: FONT, fontSize: 12, fontWeight: 700, color: "#9CA3AF" }}>VS</span>
+            <span style={{ fontFamily: FONT, fontSize: 12, fontWeight: 700, color: "#A8957B" }}>VS</span>
           </div>
           <div style={{
             flex: 1, padding: "16px 12px", borderRadius: 16,
@@ -672,7 +672,7 @@ function FlipTeamModal({ players, onConfirm }) {
                   display: "flex", alignItems: "center", justifyContent: "center",
                   color: "#fff", fontSize: 11, fontWeight: 700, fontFamily: FONT,
                 }}>{p.name[0]}</div>
-                <span style={{ fontFamily: FONT, fontSize: 13, fontWeight: 600, color: "#1A1A1A" }}>{p.name}</span>
+                <span style={{ fontFamily: FONT, fontSize: 13, fontWeight: 600, color: "#1E130A" }}>{p.name}</span>
               </div>
             ))}
           </div>
@@ -682,7 +682,7 @@ function FlipTeamModal({ players, onConfirm }) {
           <button onClick={reshuffle} disabled={animating} style={{
             flex: 1, padding: "14px", borderRadius: 14, border: "none", cursor: animating ? "not-allowed" : "pointer",
             fontFamily: FONT, fontSize: 14, fontWeight: 700,
-            background: "#F3F4F6", color: "#6B7280",
+            background: "#EDE7D9", color: "#8B7355",
           }}>
             🔄 Re-flip
           </button>
@@ -712,13 +712,13 @@ function WolfPartnerModal({ wolfPlayer, otherPlayers, holeNumber, holeValue, onS
         textAlign: "center",
       }}>
         <div style={{ fontSize: 48, marginBottom: 8 }}>🐺</div>
-        <div style={{ fontFamily: FONT, fontSize: 22, fontWeight: 800, color: "#1A1A1A", marginBottom: 4 }}>
+        <div style={{ fontFamily: FONT, fontSize: 22, fontWeight: 800, color: "#1E130A", marginBottom: 4 }}>
           Hole {holeNumber} — Wolf
         </div>
-        <div style={{ fontFamily: FONT, fontSize: 14, color: "#6B7280", marginBottom: 6 }}>
+        <div style={{ fontFamily: FONT, fontSize: 14, color: "#8B7355", marginBottom: 6 }}>
           <span style={{ fontWeight: 700, color: wolfPlayer.color }}>{wolfPlayer.name}</span> is the Wolf
         </div>
-        <div style={{ fontFamily: FONT, fontSize: 12, color: "#9CA3AF", marginBottom: 20 }}>
+        <div style={{ fontFamily: FONT, fontSize: 12, color: "#A8957B", marginBottom: 20 }}>
           Pick a partner or go lone for 2× payout
         </div>
 
@@ -727,7 +727,7 @@ function WolfPartnerModal({ wolfPlayer, otherPlayers, holeNumber, holeValue, onS
             <button key={p.id} onClick={() => onSelectPartner(p.id)} style={{
               display: "flex", alignItems: "center", gap: 12, padding: "14px 16px",
               borderRadius: 14, border: "none", cursor: "pointer",
-              background: "#F9FAFB", transition: "all 0.15s ease",
+              background: "#FAF5EC", transition: "all 0.15s ease",
             }}>
               <div style={{
                 width: 36, height: 36, borderRadius: 18, background: p.color,
@@ -735,8 +735,8 @@ function WolfPartnerModal({ wolfPlayer, otherPlayers, holeNumber, holeValue, onS
                 color: "#fff", fontSize: 14, fontWeight: 700, fontFamily: FONT,
               }}>{p.name[0]}</div>
               <div style={{ flex: 1, textAlign: "left" }}>
-                <div style={{ fontFamily: FONT, fontSize: 14, fontWeight: 600, color: "#1A1A1A" }}>{p.name}</div>
-                <div style={{ fontFamily: MONO, fontSize: 11, color: "#9CA3AF" }}>HCP {p.handicap}</div>
+                <div style={{ fontFamily: FONT, fontSize: 14, fontWeight: 600, color: "#1E130A" }}>{p.name}</div>
+                <div style={{ fontFamily: MONO, fontSize: 11, color: "#A8957B" }}>HCP {p.handicap}</div>
               </div>
               <span style={{ fontFamily: FONT, fontSize: 12, fontWeight: 700, color: "#8B5CF6" }}>Pick →</span>
             </button>
@@ -785,13 +785,13 @@ function NassauPressModal({ currentHole, holeValue, nassauPresses, onPress, onCl
         textAlign: "center",
       }}>
         <div style={{ fontSize: 48, marginBottom: 8 }}>📌</div>
-        <div style={{ fontFamily: FONT, fontSize: 22, fontWeight: 800, color: "#1A1A1A", marginBottom: 4 }}>
+        <div style={{ fontFamily: FONT, fontSize: 22, fontWeight: 800, color: "#1E130A", marginBottom: 4 }}>
           Press
         </div>
-        <div style={{ fontFamily: FONT, fontSize: 14, color: "#6B7280", marginBottom: 8 }}>
+        <div style={{ fontFamily: FONT, fontSize: 14, color: "#8B7355", marginBottom: 8 }}>
           Start a new match within the {segment}
         </div>
-        <div style={{ fontFamily: MONO, fontSize: 12, color: "#9CA3AF", marginBottom: 20 }}>
+        <div style={{ fontFamily: MONO, fontSize: 12, color: "#A8957B", marginBottom: 20 }}>
           Active presses this segment: {pressCount} · ${holeValue} per press
         </div>
 
@@ -807,14 +807,14 @@ function NassauPressModal({ currentHole, holeValue, nassauPresses, onPress, onCl
           <button onClick={onClose} style={{
             flex: 1, padding: "14px", borderRadius: 14, border: "none", cursor: "pointer",
             fontFamily: FONT, fontSize: 14, fontWeight: 700,
-            background: "#F3F4F6", color: "#6B7280",
+            background: "#EDE7D9", color: "#8B7355",
           }}>
             Cancel
           </button>
           <button onClick={() => { onPress(currentHole); onClose(); }} style={{
             flex: 1, padding: "14px", borderRadius: 14, border: "none", cursor: "pointer",
             fontFamily: FONT, fontSize: 14, fontWeight: 700,
-            background: "#16A34A", color: "#fff",
+            background: "#2D5016", color: "#fff",
           }}>
             Press! 📌
           </button>
@@ -1057,10 +1057,10 @@ export default function CrybabActiveRound() {
   // --- Early returns (after all hooks) ---
   if (loading) {
     return (
-      <div style={{ maxWidth: 420, margin: "0 auto", minHeight: "100vh", background: "#F7F7F5", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONT }}>
+      <div style={{ maxWidth: 420, margin: "0 auto", minHeight: "100vh", background: "#F5EFE0", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONT }}>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>⛳</div>
-          <div style={{ fontSize: 16, fontWeight: 600, color: "#6B7280" }}>Loading round...</div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: "#8B7355" }}>Loading round...</div>
         </div>
       </div>
     );
@@ -1069,15 +1069,15 @@ export default function CrybabActiveRound() {
   if (error || !round) {
     const isTimeout = error && error.includes("timed out");
     return (
-      <div style={{ maxWidth: 420, margin: "0 auto", minHeight: "100vh", background: "#F7F7F5", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONT }}>
+      <div style={{ maxWidth: 420, margin: "0 auto", minHeight: "100vh", background: "#F5EFE0", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONT }}>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>{isTimeout ? "📶" : "😬"}</div>
-          <div style={{ fontSize: 16, fontWeight: 600, color: "#6B7280", marginBottom: 16 }}>{error || "Round not found"}</div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: "#8B7355", marginBottom: 16 }}>{error || "Round not found"}</div>
           {isTimeout ? (
             <button onClick={() => window.location.reload()} style={{
               padding: "12px 24px", borderRadius: 12, border: "none", cursor: "pointer",
               fontFamily: FONT, fontSize: 14, fontWeight: 700,
-              background: "#1A1A1A", color: "#fff",
+              background: "#1E130A", color: "#fff",
             }}>
               Retry
             </button>
@@ -1085,7 +1085,7 @@ export default function CrybabActiveRound() {
             <button onClick={() => navigate("/setup")} style={{
               padding: "12px 24px", borderRadius: 12, border: "none", cursor: "pointer",
               fontFamily: FONT, fontSize: 14, fontWeight: 700,
-              background: "#1A1A1A", color: "#fff",
+              background: "#1E130A", color: "#fff",
             }}>
               Start New Round
             </button>
@@ -1505,7 +1505,7 @@ export default function CrybabActiveRound() {
     const crybabyPlayer = sorted[sorted.length - 1];
     const winner = sorted[0];
     return (
-      <div style={{ maxWidth: 420, margin: "0 auto", minHeight: "100vh", background: "#F7F7F5", fontFamily: FONT }}>
+      <div style={{ maxWidth: 420, margin: "0 auto", minHeight: "100vh", background: "#F5EFE0", fontFamily: FONT }}>
         <div style={{
           background: "linear-gradient(135deg, #1A1A1A 0%, #374151 100%)",
           padding: "60px 24px 32px", borderRadius: "0 0 32px 32px", textAlign: "center",
@@ -1534,12 +1534,12 @@ export default function CrybabActiveRound() {
                   color: "#fff", fontSize: 16, fontWeight: 700,
                 }}>{p.name[0]}</div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: "#1A1A1A" }}>{p.name}</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: "#1E130A" }}>{p.name}</div>
                   {isCrybab && <div style={{ fontSize: 11, color: "#DC2626", fontWeight: 600 }}>CRYBABY</div>}
                 </div>
                 <span style={{
                   fontFamily: MONO, fontSize: 22, fontWeight: 800,
-                  color: amount > 0 ? "#16A34A" : amount < 0 ? "#DC2626" : "#9CA3AF",
+                  color: amount > 0 ? "#2D5016" : amount < 0 ? "#DC2626" : "#A8957B",
                 }}>
                   {amount >= 0 ? "+" : ""}${amount}
                 </span>
@@ -1553,7 +1553,7 @@ export default function CrybabActiveRound() {
               background: "#fff", borderRadius: 16, padding: 20,
               boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
             }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>
                 Nassau Breakdown
               </div>
               {['Front 9', 'Back 9', 'Overall'].map((label, idx) => {
@@ -1562,11 +1562,11 @@ export default function CrybabActiveRound() {
                 const topWins = match[sortedMatch[0]?.id] || 0;
                 return (
                   <div key={label} style={{ marginBottom: 10 }}>
-                    <div style={{ fontFamily: FONT, fontSize: 12, fontWeight: 700, color: "#6B7280", marginBottom: 4 }}>{label}</div>
+                    <div style={{ fontFamily: FONT, fontSize: 12, fontWeight: 700, color: "#8B7355", marginBottom: 4 }}>{label}</div>
                     {sortedMatch.map(p => (
                       <div key={p.id} style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", fontFamily: MONO, fontSize: 12 }}>
-                        <span style={{ color: "#1A1A1A" }}>{p.name}</span>
-                        <span style={{ color: (match[p.id] || 0) === topWins && topWins > 0 ? "#16A34A" : "#9CA3AF" }}>{match[p.id] || 0} wins</span>
+                        <span style={{ color: "#1E130A" }}>{p.name}</span>
+                        <span style={{ color: (match[p.id] || 0) === topWins && topWins > 0 ? "#2D5016" : "#A8957B" }}>{match[p.id] || 0} wins</span>
                       </div>
                     ))}
                   </div>
@@ -1585,7 +1585,7 @@ export default function CrybabActiveRound() {
             background: "#fff", borderRadius: 16, padding: 20, marginTop: 8,
             boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
           }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>
               Settlement
             </div>
             {(() => {
@@ -1615,12 +1615,12 @@ export default function CrybabActiveRound() {
                   padding: "10px 0",
                   borderBottom: i < settlements.length - 1 ? "1px solid #F3F4F6" : "none",
                 }}>
-                  <div style={{ fontFamily: FONT, fontSize: 14, color: "#6B7280" }}>
+                  <div style={{ fontFamily: FONT, fontSize: 14, color: "#8B7355" }}>
                     <span style={{ fontWeight: 600, color: "#DC2626" }}>{s.from}</span>
                     {" → "}
-                    <span style={{ fontWeight: 600, color: "#16A34A" }}>{s.to}</span>
+                    <span style={{ fontWeight: 600, color: "#2D5016" }}>{s.to}</span>
                   </div>
-                  <span style={{ fontFamily: MONO, fontSize: 16, fontWeight: 800, color: "#1A1A1A" }}>
+                  <span style={{ fontFamily: MONO, fontSize: 16, fontWeight: 800, color: "#1E130A" }}>
                     ${s.amount}
                   </span>
                 </div>
@@ -1655,7 +1655,7 @@ export default function CrybabActiveRound() {
               style={{
                 width: "100%", padding: "14px", borderRadius: 12, border: "none", marginTop: 14,
                 fontFamily: FONT, fontSize: 14, fontWeight: 700,
-                background: "#16A34A", color: "#fff", cursor: "pointer",
+                background: "#2D5016", color: "#fff", cursor: "pointer",
               }}
             >
               Send Reminders 📲
@@ -1664,13 +1664,13 @@ export default function CrybabActiveRound() {
 
           {/* Recap */}
           <div style={{
-            background: "#F0FDF4", borderRadius: 16, padding: "16px 18px",
+            background: "#EEF5E5", borderRadius: 16, padding: "16px 18px",
             borderLeft: "4px solid #16A34A",
           }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#166534", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#1A3009", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
               Round Recap
             </div>
-            <div style={{ fontFamily: FONT, fontSize: 14, color: "#166534", fontStyle: "italic", lineHeight: 1.5 }}>
+            <div style={{ fontFamily: FONT, fontSize: 14, color: "#1A3009", fontStyle: "italic", lineHeight: 1.5 }}>
               💬 "{winner.name} walked away with +${totals[winner.id]}. {crybabyPlayer.name} is this round's crybaby at -${Math.abs(totals[crybabyPlayer.id])}. {holeResults.filter(h => h.folded).length > 0 ? `${holeResults.filter(h => h.folded).length} hammer${holeResults.filter(h => h.folded).length > 1 ? 's' : ''} folded — chicken dinner for someone. ` : ""}{carryOver > 0 ? `$${carryOver} left on the table in carry-overs. ` : ""}Another day, another dollar. Or several."
             </div>
           </div>
@@ -1685,7 +1685,7 @@ export default function CrybabActiveRound() {
           <button onClick={() => navigate("/feed")} style={{
             width: "100%", padding: "16px", borderRadius: 14, border: "none",
             fontFamily: FONT, fontSize: 16, fontWeight: 700,
-            background: "#16A34A", color: "#fff", cursor: "pointer",
+            background: "#2D5016", color: "#fff", cursor: "pointer",
             marginTop: 8,
           }}>
             Go to Feed →
@@ -1702,7 +1702,7 @@ export default function CrybabActiveRound() {
   return (
     <div style={{
       maxWidth: 420, margin: "0 auto", minHeight: "100vh",
-      background: "#F7F7F5", fontFamily: FONT,
+      background: "#F5EFE0", fontFamily: FONT,
       paddingBottom: 140,
     }}>
 
@@ -1752,10 +1752,10 @@ export default function CrybabActiveRound() {
             boxShadow: "0 24px 48px rgba(0,0,0,0.18)",
           }}>
             <div style={{ fontSize: 28, textAlign: "center", marginBottom: 12 }}>⛳</div>
-            <div style={{ fontFamily: FONT, fontSize: 18, fontWeight: 800, color: "#1A1A1A", textAlign: "center", marginBottom: 8 }}>
+            <div style={{ fontFamily: FONT, fontSize: 18, fontWeight: 800, color: "#1E130A", textAlign: "center", marginBottom: 8 }}>
               Leave this round?
             </div>
-            <div style={{ fontFamily: FONT, fontSize: 14, color: "#6B7280", textAlign: "center", marginBottom: 24, lineHeight: 1.5 }}>
+            <div style={{ fontFamily: FONT, fontSize: 14, color: "#8B7355", textAlign: "center", marginBottom: 24, lineHeight: 1.5 }}>
               Scores are saved. You can resume from the Feed or home screen anytime.
             </div>
             <div style={{ display: "flex", gap: 10 }}>
@@ -1763,15 +1763,15 @@ export default function CrybabActiveRound() {
                 flex: 1, padding: "14px", borderRadius: 14,
                 border: "2px solid #E5E7EB", background: "#fff",
                 fontFamily: FONT, fontSize: 15, fontWeight: 700,
-                color: "#1A1A1A", cursor: "pointer",
+                color: "#1E130A", cursor: "pointer",
               }}>
                 Stay in Round
               </button>
               <button onClick={() => blocker.proceed()} style={{
                 flex: 1, padding: "14px", borderRadius: 14,
-                border: "2px solid #E5E7EB", background: "#F9FAFB",
+                border: "2px solid #E5E7EB", background: "#FAF5EC",
                 fontFamily: FONT, fontSize: 14, fontWeight: 700,
-                color: "#6B7280", cursor: "pointer",
+                color: "#8B7355", cursor: "pointer",
               }}>
                 Leave &amp; Resume Later
               </button>
@@ -1794,10 +1794,10 @@ export default function CrybabActiveRound() {
             boxShadow: "0 24px 48px rgba(0,0,0,0.18)",
           }}>
             <div style={{ fontSize: 32, textAlign: "center", marginBottom: 12 }}>🗑️</div>
-            <div style={{ fontFamily: FONT, fontSize: 18, fontWeight: 800, color: "#1A1A1A", textAlign: "center", marginBottom: 8 }}>
+            <div style={{ fontFamily: FONT, fontSize: 18, fontWeight: 800, color: "#1E130A", textAlign: "center", marginBottom: 8 }}>
               Cancel this round?
             </div>
-            <div style={{ fontFamily: FONT, fontSize: 14, color: "#6B7280", textAlign: "center", marginBottom: 24, lineHeight: 1.5 }}>
+            <div style={{ fontFamily: FONT, fontSize: 14, color: "#8B7355", textAlign: "center", marginBottom: 24, lineHeight: 1.5 }}>
               Scores are preserved, but this round won&apos;t appear as active anymore. This cannot be undone.
             </div>
             <div style={{ display: "flex", gap: 10 }}>
@@ -1807,7 +1807,7 @@ export default function CrybabActiveRound() {
                   flex: 1, padding: "14px", borderRadius: 14,
                   border: "2px solid #E5E7EB", background: "#fff",
                   fontFamily: FONT, fontSize: 15, fontWeight: 700,
-                  color: "#1A1A1A", cursor: "pointer",
+                  color: "#1E130A", cursor: "pointer",
                 }}
               >
                 Keep Playing
@@ -1842,7 +1842,7 @@ export default function CrybabActiveRound() {
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <img src={crybabyLogo} alt="Crybaby" style={{ height: 100, marginLeft: -16, marginTop: -24, marginBottom: -24 }} />
-            <span style={{ fontSize: 12, fontWeight: 600, color: "#9CA3AF" }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#A8957B" }}>
               {course.name} · {round.gameName}
             </span>
           </div>
@@ -1856,8 +1856,8 @@ export default function CrybabActiveRound() {
               style={{
                 padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer",
                 fontFamily: FONT, fontSize: 12, fontWeight: 700,
-                background: isBroadcast ? "#16A34A20" : "#F3F4F6",
-                color: isBroadcast ? "#16A34A" : "#9CA3AF",
+                background: isBroadcast ? "#16A34A20" : "#EDE7D9",
+                color: isBroadcast ? "#2D5016" : "#A8957B",
               }}
               title={isBroadcast ? "Broadcasting to friends" : "Broadcast this round"}
             >
@@ -1865,7 +1865,7 @@ export default function CrybabActiveRound() {
             </button>
             <div style={{
               width: 8, height: 8, borderRadius: 4,
-              background: pendingSync > 0 ? "#F59E0B" : "#16A34A",
+              background: pendingSync > 0 ? "#F59E0B" : "#2D5016",
             }} />
               <button
                 onClick={() => setShowLiveFeed(true)}
@@ -1889,8 +1889,8 @@ export default function CrybabActiveRound() {
                 style={{
                   padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer",
                   fontFamily: FONT, fontSize: 12, fontWeight: 700,
-                  background: showLeaderboard ? "#1A1A1A" : "#F3F4F6",
-                  color: showLeaderboard ? "#fff" : "#6B7280",
+                  background: showLeaderboard ? "#1E130A" : "#EDE7D9",
+                  color: showLeaderboard ? "#fff" : "#8B7355",
                 }}
               >
                 📊
@@ -1936,7 +1936,7 @@ export default function CrybabActiveRound() {
             <div style={{ fontFamily: FONT, fontSize: 13, fontWeight: 700, color: "#7C3AED" }}>
               {wolfPlayer.name} is the Wolf
             </div>
-            <div style={{ fontFamily: MONO, fontSize: 11, color: "#9CA3AF" }}>
+            <div style={{ fontFamily: MONO, fontSize: 11, color: "#A8957B" }}>
               {isLoneWolf ? "Lone Wolf — 2× payout" : wolfPartner ? `Partner: ${players.find(p => p.id === wolfPartner)?.name}` : "Choosing..."}
             </div>
           </div>
@@ -2015,7 +2015,7 @@ export default function CrybabActiveRound() {
           <button onClick={() => setShowPressModal(true)} style={{
             padding: "14px 18px", borderRadius: 14, border: "none", cursor: "pointer",
             fontFamily: FONT, fontSize: 14, fontWeight: 700,
-            background: "#16A34A20", color: "#16A34A",
+            background: "#16A34A20", color: "#2D5016",
           }}>
             📌 Press
           </button>
@@ -2025,8 +2025,8 @@ export default function CrybabActiveRound() {
       {/* Nassau presses indicator */}
       {round.gameMode === 'nassau' && nassauPresses.length > 0 && (
         <div style={{
-          margin: "0 20px 8px", padding: "8px 14px", background: "#F0FDF4", borderRadius: 10,
-          fontFamily: MONO, fontSize: 11, fontWeight: 700, color: "#166534", textAlign: "center",
+          margin: "0 20px 8px", padding: "8px 14px", background: "#EEF5E5", borderRadius: 10,
+          fontFamily: MONO, fontSize: 11, fontWeight: 700, color: "#1A3009", textAlign: "center",
         }}>
           📌 {nassauPresses.length} active press{nassauPresses.length > 1 ? "es" : ""} · ${nassauPresses.length * round.holeValue} extra on the line
         </div>
@@ -2043,7 +2043,7 @@ export default function CrybabActiveRound() {
           return (
             <div key={i} style={{
               width: isCurrent ? 20 : 10, height: 10, borderRadius: 5,
-              background: result ? (result.push ? "#F59E0B" : "#16A34A") : isCurrent ? "#1A1A1A" : "#E5E7EB",
+              background: result ? (result.push ? "#F59E0B" : "#2D5016") : isCurrent ? "#1E130A" : "#DDD0BB",
               transition: "all 0.2s ease",
             }} />
           );
@@ -2073,8 +2073,8 @@ export default function CrybabActiveRound() {
             padding: "16px 32px", borderRadius: 14, border: "none",
             cursor: allScored ? "pointer" : "not-allowed",
             fontFamily: FONT, fontSize: 16, fontWeight: 700,
-            background: allScored ? "#1A1A1A" : "#D1D5DB",
-            color: allScored ? "#fff" : "#9CA3AF",
+            background: allScored ? "#1E130A" : "#CEC0AA",
+            color: allScored ? "#fff" : "#A8957B",
             transition: "all 0.2s ease",
           }}
         >

@@ -12,7 +12,7 @@ export default function InvitePage() {
   const [loading, setLoading] = useState(true);
   const [invalid, setInvalid] = useState(false);
 
-  const font = "'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif";
+  const font = "'Lato', -apple-system, BlinkMacSystemFont, sans-serif";
 
   useEffect(() => {
     if (!token) { setInvalid(true); setLoading(false); return; }

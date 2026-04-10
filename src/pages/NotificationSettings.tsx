@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
-const FONT = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+const FONT = "'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 
 export default function NotificationSettings() {
   const navigate = useNavigate();
@@ -28,7 +28,7 @@ export default function NotificationSettings() {
   return (
     <div style={{
       maxWidth: 420, margin: "0 auto", minHeight: "100vh",
-      background: "#F7F7F5", fontFamily: FONT, paddingBottom: 100,
+      background: "#F5EFE0", fontFamily: FONT, paddingBottom: 100,
     }}>
       {/* Header */}
       <div style={{
@@ -38,9 +38,9 @@ export default function NotificationSettings() {
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <button onClick={() => navigate(-1)} style={{
             background: "none", border: "none", cursor: "pointer",
-            fontSize: 20, color: "#6B7280", padding: 0, lineHeight: 1,
+            fontSize: 20, color: "#8B7355", padding: 0, lineHeight: 1,
           }}>←</button>
-          <span style={{ fontSize: 18, fontWeight: 800, color: "#1A1A1A" }}>
+          <span style={{ fontSize: 18, fontWeight: 800, color: "#1E130A" }}>
             Notification Settings
           </span>
         </div>
@@ -53,7 +53,7 @@ export default function NotificationSettings() {
           boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
         }}>
           <div style={{
-            fontSize: 11, fontWeight: 700, color: "#9CA3AF",
+            fontSize: 11, fontWeight: 700, color: "#A8957B",
             textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 16,
           }}>
             Push Notifications
@@ -65,10 +65,10 @@ export default function NotificationSettings() {
             padding: "12px 0", borderBottom: "1px solid #F3F4F6",
           }}>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: "#1A1A1A" }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: "#1E130A" }}>
                 Browser Notifications
               </div>
-              <div style={{ fontSize: 12, color: "#9CA3AF", marginTop: 2 }}>
+              <div style={{ fontSize: 12, color: "#A8957B", marginTop: 2 }}>
                 Get alerts even when the app isn't open
               </div>
             </div>
@@ -77,7 +77,7 @@ export default function NotificationSettings() {
               disabled={loading || !supported || isDenied}
               style={{
                 width: 48, height: 28, borderRadius: 14, border: "none",
-                background: isEnabled ? "#16A34A" : "#D1D5DB",
+                background: isEnabled ? "#2D5016" : "#CEC0AA",
                 position: "relative", cursor: loading || !supported || isDenied ? "not-allowed" : "pointer",
                 transition: "background 0.2s", opacity: loading ? 0.6 : 1,
                 flexShrink: 0,
@@ -115,7 +115,7 @@ export default function NotificationSettings() {
           {isEnabled && (
             <div style={{
               marginTop: 12, padding: "10px 14px", borderRadius: 10,
-              background: "#F0FDF4", fontSize: 12, color: "#16A34A",
+              background: "#EEF5E5", fontSize: 12, color: "#2D5016",
             }}>
               ✓ You'll receive push notifications for group activity, round updates, and friend requests.
             </div>
@@ -128,7 +128,7 @@ export default function NotificationSettings() {
           boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
         }}>
           <div style={{
-            fontSize: 11, fontWeight: 700, color: "#9CA3AF",
+            fontSize: 11, fontWeight: 700, color: "#A8957B",
             textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 16,
           }}>
             What You'll Be Notified About
@@ -147,8 +147,8 @@ export default function NotificationSettings() {
             }}>
               <span style={{ fontSize: 20 }}>{item.emoji}</span>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#1A1A1A" }}>{item.title}</div>
-                <div style={{ fontSize: 11, color: "#9CA3AF" }}>{item.desc}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#1E130A" }}>{item.title}</div>
+                <div style={{ fontSize: 11, color: "#A8957B" }}>{item.desc}</div>
               </div>
             </div>
           ))}

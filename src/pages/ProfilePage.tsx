@@ -240,8 +240,8 @@ export default function ProfilePage() {
                   placeholder="Handicap" type="number" style={{ ...inputStyle, flex: 1 }} />
                 <div style={{ flex: 1, position: "relative" }}>
                   <input value={editForm.ghin} disabled
-                    placeholder="GHIN #" style={{ ...inputStyle, flex: 1, opacity: 0.5, cursor: "not-allowed", background: "#F3F4F6" }} />
-                  <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", fontSize: 9, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase" }}>Coming Soon</span>
+                    placeholder="GHIN #" style={{ ...inputStyle, flex: 1, opacity: 0.5, cursor: "not-allowed", background: "#EDE7D9" }} />
+                  <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", fontSize: 9, fontWeight: 700, color: "#A8957B", textTransform: "uppercase" }}>Coming Soon</span>
                 </div>
               </div>
 
@@ -268,8 +268,8 @@ export default function ProfilePage() {
                   <option value="__add_new__">+ Add a Course / Club</option>
                 </select>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: 12, borderRadius: 10, border: "1px solid #E5E7EB", background: "#F9FAFB" }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#6B7280" }}>Add New Course</span>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: 12, borderRadius: 10, border: "1px solid #E5E7EB", background: "#FAF5EC" }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#8B7355" }}>Add New Course</span>
                   <input value={newCourseName} onChange={e => setNewCourseName(e.target.value)}
                     placeholder="Course / Club Name" style={inputStyle} />
                   <input value={newCourseCity} onChange={e => setNewCourseCity(e.target.value)}
@@ -290,11 +290,11 @@ export default function ProfilePage() {
                       setNewCourseCity("");
                       setShowAddCourse(false);
                       toast({ title: "Course added!" });
-                    }} style={{ flex: 1, padding: 8, borderRadius: 8, border: "none", background: "#16A34A", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                    }} style={{ flex: 1, padding: 8, borderRadius: 8, border: "none", background: "#2D5016", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
                       Add
                     </button>
                     <button onClick={() => { setShowAddCourse(false); setNewCourseName(""); setNewCourseCity(""); }}
-                      style={{ flex: 1, padding: 8, borderRadius: 8, border: "1px solid #E5E7EB", background: "#fff", color: "#6B7280", fontWeight: 600, fontSize: 12, cursor: "pointer" }}>
+                      style={{ flex: 1, padding: 8, borderRadius: 8, border: "1px solid #E5E7EB", background: "#fff", color: "#8B7355", fontWeight: 600, fontSize: 12, cursor: "pointer" }}>
                       Cancel
                     </button>
                   </div>
@@ -316,11 +316,11 @@ export default function ProfilePage() {
               <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={handleSaveProfile} style={{
                   flex: 1, padding: 10, borderRadius: 10, border: "none",
-                  background: "#16A34A", color: "#fff", fontWeight: 700, fontFamily: "inherit", cursor: "pointer",
+                  background: "#2D5016", color: "#fff", fontWeight: 700, fontFamily: "inherit", cursor: "pointer",
                 }}>Save</button>
                 <button onClick={() => { setEditingProfile(false); setShowAddCourse(false); }} style={{
                   flex: 1, padding: 10, borderRadius: 10, border: "1px solid #E5E7EB",
-                  background: "#fff", color: "#6B7280", fontWeight: 600, fontFamily: "inherit", cursor: "pointer",
+                  background: "#fff", color: "#8B7355", fontWeight: 600, fontFamily: "inherit", cursor: "pointer",
                 }}>Cancel</button>
               </div>
             </div>
@@ -329,7 +329,7 @@ export default function ProfilePage() {
               {(() => {
                 const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || profile?.display_name || "Player";
                 return (
-                  <div style={{ fontSize: fullName.length > 20 ? 16 : 22, fontWeight: 800, color: "#1A1A1A", marginTop: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%", padding: "0 8px" }}
+                  <div style={{ fontSize: fullName.length > 20 ? 16 : 22, fontWeight: 800, color: "#1E130A", marginTop: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%", padding: "0 8px" }}
                     title={fullName}>
                     {fullName}
                   </div>
@@ -337,16 +337,16 @@ export default function ProfilePage() {
               })()}
               {profile?.handicap != null && (
                 <span style={{
-                  fontFamily: MONO, fontSize: 13, fontWeight: 700, color: "#16A34A",
+                  fontFamily: MONO, fontSize: 13, fontWeight: 700, color: "#2D5016",
                   background: "#F0FDF4", padding: "3px 10px", borderRadius: 6, display: "inline-block", marginTop: 6,
                 }}>HCP {profile.handicap}</span>
               )}
               {profile?.home_course && (
-                <div style={{ fontSize: 12, color: "#9CA3AF", marginTop: 6 }}>{profile.home_course}</div>
+                <div style={{ fontSize: 12, color: "#A8957B", marginTop: 6 }}>{profile.home_course}</div>
               )}
               <button onClick={() => setEditingProfile(true)} style={{
                 marginTop: 12, padding: "8px 16px", borderRadius: 10, border: "1px solid #E5E7EB",
-                background: "#fff", fontFamily: "inherit", fontSize: 12, fontWeight: 600, color: "#6B7280", cursor: "pointer",
+                background: "#fff", fontFamily: "inherit", fontSize: 12, fontWeight: 600, color: "#8B7355", cursor: "pointer",
               }}>Edit Profile</button>
             </>
           )}
@@ -356,11 +356,11 @@ export default function ProfilePage() {
         {friendProfiles.length > 0 && (
           <div style={{ background: "hsl(var(--card))", borderRadius: 20, padding: "18px 20px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                 Friends ({friendProfiles.length})
               </span>
               <button onClick={() => navigate("/friends")}
-                style={{ fontSize: 12, fontWeight: 600, color: "#16A34A", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 2 }}>
+                style={{ fontSize: 12, fontWeight: 600, color: "#2D5016", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 2 }}>
                 All <ChevronRight size={14} />
               </button>
             </div>
@@ -379,7 +379,7 @@ export default function ProfilePage() {
                         {initial}
                       </div>
                     )}
-                    <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280", textAlign: "center", maxWidth: 56, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <span style={{ fontSize: 10, fontWeight: 600, color: "#8B7355", textAlign: "center", maxWidth: 56, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {fp.first_name || fp.display_name}
                     </span>
                   </button>
@@ -394,26 +394,26 @@ export default function ProfilePage() {
           background: "hsl(var(--card))", borderRadius: 20, padding: "18px 20px",
           boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
         }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>
             Stats
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             {[
               { label: "Rounds Played", value: completedRounds.length.toString() },
-              { label: "Total P&L", value: `${totalWinnings >= 0 ? "+" : ""}$${totalWinnings.toFixed(0)}`, color: totalWinnings >= 0 ? "#16A34A" : "#DC2626" },
+              { label: "Total P&L", value: `${totalWinnings >= 0 ? "+" : ""}$${totalWinnings.toFixed(0)}`, color: totalWinnings >= 0 ? "#2D5016" : "#DC2626" },
               { label: "Active Rounds", value: rounds.filter(r => r.status === "active").length.toString() },
               { label: "Avg Per Round", value: completedRounds.length ? `$${(totalWinnings / completedRounds.length).toFixed(0)}` : "$0" },
             ].map(s => (
               <div key={s.label} style={{ padding: "12px 14px", background: "hsl(var(--muted))", borderRadius: 12, textAlign: "center" }}>
-                <div style={{ fontFamily: MONO, fontSize: 20, fontWeight: 800, color: (s as any).color || "#1A1A1A" }}>{s.value}</div>
-                <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 2 }}>{s.label}</div>
+                <div style={{ fontFamily: MONO, fontSize: 20, fontWeight: 800, color: (s as any).color || "#1E130A" }}>{s.value}</div>
+                <div style={{ fontSize: 11, color: "#A8957B", marginTop: 2 }}>{s.label}</div>
               </div>
             ))}
           </div>
           <button onClick={() => navigate("/stats")} style={{
             width: "100%", marginTop: 14, padding: "10px 0", borderRadius: 10,
             border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", fontFamily: "inherit",
-            fontSize: 13, fontWeight: 700, color: "#16A34A", cursor: "pointer",
+            fontSize: 13, fontWeight: 700, color: "#2D5016", cursor: "pointer",
             display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
           }}>
             View Full Stats Dashboard
@@ -426,7 +426,7 @@ export default function ProfilePage() {
           boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em" }}>
               Ledger
             </span>
             <div style={{ display: "flex", gap: 4 }}>
@@ -434,25 +434,25 @@ export default function ProfilePage() {
                 <button key={p} onClick={() => setLedgerPeriod(p)} style={{
                   padding: "4px 10px", borderRadius: 6, border: "none", cursor: "pointer",
                   fontFamily: "inherit", fontSize: 11, fontWeight: 600,
-                  background: ledgerPeriod === p ? "#1A1A1A" : "#F3F4F6",
-                  color: ledgerPeriod === p ? "#fff" : "#9CA3AF",
+                  background: ledgerPeriod === p ? "#1E130A" : "#EDE7D9",
+                  color: ledgerPeriod === p ? "#fff" : "#A8957B",
                 }}>{p === "monthly" ? "Mo" : p === "annual" ? "Yr" : "All"}</button>
               ))}
             </div>
           </div>
 
           {ledgerData.periods.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "20px 0", fontSize: 13, color: "#9CA3AF" }}>
+            <div style={{ textAlign: "center", padding: "20px 0", fontSize: 13, color: "#A8957B" }}>
               No settlement data yet. Complete a round to see your ledger.
             </div>
           ) : (
             ledgerData.periods.map((period, i) => (
               <div key={i} style={{ marginBottom: i < ledgerData.periods.length - 1 ? 16 : 0 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: "#1A1A1A" }}>{period.label}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#1E130A" }}>{period.label}</span>
                   <span style={{
                     fontFamily: MONO, fontSize: 15, fontWeight: 800,
-                    color: period.amount >= 0 ? "#16A34A" : "#DC2626",
+                    color: period.amount >= 0 ? "#2D5016" : "#DC2626",
                   }}>
                     {period.amount >= 0 ? "+" : ""}${period.amount.toFixed(0)}
                   </span>
@@ -464,20 +464,20 @@ export default function ProfilePage() {
                     fontSize: 12,
                   }}>
                     <div>
-                      <span style={{ fontWeight: 600, color: "#1A1A1A" }}>
+                      <span style={{ fontWeight: 600, color: "#1E130A" }}>
                         {s.rounds?.course || "Round"}
                       </span>
                       {s.is_manual_adjustment && (
                         <span style={{ marginLeft: 6, fontSize: 10, color: "#F59E0B", fontWeight: 700 }}>ADJUSTED</span>
                       )}
-                      <div style={{ fontSize: 10, color: "#9CA3AF" }}>
+                      <div style={{ fontSize: 10, color: "#A8957B" }}>
                         {format(parseISO(s.created_at), "MMM d, yyyy")}
                         {s.notes ? ` · ${s.notes}` : ""}
                       </div>
                     </div>
                     <span style={{
                       fontFamily: MONO, fontWeight: 700, fontSize: 13,
-                      color: Number(s.amount) >= 0 ? "#16A34A" : "#DC2626",
+                      color: Number(s.amount) >= 0 ? "#2D5016" : "#DC2626",
                     }}>
                       {Number(s.amount) >= 0 ? "+" : ""}${Number(s.amount).toFixed(0)}
                     </span>
@@ -493,11 +493,11 @@ export default function ProfilePage() {
           background: "hsl(var(--card))", borderRadius: 20, padding: "18px 20px",
           boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
         }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>
             Round History
           </div>
           {rounds.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "20px 0", fontSize: 13, color: "#9CA3AF" }}>
+            <div style={{ textAlign: "center", padding: "20px 0", fontSize: 13, color: "#A8957B" }}>
               No rounds yet. Start one to see your history!
             </div>
           ) : (
@@ -507,15 +507,15 @@ export default function ProfilePage() {
                 padding: "12px 0", borderBottom: "1px solid #F3F4F6",
               }}>
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: "#1A1A1A" }}>{r.course || "Unknown Course"}</div>
-                  <div style={{ fontSize: 11, color: "#9CA3AF" }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "#1E130A" }}>{r.course || "Unknown Course"}</div>
+                  <div style={{ fontSize: 11, color: "#A8957B" }}>
                     {format(parseISO(r.created_at), "MMM d, yyyy")} · {r.game_type} · {r.round_players?.length || 0} players
                   </div>
                 </div>
                 <span style={{
                   fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 6,
-                  background: r.status === "completed" ? "#F0FDF4" : r.status === "active" ? "#FEF3C7" : "#F3F4F6",
-                  color: r.status === "completed" ? "#16A34A" : r.status === "active" ? "#92400E" : "#9CA3AF",
+                  background: r.status === "completed" ? "#F0FDF4" : r.status === "active" ? "#FEF3C7" : "#EDE7D9",
+                  color: r.status === "completed" ? "#2D5016" : r.status === "active" ? "#92400E" : "#A8957B",
                 }}>
                   {r.status === "completed" ? "✓ Done" : r.status === "active" ? "● Live" : r.status}
                 </span>
@@ -531,6 +531,6 @@ export default function ProfilePage() {
 const inputStyle: React.CSSProperties = {
   width: "100%", padding: "10px 12px", borderRadius: 10,
   border: "1px solid #E5E7EB", background: "#fff",
-  fontFamily: "'SF Pro Display', -apple-system, sans-serif",
+  fontFamily: "'Lato', -apple-system, sans-serif",
   fontSize: 14, outline: "none", boxSizing: "border-box",
 };

@@ -179,16 +179,16 @@ export default function AddClubModal({ onClose, onSaved }: Props) {
   const inputStyle: React.CSSProperties = {
     width: "100%", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #E5E7EB",
     fontFamily: font, fontSize: 14, outline: "none", boxSizing: "border-box",
-    background: "#fff", color: "#1A1A1A",
+    background: "#fff", color: "#1E130A",
   };
   const labelStyle: React.CSSProperties = {
-    fontSize: 11, fontWeight: 700, color: "#6B7280", textTransform: "uppercase",
+    fontSize: 11, fontWeight: 700, color: "#8B7355", textTransform: "uppercase",
     letterSpacing: "0.06em", marginBottom: 6, display: "block",
   };
   const cellStyle: React.CSSProperties = {
     width: 36, textAlign: "center", padding: "6px 0", borderRadius: 8,
     border: "1.5px solid #E5E7EB", fontFamily: font, fontSize: 13, fontWeight: 600,
-    background: "#fff", color: "#1A1A1A", outline: "none",
+    background: "#fff", color: "#1E130A", outline: "none",
   };
 
   // ─── Render ────────────────────────────────────────────────────────────────
@@ -213,10 +213,10 @@ export default function AddClubModal({ onClose, onSaved }: Props) {
           padding: "18px 20px 14px", borderBottom: "1px solid #F3F4F6", flexShrink: 0,
         }}>
           <div>
-            <div style={{ fontFamily: font, fontSize: 17, fontWeight: 800, color: "#1A1A1A" }}>
+            <div style={{ fontFamily: font, fontSize: 17, fontWeight: 800, color: "#1E130A" }}>
               {step === "upload" ? "Add Your Club ⛳" : step === "analyzing" ? "Reading Scorecard…" : "Confirm Details"}
             </div>
-            <div style={{ fontFamily: font, fontSize: 12, color: "#9CA3AF", marginTop: 2 }}>
+            <div style={{ fontFamily: font, fontSize: 12, color: "#A8957B", marginTop: 2 }}>
               {step === "upload"
                 ? "Upload a scorecard photo or enter manually"
                 : step === "analyzing"
@@ -226,8 +226,8 @@ export default function AddClubModal({ onClose, onSaved }: Props) {
           </div>
           <button onClick={onClose} style={{
             width: 32, height: 32, borderRadius: "50%", border: "none",
-            background: "#F3F4F6", cursor: "pointer", fontSize: 18, lineHeight: "32px",
-            color: "#6B7280", display: "flex", alignItems: "center", justifyContent: "center",
+            background: "#EDE7D9", cursor: "pointer", fontSize: 18, lineHeight: "32px",
+            color: "#8B7355", display: "flex", alignItems: "center", justifyContent: "center",
           }}>✕</button>
         </div>
 
@@ -244,17 +244,17 @@ export default function AddClubModal({ onClose, onSaved }: Props) {
                 onDrop={handleDrop}
                 onClick={() => fileRef.current?.click()}
                 style={{
-                  border: `2px dashed ${dragOver ? "#16A34A" : "#D1D5DB"}`,
+                  border: `2px dashed ${dragOver ? "#2D5016" : "#CEC0AA"}`,
                   borderRadius: 16, padding: "36px 20px", textAlign: "center",
                   cursor: "pointer", background: dragOver ? "#F0FDF4" : "#FAFAFA",
                   transition: "all 0.2s",
                 }}
               >
                 <div style={{ fontSize: 40, marginBottom: 10 }}>📸</div>
-                <div style={{ fontFamily: font, fontSize: 15, fontWeight: 700, color: "#1A1A1A", marginBottom: 6 }}>
+                <div style={{ fontFamily: font, fontSize: 15, fontWeight: 700, color: "#1E130A", marginBottom: 6 }}>
                   Upload Scorecard Photo
                 </div>
-                <div style={{ fontFamily: font, fontSize: 13, color: "#9CA3AF" }}>
+                <div style={{ fontFamily: font, fontSize: 13, color: "#A8957B" }}>
                   Tap to choose or drag a screenshot here
                 </div>
                 <input
@@ -268,9 +268,9 @@ export default function AddClubModal({ onClose, onSaved }: Props) {
 
               {/* Divider */}
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ flex: 1, height: 1, background: "#E5E7EB" }} />
-                <span style={{ fontFamily: font, fontSize: 12, color: "#9CA3AF" }}>or</span>
-                <div style={{ flex: 1, height: 1, background: "#E5E7EB" }} />
+                <div style={{ flex: 1, height: 1, background: "#DDD0BB" }} />
+                <span style={{ fontFamily: font, fontSize: 12, color: "#A8957B" }}>or</span>
+                <div style={{ flex: 1, height: 1, background: "#DDD0BB" }} />
               </div>
 
               {/* Manual entry shortcut */}
@@ -298,10 +298,10 @@ export default function AddClubModal({ onClose, onSaved }: Props) {
               )}
               <div style={{ fontSize: 36, animation: "spin 1.5s linear infinite" }}>⛳</div>
               <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-              <div style={{ fontFamily: font, fontSize: 15, fontWeight: 700, color: "#1A1A1A" }}>
+              <div style={{ fontFamily: font, fontSize: 15, fontWeight: 700, color: "#1E130A" }}>
                 AI is reading your scorecard…
               </div>
-              <div style={{ fontFamily: font, fontSize: 13, color: "#9CA3AF", textAlign: "center" }}>
+              <div style={{ fontFamily: font, fontSize: 13, color: "#A8957B", textAlign: "center" }}>
                 Extracting course name, pars, handicaps, and tee info
               </div>
             </div>
@@ -364,7 +364,7 @@ export default function AddClubModal({ onClose, onSaved }: Props) {
                       style={{
                         flex: 1, padding: "10px", borderRadius: 10, cursor: "pointer",
                         border: "none", fontFamily: font, fontSize: 14, fontWeight: 700,
-                        background: course.holes === h ? "#16A34A" : "#F3F4F6",
+                        background: course.holes === h ? "#2D5016" : "#EDE7D9",
                         color: course.holes === h ? "#fff" : "#374151",
                         transition: "all 0.15s",
                       }}
@@ -379,7 +379,7 @@ export default function AddClubModal({ onClose, onSaved }: Props) {
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {[0, 9].filter(start => start < course.holes).map(start => (
                     <div key={start} style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                      <span style={{ fontFamily: font, fontSize: 10, color: "#9CA3AF", width: 24, flexShrink: 0 }}>
+                      <span style={{ fontFamily: font, fontSize: 10, color: "#A8957B", width: 24, flexShrink: 0 }}>
                         {start + 1}–{Math.min(start + 9, course.holes)}
                       </span>
                       {course.pars.slice(start, start + 9).map((par, idx) => (
@@ -396,7 +396,7 @@ export default function AddClubModal({ onClose, onSaved }: Props) {
                     </div>
                   ))}
                 </div>
-                <div style={{ fontFamily: font, fontSize: 11, color: "#9CA3AF", marginTop: 4 }}>
+                <div style={{ fontFamily: font, fontSize: 11, color: "#A8957B", marginTop: 4 }}>
                   Total par: {course.pars.reduce((a, b) => a + b, 0)}
                 </div>
               </div>
@@ -407,7 +407,7 @@ export default function AddClubModal({ onClose, onSaved }: Props) {
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {[0, 9].filter(start => start < course.holes).map(start => (
                     <div key={start} style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                      <span style={{ fontFamily: font, fontSize: 10, color: "#9CA3AF", width: 24, flexShrink: 0 }}>
+                      <span style={{ fontFamily: font, fontSize: 10, color: "#A8957B", width: 24, flexShrink: 0 }}>
                         {start + 1}–{Math.min(start + 9, course.holes)}
                       </span>
                       {course.handicaps.slice(start, start + 9).map((hcp, idx) => (
@@ -433,7 +433,7 @@ export default function AddClubModal({ onClose, onSaved }: Props) {
                   <button
                     onClick={addTee}
                     style={{
-                      fontSize: 12, fontWeight: 700, color: "#16A34A", background: "none",
+                      fontSize: 12, fontWeight: 700, color: "#2D5016", background: "none",
                       border: "none", cursor: "pointer", fontFamily: font, padding: 0,
                     }}
                   >+ Add Tee</button>
@@ -441,7 +441,7 @@ export default function AddClubModal({ onClose, onSaved }: Props) {
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {course.tees.map((tee, i) => (
                     <div key={i} style={{
-                      background: "#F9FAFB", borderRadius: 12, padding: "12px",
+                      background: "#FAF5EC", borderRadius: 12, padding: "12px",
                       border: "1.5px solid #E5E7EB",
                     }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
@@ -454,7 +454,7 @@ export default function AddClubModal({ onClose, onSaved }: Props) {
                         {course.tees.length > 1 && (
                           <button
                             onClick={() => removeTee(i)}
-                            style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#9CA3AF", padding: 4 }}
+                            style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#A8957B", padding: 4 }}
                           >✕</button>
                         )}
                       </div>
@@ -465,7 +465,7 @@ export default function AddClubModal({ onClose, onSaved }: Props) {
                           { label: "Yards", key: "yardage" as const, placeholder: "6200" },
                         ].map(({ label, key, placeholder }) => (
                           <div key={key} style={{ flex: 1, textAlign: "center" }}>
-                            <div style={{ fontSize: 10, color: "#9CA3AF", marginBottom: 4, fontFamily: font }}>{label}</div>
+                            <div style={{ fontSize: 10, color: "#A8957B", marginBottom: 4, fontFamily: font }}>{label}</div>
                             <input
                               type="number"
                               style={{ ...inputStyle, padding: "6px 8px", textAlign: "center" }}
@@ -503,7 +503,7 @@ export default function AddClubModal({ onClose, onSaved }: Props) {
               disabled={saving || !course.name.trim()}
               style={{
                 flex: 2, padding: "14px", borderRadius: 12, border: "none",
-                background: !course.name.trim() ? "#D1D5DB" : "#16A34A",
+                background: !course.name.trim() ? "#CEC0AA" : "#2D5016",
                 color: "#fff", fontFamily: font, fontSize: 14, fontWeight: 700,
                 cursor: saving || !course.name.trim() ? "not-allowed" : "pointer",
                 transition: "background 0.15s",

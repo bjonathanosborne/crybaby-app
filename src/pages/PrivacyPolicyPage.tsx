@@ -1,10 +1,10 @@
 export default function PrivacyPolicyPage() {
   return (
-    <div style={{ maxWidth: 680, margin: "0 auto", padding: "40px 24px 80px", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", color: "#1A1A1A", lineHeight: 1.7 }}>
+    <div style={{ maxWidth: 680, margin: "0 auto", padding: "40px 24px 80px", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", color: "#1E130A", lineHeight: 1.7 }}>
       <div style={{ marginBottom: 32 }}>
         <div style={{ fontSize: 28, fontWeight: 800, marginBottom: 6 }}>Crybaby Golf</div>
-        <div style={{ fontSize: 22, fontWeight: 700, color: "#16A34A", marginBottom: 4 }}>Privacy Policy</div>
-        <div style={{ fontSize: 13, color: "#6B7280" }}>Last updated: March 2025</div>
+        <div style={{ fontSize: 22, fontWeight: 700, color: "#2D5016", marginBottom: 4 }}>Privacy Policy</div>
+        <div style={{ fontSize: 13, color: "#8B7355" }}>Last updated: March 2025</div>
       </div>
 
       <Section title="Overview">
@@ -56,7 +56,7 @@ export default function PrivacyPolicyPage() {
       </Section>
 
       <Section title="Contact">
-        Questions about this policy? Email us at: <a href="mailto:support@crybabygolf.com" style={{ color: "#16A34A" }}>support@crybabygolf.com</a>
+        Questions about this policy? Email us at: <a href="mailto:support@crybabygolf.com" style={{ color: "#2D5016" }}>support@crybabygolf.com</a>
       </Section>
     </div>
   );
@@ -65,7 +65,7 @@ export default function PrivacyPolicyPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 28 }}>
-      <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: "#1A1A1A" }}>{title}</div>
+      <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: "#1E130A" }}>{title}</div>
       <div style={{ fontSize: 15, color: "#374151" }}>{children}</div>
     </div>
   );

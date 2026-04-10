@@ -9,7 +9,7 @@ import crybabyLogo from "@/assets/crybaby-logo.png";
 // Auth → GHIN Verification → Profile → Welcome
 // ============================================================
 
-const FONT = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+const FONT = "'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 const MONO = "'SF Mono', 'JetBrains Mono', monospace";
 
 const AUSTIN_COURSES = [
@@ -33,7 +33,7 @@ const AUSTIN_COURSES = [
 ];
 
 const AVATAR_COLORS = [
-  "#16A34A", "#3B82F6", "#F59E0B", "#DC2626", "#8B5CF6",
+  "#2D5016", "#3B82F6", "#F59E0B", "#DC2626", "#8B5CF6",
   "#EC4899", "#14B8A6", "#F97316", "#6366F1", "#84CC16",
 ];
 
@@ -68,7 +68,7 @@ function SplashScreen({ onContinue }) {
       <div style={{
         minHeight: "100vh", display: "flex", flexDirection: "column",
         alignItems: "center", justifyContent: "center",
-        background: "#1A1A1A",
+        background: "#1E130A",
         transition: "opacity 0.8s ease",
         opacity: visible ? 1 : 0,
       }}>
@@ -85,7 +85,7 @@ function SplashScreen({ onContinue }) {
     <div style={{
       minHeight: "100vh", display: "flex", flexDirection: "column",
       alignItems: "center", justifyContent: "center",
-      background: "#1A1A1A", padding: "40px 32px",
+      background: "#1E130A", padding: "40px 32px",
       transition: "opacity 0.8s ease",
       opacity: 1,
     }}>
@@ -103,7 +103,7 @@ function SplashScreen({ onContinue }) {
         width: "100%", maxWidth: 320, padding: "18px 32px", borderRadius: 16,
         border: "none", cursor: "pointer",
         fontFamily: FONT, fontSize: 17, fontWeight: 700,
-        background: "#16A34A", color: "#fff",
+        background: "#2D5016", color: "#fff",
         boxShadow: "0 4px 20px rgba(22,163,74,0.4)",
         transition: "transform 0.15s ease",
       }}>
@@ -134,10 +134,10 @@ function AuthScreen({ onGoogleAuth, onEmailAuth }) {
     return (
       <div style={{
         minHeight: "100vh", display: "flex", flexDirection: "column",
-        background: "#F7F7F5", padding: "0",
+        background: "#F5EFE0", padding: "0",
       }}>
         <div style={{
-          background: "#1A1A1A", padding: "60px 32px 40px",
+          background: "#1E130A", padding: "60px 32px 40px",
           borderRadius: "0 0 36px 36px", textAlign: "center",
         }}>
           <img src={crybabyLogo} alt="Crybaby Golf" style={{ height: 56, marginBottom: 12 }} />
@@ -156,7 +156,7 @@ function AuthScreen({ onGoogleAuth, onEmailAuth }) {
             width: "100%", padding: "16px 20px", borderRadius: 14,
             border: "1px solid #E5E7EB", background: "#fff", cursor: "pointer",
             display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
-            fontFamily: FONT, fontSize: 15, fontWeight: 600, color: "#1A1A1A",
+            fontFamily: FONT, fontSize: 15, fontWeight: 600, color: "#1E130A",
             boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
           }}>
             <svg width="20" height="20" viewBox="0 0 24 24">
@@ -173,7 +173,7 @@ function AuthScreen({ onGoogleAuth, onEmailAuth }) {
             width: "100%", padding: "16px 20px", borderRadius: 14,
             border: "1px solid #E5E7EB", background: "#fff", cursor: "pointer",
             display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
-            fontFamily: FONT, fontSize: 15, fontWeight: 600, color: "#1A1A1A",
+            fontFamily: FONT, fontSize: 15, fontWeight: 600, color: "#1E130A",
             boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
           }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="#000">
@@ -185,25 +185,25 @@ function AuthScreen({ onGoogleAuth, onEmailAuth }) {
           <div style={{
             display: "flex", alignItems: "center", gap: 16, margin: "8px 0",
           }}>
-            <div style={{ flex: 1, height: 1, background: "#E5E7EB" }} />
-            <span style={{ fontFamily: FONT, fontSize: 12, color: "#9CA3AF" }}>or</span>
-            <div style={{ flex: 1, height: 1, background: "#E5E7EB" }} />
+            <div style={{ flex: 1, height: 1, background: "#DDD0BB" }} />
+            <span style={{ fontFamily: FONT, fontSize: 12, color: "#A8957B" }}>or</span>
+            <div style={{ flex: 1, height: 1, background: "#DDD0BB" }} />
           </div>
 
           {/* Email */}
           <button onClick={() => setMode("email_signup")} style={{
             width: "100%", padding: "16px 20px", borderRadius: 14,
-            border: "none", background: "#1A1A1A", cursor: "pointer",
+            border: "none", background: "#1E130A", cursor: "pointer",
             fontFamily: FONT, fontSize: 15, fontWeight: 600, color: "#fff",
           }}>
             Sign up with Email
           </button>
 
           <div style={{
-            fontFamily: FONT, fontSize: 12, color: "#9CA3AF", textAlign: "center", marginTop: 12,
+            fontFamily: FONT, fontSize: 12, color: "#A8957B", textAlign: "center", marginTop: 12,
           }}>
             Already have an account?{" "}
-            <span onClick={() => setMode("email_login")} style={{ color: "#16A34A", fontWeight: 600, cursor: "pointer" }}>
+            <span onClick={() => setMode("email_login")} style={{ color: "#2D5016", fontWeight: 600, cursor: "pointer" }}>
               Sign in
             </span>
           </div>
@@ -211,7 +211,7 @@ function AuthScreen({ onGoogleAuth, onEmailAuth }) {
 
         <div style={{
           padding: "16px 24px 32px", textAlign: "center",
-          fontFamily: FONT, fontSize: 11, color: "#9CA3AF", lineHeight: 1.5,
+          fontFamily: FONT, fontSize: 11, color: "#A8957B", lineHeight: 1.5,
         }}>
           By continuing, you agree to Crybaby's Terms of Service and Privacy Policy. We don't sell your data. We just track how many times you get hammered.
         </div>
@@ -223,10 +223,10 @@ function AuthScreen({ onGoogleAuth, onEmailAuth }) {
   return (
     <div style={{
       minHeight: "100vh", display: "flex", flexDirection: "column",
-      background: "#F7F7F5",
+      background: "#F5EFE0",
     }}>
       <div style={{
-        background: "#1A1A1A", padding: "60px 32px 32px",
+        background: "#1E130A", padding: "60px 32px 32px",
         borderRadius: "0 0 36px 36px", textAlign: "center",
       }}>
         <img src={crybabyLogo} alt="Crybaby Golf" style={{ height: 48, marginBottom: 8 }} />
@@ -239,7 +239,7 @@ function AuthScreen({ onGoogleAuth, onEmailAuth }) {
       <div style={{ padding: "32px 24px", display: "flex", flexDirection: "column", gap: 14, flex: 1 }}>
         {mode === "email_signup" && (
           <div>
-            <label style={{ fontFamily: FONT, fontSize: 12, fontWeight: 600, color: "#6B7280", display: "block", marginBottom: 6 }}>
+            <label style={{ fontFamily: FONT, fontSize: 12, fontWeight: 600, color: "#8B7355", display: "block", marginBottom: 6 }}>
               Full Name
             </label>
             <input value={name} onChange={e => setName(e.target.value)} placeholder="What do people call you on the course?"
@@ -252,7 +252,7 @@ function AuthScreen({ onGoogleAuth, onEmailAuth }) {
         )}
 
         <div>
-          <label style={{ fontFamily: FONT, fontSize: 12, fontWeight: 600, color: "#6B7280", display: "block", marginBottom: 6 }}>
+          <label style={{ fontFamily: FONT, fontSize: 12, fontWeight: 600, color: "#8B7355", display: "block", marginBottom: 6 }}>
             Email
           </label>
           <input value={email} onChange={e => setEmail(e.target.value)} placeholder="you@email.com" type="email"
@@ -264,7 +264,7 @@ function AuthScreen({ onGoogleAuth, onEmailAuth }) {
         </div>
 
         <div>
-          <label style={{ fontFamily: FONT, fontSize: 12, fontWeight: 600, color: "#6B7280", display: "block", marginBottom: 6 }}>
+          <label style={{ fontFamily: FONT, fontSize: 12, fontWeight: 600, color: "#8B7355", display: "block", marginBottom: 6 }}>
             Password
           </label>
           <input value={password} onChange={e => setPassword(e.target.value)} placeholder="At least 8 characters" type="password"
@@ -282,15 +282,15 @@ function AuthScreen({ onGoogleAuth, onEmailAuth }) {
             width: "100%", padding: "16px", borderRadius: 14, border: "none",
             cursor: email && password ? "pointer" : "not-allowed",
             fontFamily: FONT, fontSize: 16, fontWeight: 700, marginTop: 8,
-            background: email && password ? "#16A34A" : "#D1D5DB",
-            color: email && password ? "#fff" : "#9CA3AF",
+            background: email && password ? "#2D5016" : "#CEC0AA",
+            color: email && password ? "#fff" : "#A8957B",
           }}
         >
           {mode === "email_login" ? "Sign In" : "Create Account"}
         </button>
 
         <button onClick={() => setMode("choose")} style={{
-          fontFamily: FONT, fontSize: 13, fontWeight: 600, color: "#6B7280",
+          fontFamily: FONT, fontSize: 13, fontWeight: 600, color: "#8B7355",
           background: "none", border: "none", cursor: "pointer", marginTop: 4,
         }}>← Back to options</button>
       </div>
@@ -322,10 +322,10 @@ function GHINScreen({ userName, onVerified, onSkip }) {
   return (
     <div style={{
       minHeight: "100vh", display: "flex", flexDirection: "column",
-      background: "#F7F7F5",
+      background: "#F5EFE0",
     }}>
       <div style={{
-        background: "#1A1A1A", padding: "60px 32px 32px",
+        background: "#1E130A", padding: "60px 32px 32px",
         borderRadius: "0 0 36px 36px", textAlign: "center",
       }}>
         <div style={{ fontSize: 40, marginBottom: 8 }}>🎯</div>
@@ -341,7 +341,7 @@ function GHINScreen({ userName, onVerified, onSkip }) {
       <div style={{ padding: "28px 24px", flex: 1, display: "flex", flexDirection: "column", gap: 16 }}>
         {/* GHIN Input */}
         <div>
-          <label style={{ fontFamily: FONT, fontSize: 12, fontWeight: 600, color: "#6B7280", display: "block", marginBottom: 6 }}>
+          <label style={{ fontFamily: FONT, fontSize: 12, fontWeight: 600, color: "#8B7355", display: "block", marginBottom: 6 }}>
             GHIN Number
           </label>
           <div style={{ display: "flex", gap: 8 }}>
@@ -368,8 +368,8 @@ function GHINScreen({ userName, onVerified, onSkip }) {
                 padding: "14px 20px", borderRadius: 12, border: "none",
                 cursor: ghin.length >= 7 && status !== "checking" ? "pointer" : "not-allowed",
                 fontFamily: FONT, fontSize: 14, fontWeight: 700,
-                background: ghin.length >= 7 ? "#1A1A1A" : "#D1D5DB",
-                color: ghin.length >= 7 ? "#fff" : "#9CA3AF",
+                background: ghin.length >= 7 ? "#1E130A" : "#CEC0AA",
+                color: ghin.length >= 7 ? "#fff" : "#A8957B",
                 minWidth: 80,
               }}
             >
@@ -385,10 +385,10 @@ function GHINScreen({ userName, onVerified, onSkip }) {
             boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
           }}>
             <div style={{ fontSize: 32, marginBottom: 8 }}>🔍</div>
-            <div style={{ fontFamily: FONT, fontSize: 14, color: "#6B7280" }}>
+            <div style={{ fontFamily: FONT, fontSize: 14, color: "#8B7355" }}>
               Pulling your handicap from GHIN<LoadingDots />
             </div>
-            <div style={{ fontFamily: FONT, fontSize: 12, color: "#9CA3AF", marginTop: 4, fontStyle: "italic" }}>
+            <div style={{ fontFamily: FONT, fontSize: 12, color: "#A8957B", marginTop: 4, fontStyle: "italic" }}>
               Let's see what we're working with.
             </div>
           </div>
@@ -401,29 +401,29 @@ function GHINScreen({ userName, onVerified, onSkip }) {
             boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
           }}>
             <div style={{
-              background: "#F0FDF4", padding: "20px", textAlign: "center",
+              background: "#EEF5E5", padding: "20px", textAlign: "center",
               borderBottom: "1px solid #DCFCE7",
             }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 8 }}>
                 <span style={{ fontSize: 20 }}>✅</span>
-                <span style={{ fontFamily: FONT, fontSize: 14, fontWeight: 700, color: "#166534" }}>
+                <span style={{ fontFamily: FONT, fontSize: 14, fontWeight: 700, color: "#1A3009" }}>
                   GHIN Verified
                 </span>
               </div>
               <div style={{
-                fontFamily: MONO, fontSize: 48, fontWeight: 900, color: "#16A34A",
+                fontFamily: MONO, fontSize: 48, fontWeight: 900, color: "#2D5016",
                 letterSpacing: "-0.03em",
               }}>
                 {handicap}
               </div>
-              <div style={{ fontFamily: FONT, fontSize: 12, color: "#166534" }}>
+              <div style={{ fontFamily: FONT, fontSize: 12, color: "#1A3009" }}>
                 Handicap Index
               </div>
             </div>
 
             {/* Recent Scores */}
             <div style={{ padding: "16px 18px" }}>
-              <div style={{ fontFamily: FONT, fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
+              <div style={{ fontFamily: FONT, fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
                 Recent Scores
               </div>
               {scoringHistory.map((s, i) => (
@@ -433,12 +433,12 @@ function GHINScreen({ userName, onVerified, onSkip }) {
                   borderBottom: i < scoringHistory.length - 1 ? "1px solid #F3F4F6" : "none",
                 }}>
                   <div>
-                    <div style={{ fontFamily: FONT, fontSize: 13, fontWeight: 600, color: "#1A1A1A" }}>{s.course}</div>
-                    <div style={{ fontFamily: FONT, fontSize: 11, color: "#9CA3AF" }}>{s.date}</div>
+                    <div style={{ fontFamily: FONT, fontSize: 13, fontWeight: 600, color: "#1E130A" }}>{s.course}</div>
+                    <div style={{ fontFamily: FONT, fontSize: 11, color: "#A8957B" }}>{s.date}</div>
                   </div>
                   <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                    <span style={{ fontFamily: MONO, fontSize: 15, fontWeight: 800, color: "#1A1A1A" }}>{s.score}</span>
-                    <span style={{ fontFamily: MONO, fontSize: 11, color: "#6B7280" }}>diff {s.diff}</span>
+                    <span style={{ fontFamily: MONO, fontSize: 15, fontWeight: 800, color: "#1E130A" }}>{s.score}</span>
+                    <span style={{ fontFamily: MONO, fontSize: 11, color: "#8B7355" }}>diff {s.diff}</span>
                   </div>
                 </div>
               ))}
@@ -446,8 +446,8 @@ function GHINScreen({ userName, onVerified, onSkip }) {
 
             <div style={{
               padding: "12px 18px 16px",
-              fontFamily: FONT, fontSize: 12, color: "#166534", fontStyle: "italic",
-              background: "#F0FDF4", borderTop: "1px solid #DCFCE7",
+              fontFamily: FONT, fontSize: 12, color: "#1A3009", fontStyle: "italic",
+              background: "#EEF5E5", borderTop: "1px solid #DCFCE7",
             }}>
               💬 "A {handicap} handicap. The pigeons won't know what hit 'em."
             </div>
@@ -476,10 +476,10 @@ function GHINScreen({ userName, onVerified, onSkip }) {
             background: "#fff", borderRadius: 16, padding: "18px 20px",
             boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
           }}>
-            <div style={{ fontFamily: FONT, fontSize: 14, fontWeight: 700, color: "#1A1A1A", marginBottom: 8 }}>
+            <div style={{ fontFamily: FONT, fontSize: 14, fontWeight: 700, color: "#1E130A", marginBottom: 8 }}>
               Don't have a GHIN number?
             </div>
-            <div style={{ fontFamily: FONT, fontSize: 13, color: "#6B7280", lineHeight: 1.5, marginBottom: 14 }}>
+            <div style={{ fontFamily: FONT, fontSize: 13, color: "#8B7355", lineHeight: 1.5, marginBottom: 14 }}>
               You can enter your handicap manually for your first 3 rounds. After that, a verified GHIN number is required. No sandbagging on our watch.
             </div>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -490,7 +490,7 @@ function GHINScreen({ userName, onVerified, onSkip }) {
                 style={{
                   flex: 1, padding: "12px 14px", borderRadius: 10,
                   border: "1px solid #E5E7EB", fontFamily: MONO, fontSize: 16, fontWeight: 600,
-                  background: "#F9FAFB", outline: "none", boxSizing: "border-box",
+                  background: "#FAF5EC", outline: "none", boxSizing: "border-box",
                 }}
               />
               <button
@@ -504,8 +504,8 @@ function GHINScreen({ userName, onVerified, onSkip }) {
                   padding: "12px 18px", borderRadius: 10, border: "none",
                   cursor: manualHandicap ? "pointer" : "not-allowed",
                   fontFamily: FONT, fontSize: 13, fontWeight: 700,
-                  background: manualHandicap ? "#F59E0B" : "#D1D5DB",
-                  color: manualHandicap ? "#fff" : "#9CA3AF",
+                  background: manualHandicap ? "#F59E0B" : "#CEC0AA",
+                  color: manualHandicap ? "#fff" : "#A8957B",
                 }}
               >
                 Use for 3 rounds
@@ -525,7 +525,7 @@ function GHINScreen({ userName, onVerified, onSkip }) {
           <button onClick={() => onVerified(ghin, handicap)} style={{
             width: "100%", padding: "18px", borderRadius: 14, border: "none", cursor: "pointer",
             fontFamily: FONT, fontSize: 16, fontWeight: 700,
-            background: "#16A34A", color: "#fff",
+            background: "#2D5016", color: "#fff",
             boxShadow: "0 4px 12px rgba(22,163,74,0.25)",
           }}>
             Looks right — Continue →
@@ -534,11 +534,11 @@ function GHINScreen({ userName, onVerified, onSkip }) {
 
         {status !== "verified" && (
           <div style={{
-            textAlign: "center", fontFamily: FONT, fontSize: 12, color: "#9CA3AF",
+            textAlign: "center", fontFamily: FONT, fontSize: 12, color: "#A8957B",
             marginTop: 8,
           }}>
             Need a GHIN?{" "}
-            <span style={{ color: "#16A34A", fontWeight: 600, cursor: "pointer" }}>
+            <span style={{ color: "#2D5016", fontWeight: 600, cursor: "pointer" }}>
               Get one at USGA.org →
             </span>
           </div>
@@ -580,10 +580,10 @@ function ProfileSetupScreen({ userName, handicap, ghinVerified, onComplete }) {
   return (
     <div style={{
       minHeight: "100vh", display: "flex", flexDirection: "column",
-      background: "#F7F7F5",
+      background: "#F5EFE0",
     }}>
       <div style={{
-        background: "#1A1A1A", padding: "60px 32px 32px",
+        background: "#1E130A", padding: "60px 32px 32px",
         borderRadius: "0 0 36px 36px", textAlign: "center",
       }}>
         {/* Avatar preview — tappable for upload */}
@@ -606,7 +606,7 @@ function ProfileSetupScreen({ userName, handicap, ghinVerified, onComplete }) {
           <div style={{
             position: "absolute", bottom: -2, right: -2,
             width: 28, height: 28, borderRadius: 14,
-            background: "#16A34A", border: "2px solid #1A1A1A",
+            background: "#2D5016", border: "2px solid #1A1A1A",
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 13,
           }}>
@@ -631,11 +631,11 @@ function ProfileSetupScreen({ userName, handicap, ghinVerified, onComplete }) {
           letterSpacing: "-0.02em", marginBottom: 2,
         }}>{userName}</div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-          <span style={{ fontFamily: MONO, fontSize: 14, fontWeight: 700, color: "#16A34A" }}>
+          <span style={{ fontFamily: MONO, fontSize: 14, fontWeight: 700, color: "#2D5016" }}>
             HCP {handicap}
           </span>
           {ghinVerified && (
-            <span style={{ fontFamily: FONT, fontSize: 11, color: "#16A34A" }}>✅</span>
+            <span style={{ fontFamily: FONT, fontSize: 11, color: "#2D5016" }}>✅</span>
           )}
         </div>
       </div>
@@ -643,7 +643,7 @@ function ProfileSetupScreen({ userName, handicap, ghinVerified, onComplete }) {
       <div style={{ padding: "28px 24px", flex: 1, display: "flex", flexDirection: "column", gap: 20 }}>
         {/* Avatar Color — only show if no uploaded image */}
         <div>
-          <div style={{ fontFamily: FONT, fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
+          <div style={{ fontFamily: FONT, fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
             {avatarImage ? "Avatar Color (backup)" : "Pick Your Color"}
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
@@ -671,7 +671,7 @@ function ProfileSetupScreen({ userName, handicap, ghinVerified, onComplete }) {
 
         {/* Home Course */}
         <div>
-          <div style={{ fontFamily: FONT, fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
+          <div style={{ fontFamily: FONT, fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
             Home Course
           </div>
           <div style={{ position: "relative" }}>
@@ -690,15 +690,15 @@ function ProfileSetupScreen({ userName, handicap, ghinVerified, onComplete }) {
 
           {selectedCourse && !courseSearch && (
             <div style={{
-              marginTop: 8, padding: "12px 14px", background: "#F0FDF4", borderRadius: 12,
+              marginTop: 8, padding: "12px 14px", background: "#EEF5E5", borderRadius: 12,
               display: "flex", justifyContent: "space-between", alignItems: "center",
               border: "1px solid #DCFCE7",
             }}>
               <div>
-                <div style={{ fontFamily: FONT, fontSize: 14, fontWeight: 600, color: "#1A1A1A" }}>{selectedCourse.name}</div>
-                <div style={{ fontFamily: FONT, fontSize: 12, color: "#6B7280" }}>{selectedCourse.city}</div>
+                <div style={{ fontFamily: FONT, fontSize: 14, fontWeight: 600, color: "#1E130A" }}>{selectedCourse.name}</div>
+                <div style={{ fontFamily: FONT, fontSize: 12, color: "#8B7355" }}>{selectedCourse.city}</div>
               </div>
-              <span style={{ fontFamily: FONT, fontSize: 12, fontWeight: 700, color: "#16A34A" }}>✓ Selected</span>
+              <span style={{ fontFamily: FONT, fontSize: 12, fontWeight: 700, color: "#2D5016" }}>✓ Selected</span>
             </div>
           )}
 
@@ -715,18 +715,18 @@ function ProfileSetupScreen({ userName, handicap, ghinVerified, onComplete }) {
                     background: "transparent", cursor: "pointer", borderBottom: "1px solid #F3F4F6",
                     fontFamily: FONT,
                   }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: "#1A1A1A" }}>{c.name}</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "#1E130A" }}>{c.name}</div>
                   <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 2 }}>
-                    <span style={{ fontSize: 12, color: "#9CA3AF" }}>{c.city}</span>
+                    <span style={{ fontSize: 12, color: "#A8957B" }}>{c.city}</span>
                     <span style={{
                       fontSize: 10, fontWeight: 700, padding: "1px 5px", borderRadius: 3,
-                      background: "#F3F4F6", color: "#6B7280", textTransform: "uppercase",
+                      background: "#EDE7D9", color: "#8B7355", textTransform: "uppercase",
                     }}>{c.type}</span>
                   </div>
                 </button>
               ))}
               {filteredCourses.length === 0 && (
-                <div style={{ padding: "16px", textAlign: "center", fontFamily: FONT, fontSize: 13, color: "#9CA3AF" }}>
+                <div style={{ padding: "16px", textAlign: "center", fontFamily: FONT, fontSize: 13, color: "#A8957B" }}>
                   No courses found. You can add yours later.
                 </div>
               )}
@@ -736,7 +736,7 @@ function ProfileSetupScreen({ userName, handicap, ghinVerified, onComplete }) {
 
         {/* Location */}
         <div>
-          <div style={{ fontFamily: FONT, fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
+          <div style={{ fontFamily: FONT, fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
             City
           </div>
           <input
@@ -757,7 +757,7 @@ function ProfileSetupScreen({ userName, handicap, ghinVerified, onComplete }) {
           style={{
             width: "100%", padding: "18px", borderRadius: 14, border: "none", cursor: "pointer",
             fontFamily: FONT, fontSize: 16, fontWeight: 700, marginTop: 8,
-            background: "#1A1A1A", color: "#fff",
+            background: "#1E130A", color: "#fff",
           }}
         >
           Let's Go →
@@ -785,7 +785,7 @@ function WelcomeScreen({ userName, handicap, ghinVerified, homeCourse, onStart, 
   return (
     <div style={{
       minHeight: "100vh", display: "flex", flexDirection: "column",
-      background: "#F7F7F5",
+      background: "#F5EFE0",
       opacity: visible ? 1 : 0, transition: "opacity 0.6s ease",
     }}>
       <div style={{
@@ -809,7 +809,7 @@ function WelcomeScreen({ userName, handicap, ghinVerified, homeCourse, onStart, 
 
       <div style={{ padding: "28px 24px", flex: 1, display: "flex", flexDirection: "column", gap: 14 }}>
         <div style={{
-          fontFamily: FONT, fontSize: 15, fontWeight: 700, color: "#1A1A1A", marginBottom: 4,
+          fontFamily: FONT, fontSize: 15, fontWeight: 700, color: "#1E130A", marginBottom: 4,
         }}>
           Here's how it works
         </div>
@@ -825,8 +825,8 @@ function WelcomeScreen({ userName, handicap, ghinVerified, homeCourse, onStart, 
           }}>
             <span style={{ fontSize: 28 }}>{tip.icon}</span>
             <div>
-              <div style={{ fontFamily: FONT, fontSize: 14, fontWeight: 700, color: "#1A1A1A" }}>{tip.title}</div>
-              <div style={{ fontFamily: FONT, fontSize: 12, color: "#6B7280", marginTop: 2 }}>{tip.desc}</div>
+              <div style={{ fontFamily: FONT, fontSize: 14, fontWeight: 700, color: "#1E130A" }}>{tip.title}</div>
+              <div style={{ fontFamily: FONT, fontSize: 12, color: "#8B7355", marginTop: 2 }}>{tip.desc}</div>
             </div>
           </div>
         ))}
@@ -842,14 +842,14 @@ function WelcomeScreen({ userName, handicap, ghinVerified, homeCourse, onStart, 
         <button onClick={onStart} style={{
           width: "100%", padding: "18px", borderRadius: 14, border: "none", cursor: "pointer",
           fontFamily: FONT, fontSize: 17, fontWeight: 700, marginTop: 8,
-          background: "#1A1A1A", color: "#fff",
+          background: "#1E130A", color: "#fff",
           boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
         }}>
           Start Your First Round 🏌️
         </button>
 
         <button onClick={onBrowseFeed} style={{
-          fontFamily: FONT, fontSize: 13, fontWeight: 600, color: "#6B7280",
+          fontFamily: FONT, fontSize: 13, fontWeight: 600, color: "#8B7355",
           background: "none", border: "none", cursor: "pointer",
         }}>
           Browse the feed first →

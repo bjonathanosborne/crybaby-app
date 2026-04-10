@@ -20,7 +20,7 @@ const MONO = "'SF Mono', 'JetBrains Mono', monospace";
 const inputStyle: React.CSSProperties = {
   width: "100%", padding: "10px 12px", borderRadius: 10,
   border: "1px solid #E5E7EB", background: "#fff",
-  fontFamily: "'SF Pro Display', -apple-system, sans-serif",
+  fontFamily: "'Lato', -apple-system, sans-serif",
   fontSize: 14, outline: "none", boxSizing: "border-box",
 };
 
@@ -198,7 +198,7 @@ export default function HomePage() {
             <div className="flex gap-2">
               <input value={editForm.handicap} onChange={e => setEditForm(f => ({ ...f, handicap: e.target.value }))} placeholder="Handicap" type="number" style={{ ...inputStyle, flex: 1 }} />
               <div className="flex-1 relative">
-                <input value={editForm.ghin} disabled placeholder="GHIN #" style={{ ...inputStyle, opacity: 0.5, cursor: "not-allowed", background: "#F3F4F6" }} />
+                <input value={editForm.ghin} disabled placeholder="GHIN #" style={{ ...inputStyle, opacity: 0.5, cursor: "not-allowed", background: "#EDE7D9" }} />
                 <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] font-bold text-muted-foreground uppercase">Coming Soon</span>
               </div>
             </div>
