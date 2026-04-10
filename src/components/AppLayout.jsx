@@ -46,7 +46,7 @@ export default function AppLayout() {
             {showBack ? (
               <button
                 onClick={() => navigate(-1)}
-                className="flex items-center justify-center w-9 h-9 rounded-full bg-transparent border-none cursor-pointer text-foreground hover:bg-accent transition-colors"
+                className="flex items-center justify-center w-11 h-11 rounded-full bg-transparent border-none cursor-pointer text-foreground hover:bg-accent transition-colors"
                 aria-label="Go back"
               >
                 <ChevronLeft className="w-5 h-5" />
