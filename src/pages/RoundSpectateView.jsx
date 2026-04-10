@@ -10,15 +10,10 @@ import {
   declineRound,
 } from "@/lib/db";
 import { formatDistanceToNow, parseISO } from "date-fns";
+import { CrybIcon } from "@/components/icons/CrybIcons";
 
 const FONT = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 const REACTION_OPTIONS = ["🔥", "😂", "💀", "🍼", "👏"];
-
-const EVENT_ICONS = {
-  eagle: "🦅", birdie: "🐦", par: "⛳", bogey: "😬",
-  double_bogey: "😵", triple_plus: "💀", push: "🤝",
-  team_win: "🏆", hammer: "🔨", hammer_fold: "🐔", score: "📝",
-};
 
 const EVENT_COLORS = {
   eagle: "hsl(var(--primary))", birdie: "hsl(var(--primary))",
@@ -317,7 +312,6 @@ export default function RoundSpectateView() {
         ) : (
           <div ref={feedRef} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {events.map(evt => {
-              const icon = EVENT_ICONS[evt.event_type] || "📝";
               const color = EVENT_COLORS[evt.event_type] || "hsl(var(--foreground))";
               const eventReactions = reactions[evt.id] || [];
               const data = evt.event_data || {};
@@ -330,8 +324,8 @@ export default function RoundSpectateView() {
               return (
                 <div key={evt.id} style={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 16, padding: 12 }}>
                   <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0, background: `${color}14` }}>
-                      {icon}
+                    <div style={{ width: 36, height: 36, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: `${color}14`, color }}>
+                      <CrybIcon name={evt.event_type} size={18} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>

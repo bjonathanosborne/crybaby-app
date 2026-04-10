@@ -6,11 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { UserPlus, Check, Clock, MessageCircle, ChevronRight } from "lucide-react";
 import { formatDistanceToNow, parseISO } from "date-fns";
-
-const EVENT_ICONS: Record<string, string> = {
-  birdie: "🐦", eagle: "🦅", team_win: "🏆", push: "🤝",
-  hammer: "🔨", hammer_fold: "🐔", score: "⛳",
-};
+import { CrybIcon } from "@/components/icons/CrybIcons";
 
 export default function UserProfilePage() {
   const { userId } = useParams<{ userId: string }>();
@@ -215,11 +211,10 @@ export default function UserProfilePage() {
             <div className="flex flex-col divide-y divide-border">
               {recentEvents.slice(0, 10).map((event: any) => {
                 const data = event.event_data || {};
-                const icon = EVENT_ICONS[event.event_type] || "⛳";
                 const round = roundMap[event.round_id];
                 return (
                   <div key={event.id} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
-                    <span className="text-lg mt-0.5 flex-shrink-0">{icon}</span>
+                    <span className="mt-0.5 flex-shrink-0 text-foreground"><CrybIcon name={event.event_type} size={18} /></span>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm text-foreground leading-snug">
                         {data.message || `Hole ${event.hole_number}`}

@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { loadProfile, loadMyRounds, loadSettlements, loadUserStats } from "@/lib/db";
 import { format, parseISO, subMonths } from "date-fns";
 import { Loader2, BarChart3 } from "lucide-react";
+import { EagleIcon, BirdieIcon, ParFlagIcon, BogeyIcon } from "@/components/icons/CrybIcons";
 import {
   ResponsiveContainer, LineChart, Line, BarChart, Bar,
   XAxis, YAxis, Tooltip, CartesianGrid, Area, AreaChart,
@@ -170,10 +171,10 @@ export default function StatsPage() {
               Career Scorecard
             </div>
             <div className="grid grid-cols-4 gap-2">
-              <BirdCard emoji="🦅" label="Eagles" value={serverStats.eagles ?? 0} />
-              <BirdCard emoji="🐦" label="Birdies" value={serverStats.birdies ?? 0} />
-              <BirdCard emoji="⛳" label="Pars" value={serverStats.pars ?? 0} />
-              <BirdCard emoji="😬" label="Bogeys" value={serverStats.bogeys ?? 0} />
+              <BirdCard icon={EagleIcon} label="Eagles" value={serverStats.eagles ?? 0} />
+              <BirdCard icon={BirdieIcon} label="Birdies" value={serverStats.birdies ?? 0} />
+              <BirdCard icon={ParFlagIcon} label="Pars" value={serverStats.pars ?? 0} />
+              <BirdCard icon={BogeyIcon} label="Bogeys" value={serverStats.bogeys ?? 0} />
             </div>
           </div>
         )}
@@ -318,10 +319,12 @@ function StatCard({ label, value, valueColor }: {
   );
 }
 
-function BirdCard({ emoji, label, value }: { emoji: string; label: string; value: number }) {
+function BirdCard({ icon: Icon, label, value }: { icon: React.ComponentType<{ size?: number; className?: string }>; label: string; value: number }) {
   return (
     <div className="bg-muted/50 rounded-xl p-2.5 text-center">
-      <div className="text-xl mb-1">{emoji}</div>
+      <div className="flex justify-center mb-1">
+        <Icon size={20} className="text-foreground" />
+      </div>
       <div className="text-base font-extrabold font-mono text-foreground">{value}</div>
       <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mt-0.5">{label}</div>
     </div>

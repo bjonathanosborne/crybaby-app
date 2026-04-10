@@ -4,6 +4,7 @@ import { loadFeed, createPost, addComment, toggleReaction, loadProfile, loadBroa
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { MessageCircle, ArrowUp, Radio, Eye, X, Trophy, Zap } from "lucide-react";
+import { CrybIcon, ParFlagIcon } from "@/components/icons/CrybIcons";
 
 const REACTION_EMOJIS = {
   "🔥": "🔥", "🔨": "🔨", "🍼": "🍼", "💀": "💀", "🐔": "🐔",
@@ -104,7 +105,7 @@ function PostCard({ post, profile, comments, reactions, profiles, currentUserId,
           <div>
             {roundData.course && (
               <div className="text-sm font-semibold text-foreground mb-1 flex items-center gap-1.5">
-                <span className="text-primary">⛳</span> {roundData.course}
+                <ParFlagIcon size={14} className="text-primary flex-shrink-0" /> {roundData.course}
               </div>
             )}
             {roundData.gameType && (
@@ -116,8 +117,8 @@ function PostCard({ post, profile, comments, reactions, profiles, currentUserId,
               <div className="bg-muted/50 rounded-xl p-3">
                 {roundData.results.sort((a, b) => (b.amount || 0) - (a.amount || 0)).map((r, i) => (
                   <div key={i} className={`flex items-center gap-2.5 py-2 ${i < roundData.results.length - 1 ? "border-b border-border" : ""}`}>
-                    <span className="text-sm w-5 text-center">
-                      {i === 0 ? "🏆" : r.isCrybaby ? "🍼" : ""}
+                    <span className="w-5 flex items-center justify-center">
+                      {i === 0 ? <Trophy size={16} className="text-primary" /> : r.isCrybaby ? <CrybIcon name="crybaby_bottle" size={16} /> : null}
                     </span>
                     <span className="text-[13px] font-semibold text-foreground flex-1 truncate">
                       {r.name}
@@ -328,7 +329,7 @@ function BroadcastCard({ round, onFollow, onDecline, navigate }) {
         </div>
         <div className="bg-muted/50 rounded-xl p-3 mb-3">
           <div className="text-sm font-semibold text-foreground flex items-center gap-1.5 mb-1">
-            <span className="text-primary">⛳</span> {round.course}
+            <ParFlagIcon size={14} className="text-primary flex-shrink-0" /> {round.course}
           </div>
           <div className="flex items-center gap-2 flex-wrap mt-0.5">
             <span className="text-xs text-muted-foreground">
@@ -381,15 +382,10 @@ function BroadcastCard({ round, onFollow, onDecline, navigate }) {
 // ─── Live Event Item ───
 function LiveEventItem({ event, roundCourse }) {
   const data = event.event_data || {};
-  const iconMap = {
-    birdie: "🐦", eagle: "🦅", team_win: "🏆", push: "🤝",
-    hammer: "🔨", hammer_fold: "🐔", score: "⛳",
-  };
-  const icon = iconMap[event.event_type] || "⛳";
 
   return (
     <div className="flex items-start gap-2.5 py-2">
-      <span className="text-base mt-0.5">{icon}</span>
+      <span className="mt-0.5 flex-shrink-0 text-foreground"><CrybIcon name={event.event_type} size={16} /></span>
       <div className="flex-1 min-w-0">
         <div className="text-[13px] text-foreground leading-snug">
           {data.message || `Hole ${event.hole_number}`}
@@ -537,7 +533,7 @@ export default function CrybabyFeed() {
       {/* Active Round Resume Banner */}
       {activeRound && (
         <div className="mx-4 mb-1 px-4 py-3 rounded-2xl bg-primary/10 border border-primary/20 flex items-center gap-3">
-          <span className="text-xl">⛳</span>
+          <ParFlagIcon size={22} className="text-primary flex-shrink-0" />
           <div className="flex-1 min-w-0">
             <div className="text-[10px] font-bold text-primary uppercase tracking-wider">Round In Progress</div>
             <div className="text-sm font-semibold text-foreground truncate">{activeRound.course}</div>

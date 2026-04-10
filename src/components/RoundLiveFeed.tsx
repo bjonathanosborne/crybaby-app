@@ -3,22 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { loadRoundEvents, loadEventReactions, toggleEventReaction } from "@/lib/db";
 import { formatDistanceToNow, parseISO } from "date-fns";
+import { CrybIcon } from "@/components/icons/CrybIcons";
 
 const REACTION_OPTIONS = ["🔥", "😂", "💀", "🍼", "👏"];
-
-const EVENT_ICONS: Record<string, string> = {
-  eagle: "🦅",
-  birdie: "🐦",
-  par: "⛳",
-  bogey: "😬",
-  double_bogey: "😵",
-  triple_plus: "💀",
-  push: "🤝",
-  team_win: "🏆",
-  hammer: "🔨",
-  hammer_fold: "🐔",
-  score: "📝",
-};
 
 const EVENT_COLORS: Record<string, string> = {
   eagle: "hsl(var(--primary))",
@@ -158,7 +145,6 @@ export default function RoundLiveFeed({ roundId, isOpen, onClose }: RoundLiveFee
         ) : (
           <div className="flex flex-col gap-2">
             {events.map((evt: any) => {
-              const icon = EVENT_ICONS[evt.event_type] || "📝";
               const color = EVENT_COLORS[evt.event_type] || "hsl(var(--foreground))";
               const eventReactions = reactions[evt.id] || [];
               const data = evt.event_data || {};
@@ -178,10 +164,10 @@ export default function RoundLiveFeed({ roundId, isOpen, onClose }: RoundLiveFee
                   {/* Event header */}
                   <div className="flex items-start gap-3">
                     <div
-                      className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0"
-                      style={{ background: `${color}14` }}
+                      className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{ background: `${color}14`, color }}
                     >
-                      {icon}
+                      <CrybIcon name={evt.event_type} size={18} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
