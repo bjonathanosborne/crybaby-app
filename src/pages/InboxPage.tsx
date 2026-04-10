@@ -48,7 +48,7 @@ export default function InboxPage() {
   const [acting, setActing] = useState<string | null>(null);
 
   const refresh = async () => {
-    if (!user) return;
+    if (!user) { setLoading(false); return; }
     try {
       const notifs = await loadNotifications(50);
       setNotifications(notifs);

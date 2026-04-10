@@ -62,7 +62,7 @@ export default function ProfilePage() {
   };
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) { setLoading(false); return; }
     Promise.all([
       loadProfile(),
       loadMyRounds(50),

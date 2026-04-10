@@ -58,7 +58,7 @@ export default function FriendsPage() {
   const [myProfile, setMyProfile] = useState<any>(null);
 
   const loadAll = async () => {
-    if (!user) return;
+    if (!user) { setLoading(false); return; }
     setLoading(true);
     try {
       const [f, p, s, mp] = await Promise.all([
