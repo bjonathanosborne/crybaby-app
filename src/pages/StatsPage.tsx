@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { loadProfile, loadMyRounds, loadSettlements } from "@/lib/db";
-import { format, parseISO, subMonths, startOfMonth } from "date-fns";
+import { loadProfile, loadMyRounds, loadSettlements, loadUserStats } from "@/lib/db";
+import { format, parseISO, subMonths } from "date-fns";
 import { Loader2, TrendingUp, TrendingDown, Trophy, Target, DollarSign, BarChart3 } from "lucide-react";
 import {
   ResponsiveContainer, LineChart, Line, BarChart, Bar,
@@ -13,6 +13,7 @@ export default function StatsPage() {
   const [profile, setProfile] = useState<any>(null);
   const [rounds, setRounds] = useState<any[]>([]);
   const [settlements, setSettlements] = useState<any[]>([]);
+  const [serverStats, setServerStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -21,10 +22,12 @@ export default function StatsPage() {
       loadProfile(),
       loadMyRounds(200),
       loadSettlements(),
-    ]).then(([p, r, s]) => {
+      loadUserStats(),
+    ]).then(([p, r, s, ss]) => {
       setProfile(p);
       setRounds(r || []);
       setSettlements(s || []);
+      setServerStats(ss);
     }).finally(() => setLoading(false));
   }, [user]);
 
@@ -160,6 +163,21 @@ export default function StatsPage() {
           <StatCard icon={TrendingUp} label="Wins" value={String(stats.wins)} valueColor="text-primary" />
           <StatCard icon={TrendingDown} label="Losses" value={String(stats.losses)} valueColor="text-destructive" />
         </div>
+
+        {/* ── Bird Scores ── */}
+        {serverStats && (
+          <div className="bg-card rounded-2xl p-4 border border-border">
+            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-3">
+              Career Scorecard
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              <BirdCard emoji="🦅" label="Eagles" value={serverStats.eagles ?? 0} />
+              <BirdCard emoji="🐦" label="Birdies" value={serverStats.birdies ?? 0} />
+              <BirdCard emoji="⛳" label="Pars" value={serverStats.pars ?? 0} />
+              <BirdCard emoji="😬" label="Bogeys" value={serverStats.bogeys ?? 0} />
+            </div>
+          </div>
+        )}
 
         {/* ── Scoring Trend Chart ── */}
         {scoringData.length >= 2 && (
@@ -299,6 +317,16 @@ function StatCard({ icon: Icon, label, value, valueColor }: {
         <Icon size={14} className="text-primary" />
       </div>
       <div className={`text-lg font-extrabold font-mono ${valueColor || "text-foreground"}`}>{value}</div>
+      <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mt-0.5">{label}</div>
+    </div>
+  );
+}
+
+function BirdCard({ emoji, label, value }: { emoji: string; label: string; value: number }) {
+  return (
+    <div className="bg-muted/50 rounded-xl p-2.5 text-center">
+      <div className="text-xl mb-1">{emoji}</div>
+      <div className="text-base font-extrabold font-mono text-foreground">{value}</div>
       <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mt-0.5">{label}</div>
     </div>
   );

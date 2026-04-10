@@ -836,6 +836,17 @@ export async function loadSettlements(userId?: string) {
   return data || [];
 }
 
+// Aggregate career stats via server-side function (efficient single query)
+export async function loadUserStats(userId?: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const targetId = userId || user.id;
+
+  const { data, error } = await supabase.rpc("get_user_stats", { p_user_id: targetId });
+  if (error) throw error;
+  return (data as any[])?.[0] || null;
+}
+
 // Insert settlements after a round completes
 export async function insertSettlements(roundId: string, settlements: { userId?: string; guestName?: string; amount: number }[]) {
   const { data: { user } } = await supabase.auth.getUser();
