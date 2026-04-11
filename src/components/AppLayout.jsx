@@ -8,7 +8,7 @@ import { loadActiveRound } from "@/lib/db";
 
 const ROOT_PATHS = ["/profile", "/feed", "/friends", "/groups", "/inbox", "/stats"];
 
-const ROW_H = 60;
+const ROW_H = 72;
 const LOGO_OVERFLOW_BELOW = 0;
 const BANNER_H = 44; // active-round return banner height
 
@@ -57,7 +57,7 @@ export default function AppLayout() {
               position: "absolute",
               left: "50%",
               top: "50%",
-              transform: "translate(-50%, -50%)",
+              transform: "translate(-50%, -50%) rotate(-10deg)",
               fontFamily: "'Pacifico', cursive",
               fontSize: 30,
               fontWeight: 400,
