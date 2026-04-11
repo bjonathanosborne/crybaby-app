@@ -260,7 +260,7 @@ function NewPostComposer({ profile, onPost }) {
   if (!isOpen) {
     return (
       <button onClick={() => setIsOpen(true)}
-        className="w-full flex items-center gap-4 px-5 py-5 bg-card rounded-2xl border border-border cursor-pointer text-left hover:border-primary/30 transition-colors duration-200">
+        className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border cursor-pointer text-left hover:border-primary/30 transition-colors duration-200">
         <UserAvatar profile={profile} size={40} />
         <span className="text-sm text-muted-foreground">
           Challenge someone, talk trash, share a story...
@@ -534,7 +534,7 @@ export default function CrybabyFeed() {
   return (
     <div className="max-w-[420px] mx-auto min-h-screen bg-background pb-24">
       {/* Page header */}
-      <div className="px-5" style={{ paddingTop: 32, paddingBottom: 48 }}>
+      <div className="px-5" style={{ paddingTop: 20, paddingBottom: 24 }}>
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-extrabold text-foreground tracking-tight">Action</h1>
@@ -564,7 +564,7 @@ export default function CrybabyFeed() {
       )}
 
       {/* Content */}
-      <div className="px-5 flex flex-col" style={{ gap: 40, paddingBottom: 96 }}>
+      <div className="px-5 flex flex-col" style={{ gap: 20, paddingBottom: 96 }}>
         {/* 💰 Live Action — pending broadcasts come FIRST */}
         {(pendingBroadcasts.length > 0 || activeBroadcasts.length > 0) && (
           <div className="text-[10px] font-bold text-primary uppercase tracking-widest flex items-center gap-1.5 px-1">
@@ -619,11 +619,11 @@ export default function CrybabyFeed() {
         {loading ? (
           <div className="text-center py-10 text-muted-foreground text-sm">Loading...</div>
         ) : posts.length === 0 && pendingBroadcasts.length === 0 ? (
-          <div className="bg-card rounded-2xl px-8 text-center border border-border" style={{ paddingTop: 56, paddingBottom: 56 }}>
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto" style={{ marginBottom: 24 }}>
+          <div className="bg-card rounded-2xl px-8 text-center border border-border" style={{ paddingTop: 32, paddingBottom: 32 }}>
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto" style={{ marginBottom: 14 }}>
               <MoneyIcon size={30} className="text-primary" />
             </div>
-            <div className="text-lg font-extrabold text-foreground" style={{ marginBottom: 12 }}>No action yet</div>
+            <div className="text-lg font-extrabold text-foreground" style={{ marginBottom: 8 }}>No action yet</div>
             <div className="text-sm text-muted-foreground leading-relaxed">
               Start a round, put money on it, and let the trash talk begin.
             </div>
