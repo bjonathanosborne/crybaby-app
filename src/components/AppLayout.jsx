@@ -6,7 +6,7 @@ import HamburgerMenu from "./HamburgerMenu";
 import { ChevronLeft } from "lucide-react";
 import { loadActiveRound } from "@/lib/db";
 
-const ROOT_PATHS = ["/profile", "/feed", "/friends", "/groups", "/inbox", "/stats"];
+const ROOT_PATHS = ["/profile", "/feed", "/friends", "/groups", "/inbox", "/stats", "/notifications/settings"];
 
 const ROW_H = 80;
 const LOGO_OVERFLOW_BELOW = 0;

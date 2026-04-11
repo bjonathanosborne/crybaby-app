@@ -86,8 +86,8 @@ export default function NotificationBell() {
           width: 36,
           height: 36,
           borderRadius: 10,
-          border: "1px solid hsl(var(--border))",
-          background: "hsl(var(--card))",
+          border: "none",
+          background: "transparent",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -97,7 +97,7 @@ export default function NotificationBell() {
         }}
         aria-label="Notifications"
       >
-        <Bell size={18} className="text-foreground" />
+        <Bell size={20} color="#2D5016" strokeWidth={1.8} />
         {unread > 0 && (
           <span
             style={{
