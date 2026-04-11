@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { loadFeed, createPost, addComment, toggleReaction, loadProfile, loadBroadcastRounds, followRound, declineRound, loadFollowedRoundEvents, loadActiveRound } from "@/lib/db";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { MessageCircle, ArrowUp, Radio, Eye, X, Trophy, Zap, Plus } from "lucide-react";
+import { MessageCircle, ArrowUp, Radio, Eye, X, Trophy, Zap, Plus, User } from "lucide-react";
 import { CrybIcon, ParFlagIcon, MoneyIcon } from "@/components/icons/CrybIcons";
 
 const REACTION_EMOJIS = {
@@ -29,8 +29,10 @@ function profileName(profile) {
 }
 
 function UserAvatar({ profile, size = 36 }) {
+  const hasRealName = profile?.first_name || profile?.display_name;
   const name = profileName(profile);
-  const initial = name[0]?.toUpperCase() || "?";
+  const initial = name[0]?.toUpperCase();
+
   if (profile?.avatar_url) {
     return (
       <img src={profile.avatar_url} alt={name}
@@ -38,6 +40,17 @@ function UserAvatar({ profile, size = 36 }) {
         style={{ width: size, height: size }} />
     );
   }
+
+  // No real profile loaded — show a generic person silhouette instead of a misleading initial
+  if (!hasRealName) {
+    return (
+      <div className="rounded-full bg-muted flex items-center justify-center flex-shrink-0"
+        style={{ width: size, height: size }}>
+        <User size={size * 0.52} strokeWidth={1.75} className="text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-full bg-primary flex items-center justify-center text-primary-foreground flex-shrink-0 font-bold"
       style={{ width: size, height: size, fontSize: size * 0.38 }}>
@@ -247,8 +260,8 @@ function NewPostComposer({ profile, onPost }) {
   if (!isOpen) {
     return (
       <button onClick={() => setIsOpen(true)}
-        className="w-full flex items-center gap-3 p-3.5 bg-card rounded-2xl border border-border cursor-pointer text-left hover:border-primary/30 transition-colors duration-200">
-        <UserAvatar profile={profile} size={36} />
+        className="w-full flex items-center gap-3.5 px-4 py-4 bg-card rounded-2xl border border-border cursor-pointer text-left hover:border-primary/30 transition-colors duration-200">
+        <UserAvatar profile={profile} size={40} />
         <span className="text-sm text-muted-foreground">
           Challenge someone, talk trash, share a story...
         </span>
@@ -521,7 +534,7 @@ export default function CrybabyFeed() {
   return (
     <div className="max-w-[420px] mx-auto min-h-screen bg-background pb-24">
       {/* Page header */}
-      <div className="px-5 pt-6 pb-5">
+      <div className="px-5 pt-7 pb-6">
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-extrabold text-foreground tracking-tight">Action</h1>
@@ -551,7 +564,7 @@ export default function CrybabyFeed() {
       )}
 
       {/* Content */}
-      <div className="px-5 pb-4 flex flex-col gap-5">
+      <div className="px-5 pb-6 flex flex-col gap-6">
         {/* 💰 Live Action — pending broadcasts come FIRST */}
         {(pendingBroadcasts.length > 0 || activeBroadcasts.length > 0) && (
           <div className="text-[10px] font-bold text-primary uppercase tracking-widest flex items-center gap-1.5 px-1">
@@ -606,17 +619,17 @@ export default function CrybabyFeed() {
         {loading ? (
           <div className="text-center py-10 text-muted-foreground text-sm">Loading...</div>
         ) : posts.length === 0 && pendingBroadcasts.length === 0 ? (
-          <div className="bg-card rounded-2xl py-10 px-8 text-center border border-border">
-            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-5">
-              <MoneyIcon size={28} className="text-primary" />
+          <div className="bg-card rounded-2xl pt-12 pb-8 px-8 text-center border border-border">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-6">
+              <MoneyIcon size={30} className="text-primary" />
             </div>
-            <div className="text-base font-extrabold text-foreground mb-2">No action yet</div>
-            <div className="text-sm text-muted-foreground mb-6 leading-relaxed">
+            <div className="text-lg font-extrabold text-foreground mb-2">No action yet</div>
+            <div className="text-sm text-muted-foreground mb-8 leading-relaxed">
               Start a round, put money on it, and let the trash talk begin.
             </div>
             <button onClick={() => navigate("/setup")}
-              className="px-6 py-3 rounded-2xl border-none cursor-pointer text-sm font-extrabold bg-primary text-primary-foreground hover:opacity-90 transition-opacity shadow-md inline-flex items-center gap-2">
-              <Plus size={14} strokeWidth={2.5} />
+              className="w-full py-4 rounded-2xl border-none cursor-pointer text-sm font-extrabold bg-primary text-primary-foreground hover:opacity-90 transition-opacity shadow-md flex items-center justify-center gap-2">
+              <Plus size={16} strokeWidth={2.5} />
               Start Action
             </button>
           </div>
