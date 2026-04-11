@@ -1501,12 +1501,13 @@ export default function CrybabSetupWizard() {
             fontFamily: "'Pacifico', cursive",
             fontSize: 18,
             fontWeight: 400,
-            background: !canProceed() ? "#CEC0AA" : "#2D5016",
-            color: canProceed() ? "#D4AF37" : "#A8957B",
+            background: "#2D5016",
+            color: "#D4AF37",
+            opacity: canProceed() ? 1 : 0.45,
             transition: "all 0.2s ease",
             minHeight: 44,
-            boxShadow: canProceed() ? "0 2px 12px rgba(45,80,22,0.25)" : "none",
-            textShadow: canProceed() ? "0 1px 6px rgba(212, 175, 55, 0.45)" : "none",
+            boxShadow: "0 2px 12px rgba(45,80,22,0.25)",
+            textShadow: "0 1px 6px rgba(212, 175, 55, 0.45)",
           }}
         >
           {step < 4 ? "Continue" : "Start Round 🏌️"}
