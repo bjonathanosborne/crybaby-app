@@ -324,7 +324,6 @@ export default function GroupsPage() {
             ) : (
               <>
                 {/* My Groups */}
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#8B7355", marginBottom: -8 }}>Your Groups</div>
                 {myGroups.length === 0 ? (
                   <div style={{
                     background: "#FAF5EC", borderRadius: 20, padding: "32px 20px", textAlign: "center",
