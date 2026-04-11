@@ -4,7 +4,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useState } from "react";
-import crybabyLogo from "@/assets/crybaby-logo.png";
+
 
 const navItems = [
   { path: "/profile", label: "Profile", icon: User },
@@ -42,7 +42,7 @@ export default function HamburgerMenu() {
       <SheetContent side="left" className="w-72 p-0 flex flex-col">
         <SheetHeader className="p-4 pb-2 border-b border-border">
           <SheetTitle className="flex items-center gap-2">
-            <img src={crybabyLogo} alt="Crybaby" className="h-12 -my-2" />
+            <span style={{ fontFamily: "'Pacifico', cursive", fontSize: 26, fontWeight: 400, color: "#2D5016", lineHeight: 1 }}>Crybaby Golf</span>
           </SheetTitle>
         </SheetHeader>
 
