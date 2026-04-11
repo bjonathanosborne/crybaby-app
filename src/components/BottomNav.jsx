@@ -38,11 +38,11 @@ function NewRoundIcon({ active }) {
 function GroupsIcon({ active }) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.5} strokeLinecap="round" strokeLinejoin="round">
-      {/* Leaderboard / trophy */}
-      <rect x="3" y="12" width="5" height="9" rx="1" />
-      <rect x="10" y="6" width="5" height="15" rx="1" />
-      <rect x="17" y="9" width="5" height="12" rx="1" />
-      <path d="M12 3l1 3h-2l1-3z" />
+      {/* Three people — group */}
+      <circle cx="9" cy="7" r="3" />
+      <path d="M3 21v-1.5a5 5 0 015-5h2a5 5 0 015 5V21" />
+      <circle cx="18" cy="8" r="2.5" />
+      <path d="M21 21v-1a3.5 3.5 0 00-3-3.46" />
     </svg>
   );
 }
