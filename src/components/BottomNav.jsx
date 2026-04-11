@@ -96,7 +96,7 @@ export default function BottomNav() {
                 <Icon active={active} />
               </span>
               <span className={`transition-colors duration-200 ${active ? "text-primary" : "text-muted-foreground group-hover:text-foreground"}`}
-                style={{ fontFamily: "'Pacifico', cursive", fontSize: 11, fontWeight: 400 }}>
+                style={{ fontFamily: "'Pacifico', cursive", fontSize: 12, fontWeight: 400 }}>
                 {tab.label}
               </span>
             </button>
