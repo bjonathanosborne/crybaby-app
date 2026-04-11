@@ -90,8 +90,16 @@ export default function AuthPage() {
           }}>
             Crybaby Golf
           </div>
-          <p className="text-sm font-semibold tracking-wide text-muted-foreground mt-5">
-            Golf's social scoring app
+          <p style={{
+            fontFamily: "'Lato', sans-serif",
+            fontSize: 13,
+            fontWeight: 700,
+            letterSpacing: "0.18em",
+            textTransform: "uppercase",
+            color: "#C9A227",
+            marginTop: 20,
+          }}>
+            Golf's Social Scoring App
           </p>
           <span className="inline-block mt-2 px-3 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold tracking-widest uppercase border border-primary/20">
             Beta
