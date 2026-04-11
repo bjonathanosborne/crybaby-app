@@ -57,7 +57,7 @@ export default function AppLayout() {
               position: "absolute",
               left: "50%",
               top: "50%",
-              transform: "translate(-50%, -50%) rotate(-5deg)",
+              transform: "translate(-50%, -50%)",
               fontFamily: "'Pacifico', cursive",
               fontSize: 30,
               fontWeight: 400,
