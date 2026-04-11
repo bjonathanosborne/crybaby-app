@@ -336,7 +336,7 @@ export default function GroupsPage() {
                     }}>
                       <Users size={26} strokeWidth={1.75} color="#608232" />
                     </div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: "#8B7355" }}>No groups yet</div>
+                    <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 16, fontWeight: 400, color: "#2D5016" }}>No groups yet</div>
                     <div style={{ fontSize: 12, color: "#A8957B", marginTop: 4 }}>
                       Create one or join with an invite code
                     </div>

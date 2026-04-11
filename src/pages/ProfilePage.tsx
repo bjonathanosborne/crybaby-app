@@ -497,8 +497,8 @@ export default function ProfilePage() {
             Round History
           </div>
           {rounds.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "20px 0", fontSize: 13, color: "#A8957B" }}>
-              No rounds yet. Start one to see your history!
+            <div style={{ textAlign: "center", padding: "20px 0", fontFamily: "'Pacifico', cursive", fontSize: 16, fontWeight: 400, color: "#2D5016" }}>
+              No rounds yet
             </div>
           ) : (
             rounds.slice(0, 20).map((r: any) => (

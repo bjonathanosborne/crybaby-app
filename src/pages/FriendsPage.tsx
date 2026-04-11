@@ -467,7 +467,7 @@ export default function FriendsPage() {
             {friends.length === 0 ? (
               <div className="text-center py-6">
                 <UserPlus size={32} className="mx-auto text-muted-foreground mb-2" />
-                <div className="text-sm font-semibold text-muted-foreground">No friends yet</div>
+                <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 16, fontWeight: 400, color: "#2D5016" }}>No friends yet</div>
                 <div className="text-xs text-muted-foreground mt-1">
                   Search above or hit Invite to bring your crew in
                 </div>
