@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Users } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   loadGroups, createGroup, loadGroup, loadGroupMembers,
@@ -329,7 +330,13 @@ export default function GroupsPage() {
                     background: "#FAF5EC", borderRadius: 20, padding: "32px 20px", textAlign: "center",
                     boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
                   }}>
-                    <div style={{ fontSize: 36, marginBottom: 8 }}>👥</div>
+                    <div style={{
+                      width: 52, height: 52, borderRadius: 14, background: "rgba(96,130,50,0.10)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      margin: "0 auto 12px",
+                    }}>
+                      <Users size={26} strokeWidth={1.75} color="#608232" />
+                    </div>
                     <div style={{ fontSize: 14, fontWeight: 600, color: "#8B7355" }}>No groups yet</div>
                     <div style={{ fontSize: 12, color: "#A8957B", marginTop: 4 }}>
                       Create one or join with an invite code
