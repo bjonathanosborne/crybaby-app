@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import crybabyLogo from "@/assets/crybaby-logo.png";
 import AddClubModal from "@/components/AddClubModal";
+import { Users, RotateCcw, Flag, Coins, Sliders, Globe, Lock, EyeOff, Eye } from "lucide-react";
+import { WolfIcon, HammerIcon, CrybabyBottleIcon, BirdieIcon, MoneyIcon, PressIcon } from "@/components/icons/CrybIcons";
 
 // ============================================================
 // CRYBABY — Game Setup Wizard
@@ -17,7 +19,6 @@ const GAME_FORMATS = [
     id: "drivers_others_carts",
     name: "Drivers / Others / Carts",
     players: { min: 4, max: 4 },
-    icon: "🚗",
     description: "15-hole rotating partners. Drivers, cross-cart, then same-cart. Crybaby finishes it.",
     mechanics: ["hammer", "crybaby", "birdie_bonus", "pops"],
     defaultHoles: 18,
@@ -28,7 +29,6 @@ const GAME_FORMATS = [
     id: "flip",
     name: "Flip",
     players: { min: 3, max: 6 },
-    icon: "🪙",
     description: "Coin flip before each hole. Uneven teams with multiplied stakes. Crybaby rules apply.",
     mechanics: ["hammer", "crybaby", "birdie_bonus", "pops"],
     defaultHoles: 18,
@@ -39,7 +39,6 @@ const GAME_FORMATS = [
     id: "nassau",
     name: "Nassau",
     players: { min: 2, max: 4 },
-    icon: "🏌️",
     description: "The classic. Three bets in one — front 9, back 9, and overall 18.",
     mechanics: ["presses", "pops"],
     defaultHoles: 18,
@@ -50,7 +49,6 @@ const GAME_FORMATS = [
     id: "skins",
     name: "Skins",
     players: { min: 2, max: 6 },
-    icon: "💰",
     description: "Every hole is its own bet. Low score takes the skin. Ties carry over.",
     mechanics: ["carry_overs", "pops"],
     defaultHoles: 18,
@@ -61,7 +59,6 @@ const GAME_FORMATS = [
     id: "wolf",
     name: "Wolf",
     players: { min: 4, max: 4 },
-    icon: "🐺",
     description: "Rotating Wolf picks a partner — or goes lone. Strategy meets guts.",
     mechanics: ["lone_wolf", "pops"],
     defaultHoles: 18,
@@ -72,7 +69,6 @@ const GAME_FORMATS = [
     id: "custom",
     name: "Custom Game",
     players: { min: 2, max: 6 },
-    icon: "⚙️",
     description: "Build your own rules. Your house, your game.",
     mechanics: [],
     defaultHoles: 18,
@@ -80,6 +76,16 @@ const GAME_FORMATS = [
     requiresCarts: false,
   },
 ];
+
+// SVG icon renderer per game — keyed by game id
+const GAME_ICON = {
+  drivers_others_carts: (s) => <Users size={s} strokeWidth={1.75} />,
+  flip:                 (s) => <RotateCcw size={s} strokeWidth={1.75} />,
+  nassau:               (s) => <Flag size={s} strokeWidth={1.75} />,
+  skins:                (s) => <MoneyIcon size={s} />,
+  wolf:                 (s) => <WolfIcon size={s} />,
+  custom:               (s) => <Sliders size={s} strokeWidth={1.75} />,
+};
 
 const AUSTIN_COURSES = [
   // === CITY OF AUSTIN MUNICIPAL (Golf ATX) ===
@@ -121,26 +127,26 @@ const AUSTIN_COURSES = [
 ];
 
 const COURSE_GROUPS = [
-  { label: "🏛️ City of Austin Municipal", types: ["municipal"] },
-  { label: "🔒 Private Clubs", types: ["private"] },
-  { label: "⛳ Resort / Semi-Private", types: ["resort", "semi-private"] },
-  { label: "🏌️ Public / Daily Fee", types: ["public"] },
+  { label: "City of Austin Municipal", types: ["municipal"] },
+  { label: "Private Clubs", types: ["private"] },
+  { label: "Resort / Semi-Private", types: ["resort", "semi-private"] },
+  { label: "Public / Daily Fee", types: ["public"] },
 ];
 
 const TYPE_COLORS = { municipal: "#059669", public: "#2D5016", private: "#7C3AED", "semi-private": "#3B82F6", resort: "#F59E0B" };
 
 const MECHANICS_CONFIG = {
-  hammer: { label: "Hammer", icon: "🔨", description: "Double-or-nothing mid-hole challenge" },
-  crybaby: { label: "Crybaby", icon: "🍼", description: "End-of-round redemption for the biggest loser" },
-  birdie_bonus: { label: "Birdie Bonus", icon: "🐦", description: "Birdies multiply the hole value" },
-  carry_overs: { label: "Carry-Overs", icon: "➡️", description: "Tied holes carry value to the next hole" },
-  presses: { label: "Presses", icon: "📈", description: "New bet when a team goes 2-down" },
-  pops: { label: "Handicap Strokes", icon: "🎯", description: "Stroke allocation based on GHIN handicap" },
-  lone_wolf: { label: "Lone Wolf", icon: "🐺", description: "Go solo for multiplied stakes" },
-  greenies: { label: "Greenies", icon: "🟢", description: "Closest to pin on par 3s" },
-  sandies: { label: "Sandies", icon: "⛱️", description: "Par or better from a bunker" },
-  kps: { label: "KPs", icon: "📍", description: "Closest to the pin side bets" },
-  no_pops_par3: { label: "No Pops on Par 3s", icon: "🚫", description: "No handicap strokes on par 3s" },
+  hammer:       { label: "Hammer",          icon: (s) => <HammerIcon size={s} />,        description: "Double-or-nothing mid-hole challenge" },
+  crybaby:      { label: "Crybaby",         icon: (s) => <CrybabyBottleIcon size={s} />, description: "End-of-round redemption for the biggest loser" },
+  birdie_bonus: { label: "Birdie Bonus",    icon: (s) => <BirdieIcon size={s} />,        description: "Birdies multiply the hole value" },
+  carry_overs:  { label: "Carry-Overs",     icon: (s) => <RotateCcw size={s} strokeWidth={2} />, description: "Tied holes carry value to the next hole" },
+  presses:      { label: "Presses",         icon: (s) => <PressIcon size={s} />,         description: "New bet when a team goes 2-down" },
+  pops:         { label: "Handicap Strokes",icon: (s) => <Users size={s} strokeWidth={2} />, description: "Stroke allocation based on GHIN handicap" },
+  lone_wolf:    { label: "Lone Wolf",       icon: (s) => <WolfIcon size={s} />,          description: "Go solo for multiplied stakes" },
+  greenies:     { label: "Greenies",        icon: (s) => <Flag size={s} strokeWidth={2} />, description: "Closest to pin on par 3s" },
+  sandies:      { label: "Sandies",         icon: (s) => <Coins size={s} strokeWidth={2} />, description: "Par or better from a bunker" },
+  kps:          { label: "KPs",             icon: (s) => <Flag size={s} strokeWidth={2} />, description: "Closest to the pin side bets" },
+  no_pops_par3: { label: "No Pops Par 3s",  icon: (s) => <Sliders size={s} strokeWidth={2} />, description: "No handicap strokes on par 3s" },
 };
 
 // --- STEP INDICATOR ---
@@ -183,16 +189,24 @@ function GameCard({ game, selected, onSelect, playerCount }) {
       disabled={!fits && playerCount > 0}
       style={{
         width: "100%", textAlign: "left", border: "none", cursor: fits || playerCount === 0 ? "pointer" : "not-allowed",
-        background: isSelected ? "#EEF5E5" : "#fff",
-        borderRadius: 16, padding: "16px 18px",
+        background: isSelected ? "#EEF5E5" : "#FAF5EC",
+        borderRadius: 16, padding: "20px 20px",
         boxShadow: isSelected ? "0 0 0 2px #2D5016, 0 2px 8px rgba(45,80,22,0.12)" : "0 1px 3px rgba(0,0,0,0.06)",
         opacity: !fits && playerCount > 0 ? 0.4 : 1,
         transition: "all 0.2s ease",
         transform: isSelected ? "scale(1.01)" : "scale(1)",
       }}
     >
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
-        <span style={{ fontSize: 28, lineHeight: 1 }}>{game.icon}</span>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
+        <div style={{
+          width: 48, height: 48, borderRadius: 14, flexShrink: 0,
+          background: isSelected ? "rgba(45,80,22,0.12)" : "#EDE7D9",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          color: isSelected ? "#2D5016" : "#8B7355",
+          transition: "all 0.2s ease",
+        }}>
+          {GAME_ICON[game.id]?.(22)}
+        </div>
         <div style={{ flex: 1 }}>
           <div style={{
             fontFamily: "'Lato', -apple-system, BlinkMacSystemFont, sans-serif",
@@ -202,27 +216,29 @@ function GameCard({ game, selected, onSelect, playerCount }) {
           </div>
           <div style={{
             fontFamily: "'Lato', -apple-system, BlinkMacSystemFont, sans-serif",
-            fontSize: 13, color: "#8B7355", lineHeight: 1.4,
+            fontSize: 13, color: "#8B7355", lineHeight: 1.45,
           }}>
             {game.description}
           </div>
           <div style={{
-            marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap",
+            marginTop: 10, display: "flex", gap: 6, flexWrap: "wrap",
           }}>
             <span style={{
-              fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 6,
+              fontSize: 12, fontWeight: 600, padding: "4px 10px", borderRadius: 6,
               background: "#EDE7D9", color: "#8B7355",
-              fontFamily: "'SF Mono', 'JetBrains Mono', monospace",
+              fontFamily: "'Lato', -apple-system, sans-serif",
             }}>
               {game.players.min === game.players.max ? `${game.players.min}P` : `${game.players.min}-${game.players.max}P`}
             </span>
             {game.mechanics.slice(0, 3).map(m => (
               <span key={m} style={{
-                fontSize: 11, fontWeight: 500, padding: "3px 8px", borderRadius: 6,
+                fontSize: 12, fontWeight: 500, padding: "4px 10px", borderRadius: 6,
                 background: "#FEF3C7", color: "#92400E",
                 fontFamily: "'Lato', -apple-system, sans-serif",
+                display: "inline-flex", alignItems: "center", gap: 4,
               }}>
-                {MECHANICS_CONFIG[m]?.icon} {MECHANICS_CONFIG[m]?.label}
+                {MECHANICS_CONFIG[m]?.icon(11)}
+                {MECHANICS_CONFIG[m]?.label}
               </span>
             ))}
           </div>
@@ -561,7 +577,14 @@ function MechanicToggle({ id, config, enabled, onToggle, expanded, onExpand, set
       <div style={{
         display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", cursor: "pointer",
       }} onClick={() => onToggle(id)}>
-        <span style={{ fontSize: 20 }}>{config.icon}</span>
+        <div style={{
+          width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+          background: enabled ? "rgba(45,80,22,0.10)" : "#EDE7D9",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          color: enabled ? "#2D5016" : "#8B7355", transition: "all 0.2s ease",
+        }}>
+          {config.icon(18)}
+        </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontFamily: font, fontSize: 14, fontWeight: 600, color: "#1E130A" }}>{config.label}</div>
           <div style={{ fontFamily: font, fontSize: 12, color: "#8B7355" }}>{config.description}</div>
@@ -713,7 +736,13 @@ function ReviewSection({ label, value, icon }) {
       display: "flex", alignItems: "center", gap: 12, padding: "12px 16px",
       background: "#FAF5EC", borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
     }}>
-      <span style={{ fontSize: 18 }}>{icon}</span>
+      <div style={{
+        width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+        background: "#EDE7D9", display: "flex", alignItems: "center",
+        justifyContent: "center", color: "#8B7355",
+      }}>
+        {icon}
+      </div>
       <div style={{ flex: 1 }}>
         <div style={{
           fontFamily: "'Lato', -apple-system, sans-serif",
@@ -1031,13 +1060,13 @@ export default function CrybabSetupWizard() {
       </div>
 
       {/* Content */}
-      <div style={{ padding: "16px 16px" }}>
+      <div style={{ padding: "20px 16px" }}>
         {/* STEP 0: FORMAT */}
         {step === 0 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div style={{
-              fontSize: 18, fontWeight: 700, color: "#1E130A",
-              letterSpacing: "-0.02em", marginBottom: 4,
+              fontSize: 20, fontWeight: 700, color: "#1E130A",
+              letterSpacing: "-0.02em", marginBottom: 2,
             }}>
               Choose Your Game
             </div>
@@ -1339,10 +1368,10 @@ export default function CrybabSetupWizard() {
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {[
-                  { value: "public", label: "Public", icon: "🌐" },
-                  { value: "friends", label: "Friends", icon: "👥" },
-                  { value: "group", label: "Group Only", icon: "🔒" },
-                  { value: "private", label: "Private", icon: "🙈" },
+                  { value: "public",  label: "Public",     icon: <Globe size={16} strokeWidth={2} /> },
+                  { value: "friends", label: "Friends",    icon: <Users size={16} strokeWidth={2} /> },
+                  { value: "group",   label: "Group Only", icon: <Lock size={16} strokeWidth={2} /> },
+                  { value: "private", label: "Private",    icon: <EyeOff size={16} strokeWidth={2} /> },
                 ].map(opt => (
                   <button key={opt.value} onClick={() => setPrivacy(opt.value)} style={{
                     flex: 1, minWidth: 70, padding: "10px 8px", borderRadius: 10, border: "none", cursor: "pointer",
@@ -1350,8 +1379,9 @@ export default function CrybabSetupWizard() {
                     color: privacy === opt.value ? "#fff" : "#8B7355",
                     fontFamily: font, fontSize: 12, fontWeight: 600,
                     transition: "all 0.15s ease", textAlign: "center",
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
                   }}>
-                    <div style={{ fontSize: 16, marginBottom: 4 }}>{opt.icon}</div>
+                    {opt.icon}
                     {opt.label}
                   </button>
                 ))}
@@ -1367,12 +1397,12 @@ export default function CrybabSetupWizard() {
               Review & Start
             </div>
 
-            <ReviewSection icon={format?.icon} label="Game" value={format?.name} />
-            <ReviewSection icon="👥" label="Players" value={players.filter(p => p.name.trim()).map(p => p.name).join(", ")} />
-            <ReviewSection icon="⛳" label="Course" value={`${course?.name}${selectedTee ? ` · ${selectedTee} tees` : ""}`} />
-            <ReviewSection icon="💰" label="Hole Value" value={`$${holeValue} / hole`} />
-            <ReviewSection icon="🎯" label="Mechanics" value={[...enabledMechanics].map(m => MECHANICS_CONFIG[m]?.label).join(", ") || "None"} />
-            <ReviewSection icon="👁️" label="Visibility" value={privacy.charAt(0).toUpperCase() + privacy.slice(1)} />
+            <ReviewSection icon={format ? GAME_ICON[format.id]?.(18) : null} label="Game" value={format?.name} />
+            <ReviewSection icon={<Users size={18} strokeWidth={2} />} label="Players" value={players.filter(p => p.name.trim()).map(p => p.name).join(", ")} />
+            <ReviewSection icon={<Flag size={18} strokeWidth={2} />} label="Course" value={`${course?.name}${selectedTee ? ` · ${selectedTee} tees` : ""}`} />
+            <ReviewSection icon={<MoneyIcon size={18} />} label="Hole Value" value={`$${holeValue} / hole`} />
+            <ReviewSection icon={<Sliders size={18} strokeWidth={2} />} label="Mechanics" value={[...enabledMechanics].map(m => MECHANICS_CONFIG[m]?.label).join(", ") || "None"} />
+            <ReviewSection icon={<Eye size={18} strokeWidth={2} />} label="Visibility" value={privacy.charAt(0).toUpperCase() + privacy.slice(1)} />
 
             {/* Estimated exposure */}
             <div style={{

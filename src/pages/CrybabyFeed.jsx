@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { loadFeed, createPost, addComment, toggleReaction, loadProfile, loadBroadcastRounds, followRound, declineRound, loadFollowedRoundEvents, loadActiveRound } from "@/lib/db";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { MessageCircle, ArrowUp, Radio, Eye, X, Trophy, Zap } from "lucide-react";
-import { CrybIcon, ParFlagIcon } from "@/components/icons/CrybIcons";
+import { MessageCircle, ArrowUp, Radio, Eye, X, Trophy, Zap, Plus } from "lucide-react";
+import { CrybIcon, ParFlagIcon, MoneyIcon } from "@/components/icons/CrybIcons";
 
 const REACTION_EMOJIS = {
   "🔥": "🔥", "🔨": "🔨", "🍼": "🍼", "💀": "💀", "🐔": "🐔",
@@ -521,15 +521,16 @@ export default function CrybabyFeed() {
   return (
     <div className="max-w-[420px] mx-auto min-h-screen bg-background pb-24">
       {/* Page header */}
-      <div className="px-4 pt-4 pb-3">
+      <div className="px-5 pt-6 pb-5">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-extrabold text-foreground tracking-tight">Action</h1>
-            <p className="text-[11px] text-muted-foreground font-medium tracking-wide">golf's money game</p>
+            <h1 className="text-3xl font-extrabold text-foreground tracking-tight">Action</h1>
+            <p className="text-[13px] text-muted-foreground font-medium tracking-wide mt-0.5">golf's money game</p>
           </div>
           <button onClick={() => navigate("/setup")}
-            className="px-4 py-3 min-h-[44px] rounded-xl border-none cursor-pointer text-sm font-extrabold bg-primary text-primary-foreground hover:opacity-90 transition-opacity shadow-md flex items-center gap-1.5">
-            💰 Start Action
+            className="px-4 py-3 min-h-[44px] rounded-xl border-none cursor-pointer text-sm font-extrabold bg-primary text-primary-foreground hover:opacity-90 transition-opacity shadow-md flex items-center gap-2">
+            <Plus size={15} strokeWidth={2.5} />
+            Start Action
           </button>
         </div>
       </div>
@@ -551,7 +552,7 @@ export default function CrybabyFeed() {
       )}
 
       {/* Content */}
-      <div className="p-4 flex flex-col gap-3.5">
+      <div className="px-5 pb-4 flex flex-col gap-5">
         {/* 💰 Live Action — pending broadcasts come FIRST */}
         {(pendingBroadcasts.length > 0 || activeBroadcasts.length > 0) && (
           <div className="text-[10px] font-bold text-primary uppercase tracking-widest flex items-center gap-1.5 px-1">
@@ -606,15 +607,18 @@ export default function CrybabyFeed() {
         {loading ? (
           <div className="text-center py-10 text-muted-foreground text-sm">Loading...</div>
         ) : posts.length === 0 && pendingBroadcasts.length === 0 ? (
-          <div className="bg-card rounded-2xl p-8 text-center border border-border">
-            <div className="text-4xl mb-3">💰</div>
-            <div className="text-base font-extrabold text-foreground mb-1">No action yet</div>
-            <div className="text-sm text-muted-foreground mb-4">
+          <div className="bg-card rounded-2xl py-10 px-8 text-center border border-border">
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-5">
+              <MoneyIcon size={28} className="text-primary" />
+            </div>
+            <div className="text-base font-extrabold text-foreground mb-2">No action yet</div>
+            <div className="text-sm text-muted-foreground mb-6 leading-relaxed">
               Start a round, put money on it, and let the trash talk begin.
             </div>
             <button onClick={() => navigate("/setup")}
-              className="px-6 py-3 rounded-2xl border-none cursor-pointer text-sm font-extrabold bg-primary text-primary-foreground hover:opacity-90 transition-opacity shadow-md">
-              💰 Start Action
+              className="px-6 py-3 rounded-2xl border-none cursor-pointer text-sm font-extrabold bg-primary text-primary-foreground hover:opacity-90 transition-opacity shadow-md inline-flex items-center gap-2">
+              <Plus size={14} strokeWidth={2.5} />
+              Start Action
             </button>
           </div>
         ) : (
