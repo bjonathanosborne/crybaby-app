@@ -159,7 +159,7 @@ export default function ProfilePage() {
         </div>
         {/* Profile card skeleton */}
         <div className="bg-card rounded-2xl p-6 flex flex-col items-center gap-3 shadow-sm">
-          <div className="w-[72px] h-[72px] rounded-full bg-muted" />
+          <div className="w-[96px] h-[96px] rounded-full bg-muted" />
           <div className="h-5 w-32 bg-muted rounded-md" />
           <div className="h-4 w-24 bg-muted rounded-md" />
           <div className="flex gap-8 mt-2">
@@ -198,12 +198,12 @@ export default function ProfilePage() {
           <div style={{ position: "relative", display: "inline-block" }}>
             {profile?.avatar_url ? (
               <img src={profile.avatar_url} alt={profile.display_name}
-                style={{ width: 72, height: 72, borderRadius: 36, objectFit: "cover", display: "block", margin: "0 auto" }} />
+                style={{ width: 96, height: 96, borderRadius: 48, objectFit: "cover", display: "block", margin: "0 auto" }} />
             ) : (
               <div className="bg-primary text-primary-foreground" style={{
-                width: 72, height: 72, borderRadius: 36,
+                width: 96, height: 96, borderRadius: 48,
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 28, fontWeight: 700,
+                fontSize: 36, fontWeight: 700,
                 margin: "0 auto",
               }}>
                 {(profile?.display_name || "?")[0].toUpperCase()}
