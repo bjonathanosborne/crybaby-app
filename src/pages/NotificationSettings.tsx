@@ -41,20 +41,13 @@ export default function NotificationSettings() {
           background: "#fff", borderRadius: 20, padding: "20px",
           boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
         }}>
-          <div style={{
-            fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 16,
-          }}>
-            Push Notifications
-          </div>
-
           {/* Toggle Row */}
           <div style={{
             display: "flex", justifyContent: "space-between", alignItems: "center",
-            padding: "12px 0", borderBottom: "1px solid #F3F4F6",
           }}>
             <div>
               <div style={{ fontSize: 14, fontWeight: 600, color: "#1E130A" }}>
-                Browser Notifications
+                Push Notifications
               </div>
               <div style={{ fontSize: 12, color: "#A8957B", marginTop: 2 }}>
                 Get alerts even when the app isn't open
@@ -80,65 +73,6 @@ export default function NotificationSettings() {
               }} />
             </button>
           </div>
-
-          {/* Status Info */}
-          {!supported && (
-            <div style={{
-              marginTop: 12, padding: "10px 14px", borderRadius: 10,
-              background: "#FEF3C7", fontSize: 12, color: "#92400E",
-            }}>
-              Push notifications are not supported in this browser. Try using Chrome or Edge on desktop, or add the app to your home screen on mobile.
-            </div>
-          )}
-
-          {isDenied && (
-            <div style={{
-              marginTop: 12, padding: "10px 14px", borderRadius: 10,
-              background: "#FEF2F2", fontSize: 12, color: "#DC2626",
-            }}>
-              Notifications are blocked. To enable them, update your browser's notification permissions for this site, then refresh the page.
-            </div>
-          )}
-
-          {isEnabled && (
-            <div style={{
-              marginTop: 12, padding: "10px 14px", borderRadius: 10,
-              background: "#EEF5E5", fontSize: 12, color: "#2D5016",
-            }}>
-              ✓ You'll receive push notifications for group activity, round updates, and friend requests.
-            </div>
-          )}
-        </div>
-
-        {/* Notification Types Info */}
-        <div style={{
-          background: "#fff", borderRadius: 20, padding: "20px",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-        }}>
-          <div style={{
-            fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 16,
-          }}>
-            What You'll Be Notified About
-          </div>
-
-          {[
-            { emoji: "👥", title: "Group Activity", desc: "New members joining your groups" },
-            { emoji: "⛳", title: "Round Updates", desc: "Score updates and round completions" },
-            { emoji: "🤝", title: "Friend Requests", desc: "When someone sends you a friend request" },
-            { emoji: "💬", title: "Comments & Reactions", desc: "Activity on your posts" },
-          ].map((item, i) => (
-            <div key={i} style={{
-              display: "flex", alignItems: "center", gap: 12,
-              padding: "10px 0",
-              borderBottom: i < 3 ? "1px solid #F3F4F6" : "none",
-            }}>
-              <span style={{ fontSize: 20 }}>{item.emoji}</span>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#1E130A" }}>{item.title}</div>
-                <div style={{ fontSize: 11, color: "#A8957B" }}>{item.desc}</div>
-              </div>
-            </div>
-          ))}
         </div>
       </div>
     </div>
