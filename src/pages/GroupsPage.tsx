@@ -218,7 +218,7 @@ export default function GroupsPage() {
     <div className="max-w-[420px] mx-auto min-h-screen bg-background pb-24">
       {/* Page header */}
       <div className="px-4 pt-4 pb-2 flex justify-between items-center">
-        <h1 className="text-2xl font-extrabold text-foreground tracking-tight">
+        <h1 className="text-2xl text-primary tracking-tight">
           {view === "create" ? "New Group" : view === "detail" ? (selectedGroup?.name || "Group") : view === "join" ? "Join Group" : "Groups"}
         </h1>
         {view === "list" && (

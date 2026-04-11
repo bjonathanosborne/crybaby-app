@@ -537,7 +537,7 @@ export default function CrybabyFeed() {
       <div className="px-5" style={{ paddingTop: 20, paddingBottom: 24 }}>
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-extrabold text-foreground tracking-tight">Action</h1>
+            <h1 className="text-3xl text-primary tracking-tight">Action</h1>
           </div>
           <button onClick={() => navigate("/setup")}
             className="px-4 py-3 min-h-[44px] rounded-xl border-none cursor-pointer text-sm font-extrabold bg-primary text-primary-foreground hover:opacity-90 transition-opacity shadow-md flex items-center gap-2">

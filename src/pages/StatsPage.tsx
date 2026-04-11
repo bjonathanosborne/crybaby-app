@@ -140,7 +140,7 @@ export default function StatsPage() {
   return (
     <div className="max-w-[420px] mx-auto min-h-screen bg-background pb-24 pt-6">
       <div className="px-4 pt-4 pb-2">
-        <h1 className="text-2xl font-extrabold text-foreground tracking-tight">Stats</h1>
+        <h1 className="text-2xl text-primary tracking-tight">Stats</h1>
         <p className="text-xs text-muted-foreground mt-0.5">
           {[profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || profile?.display_name || "Player"} · {stats.roundsPlayed} rounds
         </p>

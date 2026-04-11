@@ -155,7 +155,7 @@ export default function InboxPage() {
     <div className="max-w-[420px] mx-auto min-h-screen bg-background pb-24 pt-6">
       {/* Header */}
       <div className="px-4 pt-4 pb-2 flex justify-between items-center">
-        <h1 className="text-2xl font-extrabold text-foreground tracking-tight">Inbox</h1>
+        <h1 className="text-2xl text-primary tracking-tight">Inbox</h1>
         {unreadCount > 0 && (
           <button onClick={handleMarkAllRead}
             className="px-3 py-1.5 rounded-lg border border-border bg-card text-xs font-semibold text-muted-foreground cursor-pointer hover:border-primary/30 transition-colors">

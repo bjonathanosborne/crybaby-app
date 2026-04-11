@@ -136,7 +136,7 @@ export default function UserProfilePage() {
   return (
     <div className="max-w-[420px] mx-auto min-h-screen bg-background pb-24">
       <div className="px-4 pt-4 pb-2">
-        <h1 className="text-2xl font-extrabold text-foreground tracking-tight">Profile</h1>
+        <h1 className="text-2xl text-primary tracking-tight">Profile</h1>
       </div>
 
       <div className="px-4 flex flex-col gap-4">

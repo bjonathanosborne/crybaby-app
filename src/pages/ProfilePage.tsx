@@ -185,7 +185,7 @@ export default function ProfilePage() {
     <div className="max-w-[420px] mx-auto min-h-screen bg-background pb-24">
       {/* Page header */}
       <div className="px-4 pt-4 pb-2 flex justify-between items-center">
-        <h1 className="text-2xl font-extrabold text-foreground tracking-tight">Profile</h1>
+        <h1 className="text-2xl text-primary tracking-tight">Profile</h1>
         <button onClick={signOut}
           className="px-3 py-2 rounded-xl border border-border bg-card text-destructive text-xs font-semibold cursor-pointer hover:bg-destructive/10 transition-colors">
           Sign Out
