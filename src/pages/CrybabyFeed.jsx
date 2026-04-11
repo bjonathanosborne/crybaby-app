@@ -534,8 +534,7 @@ export default function CrybabyFeed() {
   return (
     <div className="max-w-[420px] mx-auto min-h-screen bg-background pb-24">
       {/* Page header */}
-      <div className="px-5 pt-5 pb-4 flex justify-between items-center">
-        <h1 className="text-3xl text-primary tracking-tight">Action</h1>
+      <div className="px-5 pt-5 pb-4 flex justify-end items-center">
         <button onClick={() => navigate("/setup")}
           className="px-4 py-2.5 min-h-[44px] rounded-xl border-none cursor-pointer text-sm font-bold bg-primary text-primary-foreground hover:opacity-90 transition-opacity shadow-md flex items-center gap-2">
           <Plus size={15} strokeWidth={2.5} />
