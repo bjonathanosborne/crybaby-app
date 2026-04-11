@@ -356,7 +356,7 @@ export default function ProfilePage() {
         {friendProfiles.length > 0 && (
           <div style={{ background: "hsl(var(--card))", borderRadius: 20, padding: "18px 20px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              <span style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016" }}>
                 Friends ({friendProfiles.length})
               </span>
               <button onClick={() => navigate("/friends")}
@@ -394,7 +394,7 @@ export default function ProfilePage() {
           background: "hsl(var(--card))", borderRadius: 20, padding: "18px 20px",
           boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
         }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>
+          <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 14 }}>
             Stats
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -426,7 +426,7 @@ export default function ProfilePage() {
           boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            <span style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016" }}>
               Ledger
             </span>
             <div style={{ display: "flex", gap: 4 }}>
@@ -493,7 +493,7 @@ export default function ProfilePage() {
           background: "hsl(var(--card))", borderRadius: 20, padding: "18px 20px",
           boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
         }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>
+          <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 14 }}>
             Round History
           </div>
           {rounds.length === 0 ? (

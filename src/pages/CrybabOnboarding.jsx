@@ -423,7 +423,7 @@ function GHINScreen({ userName, onVerified, onSkip }) {
 
             {/* Recent Scores */}
             <div style={{ padding: "16px 18px" }}>
-              <div style={{ fontFamily: FONT, fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
+              <div style={{ fontFamily: FONT, fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 10 }}>
                 Recent Scores
               </div>
               {scoringHistory.map((s, i) => (
@@ -643,7 +643,7 @@ function ProfileSetupScreen({ userName, handicap, ghinVerified, onComplete }) {
       <div style={{ padding: "28px 24px", flex: 1, display: "flex", flexDirection: "column", gap: 20 }}>
         {/* Avatar Color — only show if no uploaded image */}
         <div>
-          <div style={{ fontFamily: FONT, fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
+          <div style={{ fontFamily: FONT, fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 10 }}>
             {avatarImage ? "Avatar Color (backup)" : "Pick Your Color"}
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
@@ -671,7 +671,7 @@ function ProfileSetupScreen({ userName, handicap, ghinVerified, onComplete }) {
 
         {/* Home Course */}
         <div>
-          <div style={{ fontFamily: FONT, fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
+          <div style={{ fontFamily: FONT, fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 10 }}>
             Home Course
           </div>
           <div style={{ position: "relative" }}>
@@ -736,7 +736,7 @@ function ProfileSetupScreen({ userName, handicap, ghinVerified, onComplete }) {
 
         {/* Location */}
         <div>
-          <div style={{ fontFamily: FONT, fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
+          <div style={{ fontFamily: FONT, fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 10 }}>
             City
           </div>
           <input

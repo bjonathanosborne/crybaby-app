@@ -258,7 +258,7 @@ export default function RoundSpectateView() {
       {/* Scoreboard */}
       {scoreboard.length > 0 && (
         <div style={{ margin: "0 16px 12px" }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: "hsl(var(--muted-foreground))", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Scoreboard</div>
+          <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 8 }}>Scoreboard</div>
           <div style={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 14, overflow: "hidden" }}>
             {scoreboard.map((p, i) => {
               const name = p.guest_name || "Player";
@@ -295,7 +295,7 @@ export default function RoundSpectateView() {
 
       {/* Live event feed */}
       <div style={{ margin: "0 16px" }}>
-        <div style={{ fontSize: 11, fontWeight: 800, color: "hsl(var(--muted-foreground))", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+        <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 8 }}>
           Live Feed
         </div>
 

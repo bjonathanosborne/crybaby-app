@@ -477,7 +477,7 @@ export default function GroupsPage() {
                 background: "#FAF5EC", borderRadius: 20, padding: "18px 20px",
                 boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
               }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>
+                <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 12 }}>
                   Invite Friends
                 </div>
                 <div style={{
@@ -532,7 +532,7 @@ export default function GroupsPage() {
               background: "#FAF5EC", borderRadius: 20, padding: "18px 20px",
               boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
             }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>
+              <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 14 }}>
                 Leaderboard
               </div>
               {members.length === 0 ? (
@@ -593,7 +593,7 @@ export default function GroupsPage() {
               background: "#FAF5EC", borderRadius: 20, padding: "18px 20px",
               boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
             }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>
+              <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 14 }}>
                 Members ({members.length})
               </div>
               {members.map((m: any, i: number) => {

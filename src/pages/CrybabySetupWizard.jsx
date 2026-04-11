@@ -1246,7 +1246,7 @@ export default function CrybabSetupWizard() {
                 </div>
 
                 {/* Tee selection */}
-                <div style={{ fontSize: 11, fontWeight: 600, color: "#8B7355", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 8 }}>
                   Select Tees
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
@@ -1271,7 +1271,7 @@ export default function CrybabSetupWizard() {
                 marginTop: 4, background: "#FAF5EC", borderRadius: 14, padding: 16,
                 boxShadow: "0 1px 3px rgba(0,0,0,0.06)", overflow: "auto",
               }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "#8B7355", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 10 }}>
                   Scorecard Preview
                 </div>
                 <div style={{ display: "flex", gap: 4, overflowX: "auto", paddingBottom: 4 }}>
@@ -1303,7 +1303,7 @@ export default function CrybabSetupWizard() {
               background: "#FAF5EC", borderRadius: 16, padding: "20px 20px",
               boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
             }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>
+              <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 12 }}>
                 Hole Value
               </div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20 }}>
@@ -1344,7 +1344,7 @@ export default function CrybabSetupWizard() {
             </div>
 
             {/* Mechanics */}
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 4 }}>
+            <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginTop: 4 }}>
               Game Mechanics
             </div>
             {Object.entries(MECHANICS_CONFIG).map(([id, config]) => (
@@ -1364,7 +1364,7 @@ export default function CrybabSetupWizard() {
               marginTop: 4, background: "#FAF5EC", borderRadius: 14, padding: 16,
               boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
             }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
+              <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 10 }}>
                 Round Visibility
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -1427,7 +1427,7 @@ export default function CrybabSetupWizard() {
                 background: "#FAF5EC", borderRadius: 14, padding: 16,
                 boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
               }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
+                <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 10 }}>
                   House Rules
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>

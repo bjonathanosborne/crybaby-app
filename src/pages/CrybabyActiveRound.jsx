@@ -525,7 +525,7 @@ function CrybabSetupModal({ players, totals, onConfirm }) {
         </div>
 
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontFamily: FONT, fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+          <div style={{ fontFamily: FONT, fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 8 }}>
             Crybaby Bet (max ${maxBet})
           </div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16 }}>
@@ -546,7 +546,7 @@ function CrybabSetupModal({ players, totals, onConfirm }) {
         </div>
 
         <div style={{ marginBottom: 20 }}>
-          <div style={{ fontFamily: FONT, fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+          <div style={{ fontFamily: FONT, fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 8 }}>
             Choose Partner
           </div>
           <div style={{ display: "flex", gap: 8 }}>
@@ -1553,7 +1553,7 @@ export default function CrybabActiveRound() {
               background: "#FAF5EC", borderRadius: 16, padding: 20,
               boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
             }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>
+              <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 14 }}>
                 Nassau Breakdown
               </div>
               {['Front 9', 'Back 9', 'Overall'].map((label, idx) => {
@@ -1585,7 +1585,7 @@ export default function CrybabActiveRound() {
             background: "#FAF5EC", borderRadius: 16, padding: 20, marginTop: 8,
             boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
           }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#A8957B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>
+            <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 14 }}>
               Settlement
             </div>
             {(() => {
