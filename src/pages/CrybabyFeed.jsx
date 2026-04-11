@@ -117,7 +117,7 @@ function PostCard({ post, profile, comments, reactions, profiles, currentUserId,
         {isRoundPost && roundData ? (
           <div>
             {roundData.course && (
-              <div className="text-sm font-semibold text-foreground mb-1 flex items-center gap-1.5">
+              <div className="mb-1 flex items-center gap-1.5" style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016" }}>
                 <ParFlagIcon size={14} className="text-primary flex-shrink-0" /> {roundData.course}
               </div>
             )}
@@ -341,7 +341,7 @@ function BroadcastCard({ round, onFollow, onDecline, navigate }) {
           </div>
         </div>
         <div className="bg-muted/50 rounded-xl p-3 mb-3">
-          <div className="text-sm font-semibold text-foreground flex items-center gap-1.5 mb-1">
+          <div className="flex items-center gap-1.5 mb-1" style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016" }}>
             <ParFlagIcon size={14} className="text-primary flex-shrink-0" /> {round.course}
           </div>
           <div className="flex items-center gap-2 flex-wrap mt-0.5">
@@ -623,7 +623,7 @@ export default function CrybabyFeed() {
             <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto" style={{ marginBottom: 14 }}>
               <MoneyIcon size={30} className="text-primary" />
             </div>
-            <div className="text-lg font-extrabold text-foreground" style={{ marginBottom: 8 }}>No action yet</div>
+            <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 20, fontWeight: 400, color: "#2D5016", marginBottom: 8 }}>No action yet</div>
             <div className="text-sm text-muted-foreground leading-relaxed">
               Start a round, put money on it, and let the trash talk begin.
             </div>
