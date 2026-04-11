@@ -329,7 +329,7 @@ export default function ProfilePage() {
               {(() => {
                 const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || profile?.display_name || "Player";
                 return (
-                  <div style={{ fontFamily: "'Pacifico', cursive", fontSize: fullName.length > 20 ? 16 : 22, fontWeight: 400, color: "#2D5016", marginTop: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%", padding: "0 8px" }}
+                  <div style={{ fontFamily: "'Pacifico', cursive", fontSize: fullName.length > 20 ? 16 : 22, fontWeight: 400, color: "#2D5016", marginTop: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%", padding: "0 8px", textShadow: "0 1px 8px rgba(212, 175, 55, 0.35)" }}
                     title={fullName}>
                     {fullName}
                   </div>

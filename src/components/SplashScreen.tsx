@@ -39,6 +39,7 @@ export default function SplashScreen({ onDone }: { onDone: () => void }) {
           textAlign: "center",
           animation: "splashSpin 3s ease-out forwards",
           opacity: 0,
+          textShadow: "0 1px 10px rgba(212, 175, 55, 0.4)",
         }}
       >
         Crybaby Golf

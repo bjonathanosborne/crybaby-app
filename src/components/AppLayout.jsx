@@ -66,6 +66,7 @@ export default function AppLayout() {
               whiteSpace: "nowrap",
               pointerEvents: "none",
               userSelect: "none",
+              textShadow: "0 1px 8px rgba(212, 175, 55, 0.35)",
             }}
           >
             Crybaby Golf
