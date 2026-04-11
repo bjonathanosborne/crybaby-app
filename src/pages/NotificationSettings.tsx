@@ -1,11 +1,9 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 const FONT = "'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 
 export default function NotificationSettings() {
-  const navigate = useNavigate();
   const { supported, permission, subscribe, unsubscribe } = usePushNotifications();
   const [loading, setLoading] = useState(false);
 
@@ -35,15 +33,9 @@ export default function NotificationSettings() {
         padding: "52px 20px 20px", background: "#fff",
         borderBottom: "1px solid #DDD0BB",
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <button onClick={() => navigate(-1)} style={{
-            background: "none", border: "none", cursor: "pointer",
-            fontSize: 20, color: "#8B7355", padding: 0, lineHeight: 1,
-          }}>←</button>
-          <span style={{ fontSize: 18, fontWeight: 800, color: "#1E130A" }}>
-            Notification Settings
-          </span>
-        </div>
+        <span style={{ fontFamily: "'Pacifico', cursive", fontSize: 20, fontWeight: 400, color: "#2D5016", lineHeight: 1 }}>
+          Notification Settings
+        </span>
       </div>
 
       <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 16 }}>
@@ -53,8 +45,7 @@ export default function NotificationSettings() {
           boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
         }}>
           <div style={{
-            fontSize: 11, fontWeight: 700, color: "#A8957B",
-            textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 16,
+            fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 16,
           }}>
             Push Notifications
           </div>
@@ -128,8 +119,7 @@ export default function NotificationSettings() {
           boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
         }}>
           <div style={{
-            fontSize: 11, fontWeight: 700, color: "#A8957B",
-            textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 16,
+            fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 16,
           }}>
             What You'll Be Notified About
           </div>
