@@ -1,27 +1,44 @@
 import { useState } from "react";
-import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 const FONT = "'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 
+const NOTIFICATION_TYPES = [
+  { key: "group_activity",   emoji: "👥", title: "Group Activity",       desc: "New members joining your groups" },
+  { key: "round_updates",    emoji: "⛳", title: "Round Updates",         desc: "Score updates and round completions" },
+  { key: "friend_requests",  emoji: "🤝", title: "Friend Requests",       desc: "When someone sends you a friend request" },
+  { key: "comments",         emoji: "💬", title: "Comments & Reactions",  desc: "Activity on your posts" },
+];
+
+function Toggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) {
+  return (
+    <button
+      onClick={onToggle}
+      style={{
+        width: 48, height: 28, borderRadius: 14, border: "none",
+        background: enabled ? "#2D5016" : "#CEC0AA",
+        position: "relative", cursor: "pointer",
+        transition: "background 0.2s",
+        flexShrink: 0,
+      }}
+    >
+      <span style={{
+        display: "block", width: 22, height: 22, borderRadius: 11,
+        background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+        position: "absolute", top: 3,
+        left: enabled ? 23 : 3,
+        transition: "left 0.2s",
+      }} />
+    </button>
+  );
+}
+
 export default function NotificationSettings() {
-  const { supported, permission, subscribe, unsubscribe } = usePushNotifications();
-  const [loading, setLoading] = useState(false);
+  const [prefs, setPrefs] = useState<Record<string, boolean>>(
+    Object.fromEntries(NOTIFICATION_TYPES.map((t) => [t.key, true]))
+  );
 
-  const isEnabled = permission === "granted";
-  const isDenied = permission === "denied";
-
-  const handleToggle = async () => {
-    setLoading(true);
-    try {
-      if (isEnabled) {
-        await unsubscribe();
-      } else {
-        await subscribe();
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  const toggle = (key: string) =>
+    setPrefs((p) => ({ ...p, [key]: !p[key] }));
 
   return (
     <div style={{
@@ -35,44 +52,25 @@ export default function NotificationSettings() {
         </span>
       </div>
 
-      <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 16 }}>
-        {/* Push Notifications Card */}
+      <div style={{ padding: 16 }}>
         <div style={{
-          background: "#fff", borderRadius: 20, padding: "20px",
+          background: "#fff", borderRadius: 20, padding: "8px 20px",
           boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
         }}>
-          {/* Toggle Row */}
-          <div style={{
-            display: "flex", justifyContent: "space-between", alignItems: "center",
-          }}>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: "#1E130A" }}>
-                Push Notifications
+          {NOTIFICATION_TYPES.map((item, i) => (
+            <div key={item.key} style={{
+              display: "flex", alignItems: "center", gap: 14,
+              padding: "14px 0",
+              borderBottom: i < NOTIFICATION_TYPES.length - 1 ? "1px solid #F3F4F6" : "none",
+            }}>
+              <span style={{ fontSize: 22, flexShrink: 0 }}>{item.emoji}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "#1E130A" }}>{item.title}</div>
+                <div style={{ fontSize: 12, color: "#A8957B", marginTop: 2 }}>{item.desc}</div>
               </div>
-              <div style={{ fontSize: 12, color: "#A8957B", marginTop: 2 }}>
-                Get alerts even when the app isn't open
-              </div>
+              <Toggle enabled={prefs[item.key]} onToggle={() => toggle(item.key)} />
             </div>
-            <button
-              onClick={handleToggle}
-              disabled={loading || !supported || isDenied}
-              style={{
-                width: 48, height: 28, borderRadius: 14, border: "none",
-                background: isEnabled ? "#2D5016" : "#CEC0AA",
-                position: "relative", cursor: loading || !supported || isDenied ? "not-allowed" : "pointer",
-                transition: "background 0.2s", opacity: loading ? 0.6 : 1,
-                flexShrink: 0,
-              }}
-            >
-              <span style={{
-                display: "block", width: 22, height: 22, borderRadius: 11,
-                background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
-                position: "absolute", top: 3,
-                left: isEnabled ? 23 : 3,
-                transition: "left 0.2s",
-              }} />
-            </button>
-          </div>
+          ))}
         </div>
       </div>
     </div>
