@@ -40,7 +40,7 @@ export default function HamburgerMenu() {
         </button>
       </SheetTrigger>
       <SheetContent side="left" className="w-72 p-0 flex flex-col">
-        <SheetHeader className="p-4 pb-2 border-b border-border">
+        <SheetHeader className="px-6 pt-8 pb-6 border-b border-border">
           <SheetTitle className="flex items-center gap-2">
             <span style={{ fontFamily: "'Pacifico', cursive", fontSize: 26, fontWeight: 400, color: "#2D5016", lineHeight: 1 }}>Crybaby Golf</span>
           </SheetTitle>
