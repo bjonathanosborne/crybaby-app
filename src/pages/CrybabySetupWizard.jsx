@@ -209,8 +209,8 @@ function GameCard({ game, selected, onSelect, playerCount }) {
         </div>
         <div style={{ flex: 1 }}>
           <div style={{
-            fontFamily: "'Lato', -apple-system, BlinkMacSystemFont, sans-serif",
-            fontSize: 16, fontWeight: 600, color: "#1E130A", marginBottom: 4,
+            fontFamily: "'Pacifico', cursive",
+            fontSize: 15, fontWeight: 400, color: "#2D5016", marginBottom: 4,
           }}>
             {game.name}
           </div>
@@ -1065,8 +1065,9 @@ export default function CrybabSetupWizard() {
         {step === 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div style={{
-              fontSize: 20, fontWeight: 700, color: "#1E130A",
-              letterSpacing: "-0.02em", marginBottom: 2,
+              fontFamily: "'Pacifico', cursive",
+              fontSize: 22, fontWeight: 400, color: "#2D5016",
+              letterSpacing: "0", marginBottom: 2,
             }}>
               Choose Your Game
             </div>
