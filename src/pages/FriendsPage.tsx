@@ -272,7 +272,7 @@ export default function FriendsPage() {
               </span>
             )}
             <div className="mt-4 p-3.5 bg-muted rounded-xl">
-              <div className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Total P&L</div>
+              <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 13, fontWeight: 400, color: "#2D5016", marginBottom: 2 }}>Total P&L</div>
               <div className={`font-mono text-2xl font-extrabold mt-1 ${friendLedgerTotal >= 0 ? "text-primary" : "text-destructive"}`}>
                 {friendLedgerTotal >= 0 ? "+" : ""}${friendLedgerTotal.toFixed(0)}
               </div>
@@ -284,7 +284,7 @@ export default function FriendsPage() {
             </div>
           ) : (
             <div className="bg-card rounded-2xl p-4 border border-border">
-              <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-3">Round Results</div>
+              <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 12 }}>Round Results</div>
               <div className="flex flex-col gap-1">
                 {friendLedger.map((s: any, i: number) => (
                   <div key={i} className="flex justify-between items-center p-3 bg-muted rounded-lg text-xs">
@@ -397,7 +397,7 @@ export default function FriendsPage() {
         {/* ── Pending Requests ── */}
         {!showingSearch && pending.length > 0 && (
           <div className="bg-card rounded-2xl p-4 border border-primary/30">
-            <div className="text-[10px] font-bold text-primary uppercase tracking-wider mb-3">
+            <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 12 }}>
               Requests ({pending.length})
             </div>
             {pending.map((req: any) => {
@@ -432,7 +432,7 @@ export default function FriendsPage() {
         {/* ── Suggested Players (group co-members) ── */}
         {!showingSearch && suggested.length > 0 && (
           <div className="bg-card rounded-2xl p-4 border border-border">
-            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-3">
+            <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 12 }}>
               People You May Know
             </div>
             {suggested.map((p: any, i: number) => {
@@ -461,7 +461,7 @@ export default function FriendsPage() {
         {/* ── Friends List ── */}
         {!showingSearch && (
           <div className="bg-card rounded-2xl p-4 border border-border">
-            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-3">
+            <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 12 }}>
               Friends ({friends.length})
             </div>
             {friends.length === 0 ? (
@@ -505,7 +505,7 @@ export default function FriendsPage() {
         {/* ── Sent Requests ── */}
         {!showingSearch && sent.length > 0 && (
           <div className="bg-card rounded-2xl p-4 border border-border">
-            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-3">
+            <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 12 }}>
               Sent ({sent.length})
             </div>
             {sent.map((req: any) => {
