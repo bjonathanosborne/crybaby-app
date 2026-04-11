@@ -253,8 +253,8 @@ export default function FriendsPage() {
   if (view === "ledger" && friendProfile) {
     return (
       <div className="max-w-[420px] mx-auto min-h-screen bg-background pb-24">
-        <div className="px-4 pt-6 pb-2 flex justify-between items-center">
-          <h1 className="text-2xl text-primary tracking-tight">Ledger</h1>
+        <div className="px-5 pt-5 pb-4 flex justify-between items-center">
+          <h1 className="text-3xl text-primary tracking-tight">Ledger</h1>
           <button onClick={() => setView("list")}
             className="px-3 py-2 rounded-xl border border-border bg-card text-foreground text-xs font-semibold cursor-pointer hover:border-primary/30 transition-colors flex items-center gap-1.5">
             <ArrowLeft size={14} /> Back
@@ -316,12 +316,12 @@ export default function FriendsPage() {
   return (
     <div className="max-w-[420px] mx-auto min-h-screen bg-background pb-24">
       {/* Header */}
-      <div className="px-4 pt-6 pb-3 flex justify-between items-center">
-        <h1 className="text-2xl text-primary tracking-tight">Friends</h1>
+      <div className="px-5 pt-5 pb-4 flex justify-between items-center">
+        <h1 className="text-3xl text-primary tracking-tight">Friends</h1>
         <button
           onClick={handleInvite}
           disabled={inviteSending}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-bold border-none cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-60"
+          className="flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-xl bg-primary text-primary-foreground text-sm font-bold border-none cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-60"
         >
           {inviteSending
             ? <Loader2 size={15} className="animate-spin" />

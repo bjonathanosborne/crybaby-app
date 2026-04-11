@@ -1026,7 +1026,7 @@ export default function CrybabSetupWizard() {
 
       {/* Header — sticky below AppLayout top bar */}
       <div style={{
-        padding: "12px 16px 12px",
+        padding: "16px 20px 14px",
         background: "rgba(255,255,255,0.95)",
         backdropFilter: "blur(12px)",
         WebkitBackdropFilter: "blur(12px)",
@@ -1034,7 +1034,7 @@ export default function CrybabSetupWizard() {
         position: "sticky", top: 0, zIndex: 10,
       }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-          <span style={{ fontFamily: "'Pacifico', cursive", fontSize: 16, fontWeight: 400, color: "#2D5016" }}>New Round</span>
+          <span style={{ fontFamily: "'Pacifico', cursive", fontSize: 22, fontWeight: 400, color: "#2D5016" }}>New Round</span>
           {step > 0 && (
             <button
               onClick={() => setStep(step - 1)}
