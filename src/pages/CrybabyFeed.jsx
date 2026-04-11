@@ -260,7 +260,7 @@ function NewPostComposer({ profile, onPost }) {
   if (!isOpen) {
     return (
       <button onClick={() => setIsOpen(true)}
-        className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border cursor-pointer text-left hover:border-primary/30 transition-colors duration-200">
+        className="w-full flex items-center gap-3 bg-card rounded-2xl border border-border cursor-pointer text-left hover:border-primary/30 transition-colors duration-200" style={{ padding: "14px 18px" }}>
         <UserAvatar profile={profile} size={40} />
         <span className="text-sm text-muted-foreground">
           Challenge someone, talk trash, share a story...
