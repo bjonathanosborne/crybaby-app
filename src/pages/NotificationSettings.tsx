@@ -29,10 +29,7 @@ export default function NotificationSettings() {
       background: "#F5EFE0", fontFamily: FONT, paddingBottom: 100,
     }}>
       {/* Header */}
-      <div style={{
-        padding: "52px 20px 20px", background: "#fff",
-        borderBottom: "1px solid #DDD0BB",
-      }}>
+      <div style={{ padding: "20px 20px 16px" }}>
         <span style={{ fontFamily: "'Pacifico', cursive", fontSize: 20, fontWeight: 400, color: "#2D5016", lineHeight: 1 }}>
           Notification Settings
         </span>
