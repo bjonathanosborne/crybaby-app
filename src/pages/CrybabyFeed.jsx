@@ -534,7 +534,7 @@ export default function CrybabyFeed() {
   return (
     <div className="max-w-[420px] mx-auto min-h-screen bg-background pb-24">
       {/* Page header */}
-      <div className="px-5 pt-8 pb-7">
+      <div className="px-5" style={{ paddingTop: 32, paddingBottom: 48 }}>
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-extrabold text-foreground tracking-tight">Action</h1>
@@ -564,7 +564,7 @@ export default function CrybabyFeed() {
       )}
 
       {/* Content */}
-      <div className="px-5 pb-8 flex flex-col" style={{ gap: 40 }}>
+      <div className="px-5 flex flex-col" style={{ gap: 40, paddingBottom: 96 }}>
         {/* 💰 Live Action — pending broadcasts come FIRST */}
         {(pendingBroadcasts.length > 0 || activeBroadcasts.length > 0) && (
           <div className="text-[10px] font-bold text-primary uppercase tracking-widest flex items-center gap-1.5 px-1">
