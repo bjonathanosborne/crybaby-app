@@ -1,5 +1,4 @@
 import { useState } from "react";
-import crybabyLogo from "@/assets/crybaby-logo.png";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -76,13 +75,22 @@ export default function AuthPage() {
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center p-6"
-      style={{ background: "linear-gradient(180deg, hsl(152,57%,94%) 0%, hsl(0,0%,98%) 40%)" }}
+      style={{ background: "#F5EFE0" }}
     >
       <div className="w-full max-w-[380px]">
         {/* Logo */}
-        <div className="text-center mb-6">
-          <img src={crybabyLogo} alt="Crybaby" className="w-full max-w-[260px] mx-auto" />
-          <p className="text-sm font-semibold tracking-wide text-muted-foreground mt-1">
+        <div className="text-center mb-8">
+          <div style={{
+            fontFamily: "'Pacifico', cursive",
+            fontSize: 48,
+            fontWeight: 400,
+            color: "#2D5016",
+            lineHeight: 1.15,
+            textShadow: "0 1px 10px rgba(212, 175, 55, 0.4)",
+          }}>
+            Crybaby Golf
+          </div>
+          <p className="text-sm font-semibold tracking-wide text-muted-foreground mt-2">
             Golf's social scoring app
           </p>
           <span className="inline-block mt-2 px-3 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold tracking-widest uppercase border border-primary/20">
@@ -101,7 +109,7 @@ export default function AuthPage() {
         </button>
 
         {/* Divider */}
-        <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center gap-3 mb-5">
           <div className="flex-1 h-px bg-border" />
           <span className="text-xs text-muted-foreground">or</span>
           <div className="flex-1 h-px bg-border" />
@@ -126,16 +134,29 @@ export default function AuthPage() {
             onChange={(e) => setPassword(e.target.value)} required minLength={6}
             className="w-full p-3 rounded-2xl border border-border bg-card text-[15px] text-foreground outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-muted-foreground"
           />
-          <button type="submit" disabled={loading}
-            className="w-full p-3 rounded-2xl border-none bg-primary text-primary-foreground cursor-pointer text-[15px] font-bold hover:opacity-90 transition-opacity disabled:opacity-70 flex items-center justify-center gap-2">
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: "100%",
+              padding: "11px 24px",
+              borderRadius: 14,
+              border: "none",
+              cursor: loading ? "not-allowed" : "pointer",
+              fontFamily: "'Pacifico', cursive",
+              fontSize: 18,
+              fontWeight: 400,
+              background: "#2D5016",
+              color: "#D4AF37",
+              opacity: loading ? 0.7 : 1,
+              transition: "all 0.2s ease",
+              minHeight: 44,
+              boxShadow: "0 2px 12px rgba(45,80,22,0.25)",
+              textShadow: "0 1px 6px rgba(212, 175, 55, 0.45)",
+            }}
+          >
             {loading ? (
-              <>
-                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 12 6.477 12 12h-4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                {mode === "login" ? "Signing in…" : "Creating account…"}
-              </>
+              mode === "login" ? "Signing in…" : "Creating account…"
             ) : mode === "login" ? "Sign In" : "Create Account"}
           </button>
         </form>
