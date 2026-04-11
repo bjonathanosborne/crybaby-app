@@ -21,7 +21,7 @@
 
     /* Primary CTA: Augusta fairway — deep, muted, authoritative */
     --primary: 96 57% 20%;
-    --primary-foreground: 38 40% 96%;
+    --primary-foreground: 46 68% 60%; /* Masters gold */
 
     /* Secondary: warm sand for soft buttons */
     --secondary: 36 30% 88%;
@@ -68,7 +68,7 @@
     --popover-foreground: 38 30% 90%;
 
     --primary: 96 50% 38%;
-    --primary-foreground: 38 40% 96%;
+    --primary-foreground: 46 68% 60%; /* Masters gold */
 
     --secondary: 20 15% 16%;
     --secondary-foreground: 38 30% 90%;
