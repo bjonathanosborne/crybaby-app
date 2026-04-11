@@ -1034,7 +1034,7 @@ export default function CrybabSetupWizard() {
         position: "sticky", top: 0, zIndex: 10,
       }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: "#A8957B" }}>New Round</span>
+          <span style={{ fontFamily: "'Pacifico', cursive", fontSize: 16, fontWeight: 400, color: "#2D5016" }}>New Round</span>
           {step > 0 && (
             <button
               onClick={() => setStep(step - 1)}
