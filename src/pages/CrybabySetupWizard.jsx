@@ -987,7 +987,7 @@ export default function CrybabSetupWizard() {
     <div style={{
       maxWidth: 420, margin: "0 auto", minHeight: "100vh",
       background: "#F5EFE0", fontFamily: font,
-      paddingBottom: 140,
+      paddingBottom: 140, paddingTop: 16,
     }}>
       {/* Active Round Resume Banner */}
       {activeRound && (
@@ -1481,7 +1481,7 @@ export default function CrybabSetupWizard() {
       {/* Bottom CTA */}
       <div style={{
         position: "fixed", bottom: 64, left: 0, right: 0,
-        padding: "12px 16px", paddingBottom: "max(12px, env(safe-area-inset-bottom))",
+        padding: "16px 20px", paddingBottom: "max(16px, env(safe-area-inset-bottom))",
         background: "rgba(247,247,245,0.95)", backdropFilter: "blur(12px)",
         WebkitBackdropFilter: "blur(12px)",
         borderTop: "1px solid #DDD0BB",
@@ -1495,25 +1495,18 @@ export default function CrybabSetupWizard() {
           }}
           style={{
             width: "100%", maxWidth: 380,
-            padding: step < 4 ? "14px 24px" : "17px 24px",
-            borderRadius: step < 4 ? 12 : 16,
+            padding: "11px 24px",
+            borderRadius: 14,
             border: "none", cursor: canProceed() ? "pointer" : "not-allowed",
-            fontFamily: font,
-            fontSize: step < 4 ? 16 : 20,
-            fontWeight: step < 4 ? 700 : 800,
-            letterSpacing: step < 4 ? "-0.01em" : "-0.02em",
-            background: !canProceed()
-              ? "#CEC0AA"
-              : step < 4
-              ? "#1E130A"
-              : "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
-            color: canProceed() ? "#fff" : "#A8957B",
+            fontFamily: "'Pacifico', cursive",
+            fontSize: 18,
+            fontWeight: 400,
+            background: !canProceed() ? "#CEC0AA" : "#2D5016",
+            color: canProceed() ? "#D4AF37" : "#A8957B",
             transition: "all 0.2s ease",
-            minHeight: step < 4 ? 50 : 60,
-            boxShadow: canProceed() && step === 4
-              ? "0 4px 20px rgba(22, 163, 74, 0.45)"
-              : "none",
-            textShadow: canProceed() && step === 4 ? "0 1px 2px rgba(0,0,0,0.15)" : "none",
+            minHeight: 44,
+            boxShadow: canProceed() ? "0 2px 12px rgba(45,80,22,0.25)" : "none",
+            textShadow: canProceed() ? "0 1px 6px rgba(212, 175, 55, 0.45)" : "none",
           }}
         >
           {step < 4 ? "Continue" : "Start Round 🏌️"}
