@@ -3,17 +3,13 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import BottomNav from "./BottomNav";
 import NotificationBell from "./NotificationBell";
 import HamburgerMenu from "./HamburgerMenu";
-import crybabyLogo from "@/assets/crybaby-logo.png";
 import { ChevronLeft } from "lucide-react";
 import { loadActiveRound } from "@/lib/db";
 
 const ROOT_PATHS = ["/profile", "/feed", "/friends", "/groups", "/inbox", "/stats"];
 
-// Header row height (px). Logo is 120px tall, centered in this row,
-// so it overflows 30px above and 30px below → content offset = ROW_H + 30.
 const ROW_H = 60;
-const LOGO_H = 88;
-const LOGO_OVERFLOW_BELOW = (LOGO_H - ROW_H) / 2; // 14px
+const LOGO_OVERFLOW_BELOW = 0;
 const BANNER_H = 44; // active-round return banner height
 
 export default function AppLayout() {
@@ -56,19 +52,24 @@ export default function AppLayout() {
           </div>
 
           {/* Logo — absolutely centred */}
-          <img
-            src={crybabyLogo}
-            alt="Crybaby"
+          <div
             style={{
               position: "absolute",
               left: "50%",
               top: "50%",
               transform: "translate(-50%, -50%)",
-              height: LOGO_H,
-              objectFit: "contain",
+              fontFamily: "'Pacifico', cursive",
+              fontSize: 30,
+              fontWeight: 400,
+              color: "#2D5016",
+              lineHeight: 1,
+              whiteSpace: "nowrap",
               pointerEvents: "none",
+              userSelect: "none",
             }}
-          />
+          >
+            Crybaby Golf
+          </div>
 
           <NotificationBell />
         </div>

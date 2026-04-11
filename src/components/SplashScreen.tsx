@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import crybabyLogo from "@/assets/crybaby-logo.png";
 
 export default function SplashScreen({ onDone }: { onDone: () => void }) {
   const [fading, setFading] = useState(false);
@@ -30,16 +29,20 @@ export default function SplashScreen({ onDone }: { onDone: () => void }) {
         userSelect: "none",
       }}
     >
-      <img
-        src={crybabyLogo}
-        alt="Crybaby Golf"
+      <div
         style={{
-          width: 220,
-          objectFit: "contain",
+          fontFamily: "'Pacifico', cursive",
+          fontSize: 52,
+          fontWeight: 400,
+          color: "#2D5016",
+          lineHeight: 1.15,
+          textAlign: "center",
           animation: "splashSpin 3s ease-out forwards",
           opacity: 0,
         }}
-      />
+      >
+        Crybaby Golf
+      </div>
 
       {/* Bottom progress bar */}
       <div
