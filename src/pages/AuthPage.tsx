@@ -79,7 +79,7 @@ export default function AuthPage() {
     >
       <div className="w-full max-w-[380px]">
         {/* Logo */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-14">
           <div style={{
             fontFamily: "'Pacifico', cursive",
             fontSize: 48,
