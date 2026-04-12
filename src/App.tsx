@@ -30,6 +30,7 @@ import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
 import RoundSpectateView from "./pages/RoundSpectateView";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import InvitePage from "./pages/InvitePage";
+import SoloRound from "./pages/SoloRound";
 
 const queryClient = new QueryClient();
 
@@ -56,6 +57,7 @@ const AppRoutes = () => (
     <Route path="/" element={<RootRedirect />} />
     {/* Standalone full-screen routes — no AppLayout wrapper */}
     <Route path="/round" element={<ProtectedRoute><CrybabyActiveRound /></ProtectedRoute>} />
+    <Route path="/solo" element={<ProtectedRoute><SoloRound /></ProtectedRoute>} />
 
     <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
       <Route path="/home" element={<Navigate to="/feed" replace />} />

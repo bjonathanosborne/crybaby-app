@@ -534,11 +534,19 @@ export default function CrybabyFeed() {
   return (
     <div className="max-w-[420px] mx-auto min-h-screen bg-background pb-24">
       {/* Page header */}
-      <div className="px-5 pt-5 pb-4 flex justify-end items-center">
+      <div className="px-5 pt-5 pb-2 flex justify-end items-center">
         <button onClick={() => navigate("/setup")}
           className="px-4 py-2.5 min-h-[44px] rounded-xl border-none cursor-pointer text-sm font-bold bg-primary text-primary-foreground hover:opacity-90 transition-opacity shadow-md flex items-center gap-2">
           <Plus size={15} strokeWidth={2.5} />
           Start Action
+        </button>
+      </div>
+      <div className="px-5 pb-4 flex justify-end">
+        <button
+          onClick={() => navigate("/solo")}
+          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, color: "#8B7355", fontFamily: "'DM Sans', system-ui, sans-serif", fontWeight: 500, padding: "2px 0" }}
+        >
+          Just keeping score →
         </button>
       </div>
 
