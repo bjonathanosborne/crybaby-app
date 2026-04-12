@@ -2,7 +2,7 @@ import { Outlet, NavLink, Navigate, useNavigate } from "react-router-dom";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useAuth } from "@/contexts/AuthContext";
 import { Users, BarChart3, Settings, Shield, ChevronLeft, Layers } from "lucide-react";
-import crybabyLogo from "@/assets/crybaby-logo.png";
+
 
 const adminNav = [
   { path: "/admin", label: "Dashboard", icon: BarChart3, end: true },
@@ -35,7 +35,12 @@ export default function AdminLayout() {
       <aside className="hidden md:flex w-60 flex-col shrink-0" style={{ background: "#FAF5EC", borderRight: "1px solid #DDD0BB" }}>
         {/* Logo + Admin badge */}
         <div className="p-4 flex items-center gap-2" style={{ borderBottom: "1px solid #DDD0BB" }}>
-          <img src={crybabyLogo} alt="Crybaby" className="h-8" />
+          <span style={{
+            fontFamily: "'Pacifico', cursive",
+            fontSize: 22, fontWeight: 400,
+            color: "#2D5016", lineHeight: 1,
+            textShadow: "0 1px 8px rgba(212, 175, 55, 0.35)",
+          }}>Crybaby Golf</span>
           <span style={{
             fontFamily: "'DM Sans', system-ui, sans-serif",
             fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
@@ -110,7 +115,12 @@ export default function AdminLayout() {
             App
           </button>
           <div className="flex items-center gap-2">
-            <img src={crybabyLogo} alt="Crybaby" className="h-7" />
+            <span style={{
+              fontFamily: "'Pacifico', cursive",
+              fontSize: 20, fontWeight: 400,
+              color: "#2D5016", lineHeight: 1,
+              textShadow: "0 1px 8px rgba(212, 175, 55, 0.35)",
+            }}>Crybaby Golf</span>
             <span style={{
               fontFamily: "'DM Sans', system-ui, sans-serif",
               fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
