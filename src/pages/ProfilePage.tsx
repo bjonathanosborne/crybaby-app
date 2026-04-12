@@ -5,7 +5,7 @@ import { loadProfile, updateProfile, loadMyRounds, loadSettlements, uploadUserAv
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { format, startOfMonth, startOfYear, parseISO } from "date-fns";
-import { AUSTIN_COURSES } from "@/data/constants";
+import CourseSearch from "@/components/CourseSearch";
 import { ChevronDown, Plus, ChevronRight } from "lucide-react";
 
 const US_STATES = [
@@ -245,29 +245,14 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {/* Home Course Dropdown */}
-              {!showAddCourse ? (
-                <select
-                  value={editForm.home_course}
-                  onChange={e => {
-                    if (e.target.value === "__add_new__") {
-                      setShowAddCourse(true);
-                    } else {
-                      setEditForm(f => ({ ...f, home_course: e.target.value }));
-                    }
-                  }}
-                  style={{ ...inputStyle, appearance: "none", backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center" }}
-                >
-                  <option value="">Select Home Course / Club</option>
-                  {AUSTIN_COURSES.map(c => (
-                    <option key={c.id} value={c.name}>{c.name}</option>
-                  ))}
-                  {userCourses.map(c => (
-                    <option key={c.id} value={c.name}>{c.name} (User Added)</option>
-                  ))}
-                  <option value="__add_new__">+ Add a Course / Club</option>
-                </select>
-              ) : (
+              {/* Home Course Search */}
+              <CourseSearch
+                value={editForm.home_course || undefined}
+                onSelect={c => setEditForm(f => ({ ...f, home_course: c.name }))}
+                placeholder="Search for your home course…"
+                onAddManually={() => setShowAddCourse(true)}
+              />
+              {showAddCourse && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: 12, borderRadius: 10, border: "1px solid #DDD0BB", background: "#FAF5EC" }}>
                   <span style={{ fontSize: 11, fontWeight: 700, color: "#8B7355" }}>Add New Course</span>
                   <input value={newCourseName} onChange={e => setNewCourseName(e.target.value)}

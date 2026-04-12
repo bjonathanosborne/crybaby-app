@@ -7,6 +7,7 @@ import crybabyLogo from "@/assets/crybaby-logo.png";
 import AddClubModal from "@/components/AddClubModal";
 import { Users, RotateCcw, Flag, Coins, Sliders, Globe, Lock, EyeOff, Eye } from "lucide-react";
 import { WolfIcon, HammerIcon, CrybabyBottleIcon, BirdieIcon, MoneyIcon, PressIcon } from "@/components/icons/CrybIcons";
+import CourseSearch from "@/components/CourseSearch";
 
 // ============================================================
 // CRYBABY — Game Setup Wizard
@@ -777,6 +778,7 @@ export default function CrybabSetupWizard() {
     { name: "", ghin: "", handicap: null, cart: "", position: "" },
   ]);
   const [selectedCourse, setSelectedCourse] = useState(null);
+  const [selectedCourseData, setSelectedCourseData] = useState(null);
   const [selectedTee, setSelectedTee] = useState(null);
   const [courseSearch, setCourseSearch] = useState("");
   const [userCourses, setUserCourses] = useState([]);
@@ -824,8 +826,8 @@ export default function CrybabSetupWizard() {
 
   const format = GAME_FORMATS.find(g => g.id === selectedFormat);
 
-  // Resolve course from either built-in list or user courses
-  const course = AUSTIN_COURSES.find(c => c.id === selectedCourse) || (() => {
+  // Resolve course: API/search selection takes priority, then built-in list, then user courses
+  const course = selectedCourseData || AUSTIN_COURSES.find(c => c.id === selectedCourse) || (() => {
     const uc = userCourses.find(c => c.id === selectedCourse);
     if (!uc) return undefined;
     const cd = uc.course_data || {};
@@ -906,7 +908,7 @@ export default function CrybabSetupWizard() {
     switch (step) {
       case 0: return !!selectedFormat;
       case 1: return players.filter(p => p.name.trim()).length >= (format?.players.min || 2);
-      case 2: return !!selectedCourse && (!selectedCourse.tees?.length || !!selectedTee);
+      case 2: return !!course && (!course.tees?.length || !!selectedTee);
       case 3: return holeValue > 0;
       case 4: return true;
       default: return false;
@@ -1154,74 +1156,19 @@ export default function CrybabSetupWizard() {
         {/* STEP 2: COURSE */}
         {step === 2 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-              <div style={{ fontSize: 18, fontWeight: 700, color: "#1E130A", letterSpacing: "-0.02em" }}>
-                Select Course
-              </div>
-              <span style={{
-                fontFamily: font, fontSize: 10, fontWeight: 700, padding: "3px 8px",
-                borderRadius: 6, background: "#FEF3C7", color: "#92400E",
-                textTransform: "uppercase", letterSpacing: "0.05em",
-              }}>Beta · Austin, TX</span>
+            <div style={{ fontSize: 18, fontWeight: 700, color: "#1E130A", letterSpacing: "-0.02em" }}>
+              Select Course
             </div>
 
-            {/* Grouped course dropdown */}
-            <div style={{ position: "relative" }}>
-              <select
-                value={selectedCourse || ""}
-                onChange={e => { setSelectedCourse(e.target.value || null); setSelectedTee(null); }}
-                style={{
-                  width: "100%", padding: "14px 40px 14px 16px", borderRadius: 12,
-                  border: selectedCourse ? "2px solid #2D5016" : "1px solid #DDD0BB",
-                  fontFamily: font, fontSize: 14, fontWeight: selectedCourse ? 600 : 400,
-                  color: selectedCourse ? "#1E130A" : "#A8957B",
-                  background: "#FAF5EC", outline: "none", boxSizing: "border-box",
-                  appearance: "none", cursor: "pointer",
-                  WebkitAppearance: "none", MozAppearance: "none",
-                }}
-              >
-                <option value="">Choose a course...</option>
-                {COURSE_GROUPS.map(group => {
-                  const groupCourses = AUSTIN_COURSES.filter(c => group.types.includes(c.type));
-                  if (groupCourses.length === 0) return null;
-                  return (
-                    <optgroup key={group.label} label={group.label}>
-                      {groupCourses.map(c => (
-                        <option key={c.id} value={c.id}>
-                          {c.name} — {c.city}{c.holes === 9 ? " (9 holes)" : ""}
-                        </option>
-                      ))}
-                    </optgroup>
-                  );
-                })}
-                {userCourses.length > 0 && (
-                  <optgroup label="⭐ My Courses">
-                    {userCourses.map(c => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}{c.city ? ` — ${c.city}` : ""}{c.course_data?.holes === 9 ? " (9 holes)" : ""}
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-              </select>
-              <span style={{
-                position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)",
-                fontSize: 12, color: "#A8957B", pointerEvents: "none",
-              }}>▼</span>
-            </div>
-
-            {/* Add Club link */}
-            <button
-              onClick={() => setShowAddClub(true)}
-              style={{
-                background: "none", border: "none", padding: "4px 0",
-                fontFamily: font, fontSize: 13, color: "#2D5016", fontWeight: 600,
-                cursor: "pointer", textAlign: "left", textDecoration: "underline",
-                textUnderlineOffset: 3,
+            <CourseSearch
+              value={course?.name}
+              onSelect={c => {
+                setSelectedCourseData(c);
+                setSelectedCourse(c.id);
+                setSelectedTee(null);
               }}
-            >
-              Don't see your club? Add it. ➕
-            </button>
+              onAddManually={() => setShowAddClub(true)}
+            />
 
             {/* Selected course info card */}
             {course && (
@@ -1266,7 +1213,7 @@ export default function CrybabSetupWizard() {
                 </div>
               </div>
             )}
-            {selectedCourse && selectedTee && (
+            {course && selectedTee && (
               <div style={{
                 marginTop: 4, background: "#FAF5EC", borderRadius: 14, padding: 16,
                 boxShadow: "0 1px 3px rgba(0,0,0,0.06)", overflow: "auto",
