@@ -335,7 +335,7 @@ export default function CourseSearch({
             marginTop: 4,
           }}
         >
-          Don't see your club? Add it. ➕
+          Don't see your course? Add it. ➕
         </button>
       )}
     </div>
