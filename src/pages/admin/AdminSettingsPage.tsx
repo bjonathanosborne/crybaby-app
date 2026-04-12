@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
 import { UserPlus, Trash2 } from "lucide-react";
+
+const font = "'DM Sans', system-ui, sans-serif";
 
 interface AdminUser {
   id: string;
@@ -29,7 +28,6 @@ export default function AdminSettingsPage() {
       .order("created_at", { ascending: true });
 
     if (data) {
-      // Fetch profiles for each admin
       const userIds = data.map((d) => d.user_id);
       const { data: profiles } = await supabase
         .from("profiles")
@@ -80,88 +78,115 @@ export default function AdminSettingsPage() {
     }
   };
 
+  const inputStyle: React.CSSProperties = {
+    fontFamily: font, fontSize: 14,
+    background: "#FAF5EC", border: "1px solid #DDD0BB", borderRadius: 10,
+    padding: "10px 12px", outline: "none", flex: 1, boxSizing: "border-box",
+    color: "#1E130A", fontFamily: "'JetBrains Mono', monospace",
+  };
+
   return (
-    <div className="p-4 md:p-6 max-w-4xl">
-      <h1 className="text-xl md:text-2xl font-bold text-foreground mb-4 md:mb-6">Settings</h1>
+    <div style={{ padding: "24px 20px", maxWidth: 800, fontFamily: font }}>
+      <h1 style={{ fontFamily: "'Pacifico', cursive", fontSize: 26, fontWeight: 400, color: "#1E130A", marginBottom: 24 }}>
+        Settings
+      </h1>
 
-      <div className="rounded-xl border border-border bg-card p-6 mb-6">
-        <h2 className="text-lg font-semibold text-foreground mb-4">Admin Users</h2>
+      {/* Admin Users card */}
+      <div style={{ background: "#FAF5EC", border: "1px solid #DDD0BB", borderRadius: 16, padding: 24, marginBottom: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+        <h2 style={{ fontFamily: "'Pacifico', cursive", fontSize: 18, fontWeight: 400, color: "#1E130A", marginBottom: 16, marginTop: 0 }}>
+          Admin Users
+        </h2>
 
-        <div className="flex gap-2 mb-4">
-          <Input
-            placeholder="Paste user ID to add as admin..."
+        <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+          <input
+            placeholder="Paste user ID to add as admin…"
             value={newUserId}
             onChange={(e) => setNewUserId(e.target.value)}
-            className="font-mono text-sm"
+            style={inputStyle}
+            onKeyDown={(e) => e.key === "Enter" && addAdmin()}
           />
-          <Button onClick={addAdmin} size="sm">
-            <UserPlus size={16} className="mr-1" />
-            Add
-          </Button>
+          <button
+            onClick={addAdmin}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "10px 16px", borderRadius: 10, border: "none",
+              background: "#2D5016", color: "#fff",
+              fontFamily: font, fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap",
+            }}
+          >
+            <UserPlus size={14} /> Add
+          </button>
         </div>
 
-        <div className="overflow-x-auto">
-        <Table className="min-w-[400px]">
-          <TableHeader>
-            <TableRow>
-              <TableHead>User</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Added</TableHead>
-              <TableHead></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground py-4">Loading...</TableCell>
+        <div style={{ overflowX: "auto" }}>
+          <Table className="min-w-[400px]">
+            <TableHeader>
+              <TableRow style={{ borderBottom: "1px solid #DDD0BB" }}>
+                {["User", "Role", "Added", ""].map((h, i) => (
+                  <TableHead key={i} style={{ fontFamily: font, fontSize: 11, fontWeight: 700, color: "#8B7355", textTransform: "uppercase", letterSpacing: "0.05em", background: "#F0E9D8" }}>{h}</TableHead>
+                ))}
               </TableRow>
-            ) : admins.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground py-4">No admins configured</TableCell>
-              </TableRow>
-            ) : (
-              admins.map((a) => (
-                <TableRow key={a.id}>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">
-                        {a.profile?.first_name && a.profile?.last_name
-                          ? `${a.profile.first_name} ${a.profile.last_name}`
-                          : a.profile?.display_name ?? "Unknown"}
-                      </div>
-                      <div className="text-xs text-muted-foreground font-mono">{a.user_id}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge>{a.role}</Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-xs">
-                    {new Date(a.created_at).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    {a.user_id !== user?.id && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeAdmin(a.id, a.user_id)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 size={14} />
-                      </Button>
-                    )}
-                  </TableCell>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={4} style={{ textAlign: "center", color: "#A8957B", padding: "24px", fontFamily: font }}>Loading…</TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : admins.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} style={{ textAlign: "center", color: "#A8957B", padding: "24px", fontFamily: font }}>No admins configured</TableCell>
+                </TableRow>
+              ) : (
+                admins.map((a) => (
+                  <TableRow key={a.id} style={{ borderBottom: "1px solid #EDE7D9" }}>
+                    <TableCell>
+                      <div>
+                        <div style={{ fontWeight: 600, color: "#1E130A", fontSize: 14 }}>
+                          {a.profile?.first_name && a.profile?.last_name
+                            ? `${a.profile.first_name} ${a.profile.last_name}`
+                            : a.profile?.display_name ?? "Unknown"}
+                        </div>
+                        <div style={{ fontSize: 11, color: "#A8957B", fontFamily: "'JetBrains Mono', monospace" }}>{a.user_id}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span style={{
+                        fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 6,
+                        background: "#2D501612", color: "#2D5016", border: "1px solid #2D501630",
+                        textTransform: "capitalize",
+                      }}>{a.role}</span>
+                    </TableCell>
+                    <TableCell style={{ fontSize: 12, color: "#A8957B" }}>
+                      {new Date(a.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      {a.user_id !== user?.id && (
+                        <button
+                          onClick={() => removeAdmin(a.id, a.user_id)}
+                          style={{ background: "none", border: "none", cursor: "pointer", padding: 6, borderRadius: 6, color: "#C0392B" }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
       </div>
 
-      <div className="rounded-xl border border-border bg-card p-6">
-        <h2 className="text-lg font-semibold text-foreground mb-2">App Info</h2>
-        <div className="space-y-2 text-sm text-muted-foreground">
-          <div>Your User ID: <code className="bg-muted px-2 py-1 rounded text-xs font-mono">{user?.id}</code></div>
+      {/* App Info card */}
+      <div style={{ background: "#FAF5EC", border: "1px solid #DDD0BB", borderRadius: 16, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+        <h2 style={{ fontFamily: "'Pacifico', cursive", fontSize: 18, fontWeight: 400, color: "#1E130A", marginBottom: 10, marginTop: 0 }}>
+          App Info
+        </h2>
+        <div style={{ fontSize: 13, color: "#8B7355" }}>
+          Your User ID:{" "}
+          <code style={{ background: "#EDE7D9", padding: "3px 8px", borderRadius: 6, fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: "#1E130A" }}>
+            {user?.id}
+          </code>
         </div>
       </div>
     </div>

@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Users, Layers, Shield, Activity } from "lucide-react";
 
+const font = "'DM Sans', system-ui, sans-serif";
+
 interface Stats {
   users: number;
   rounds: number;
@@ -33,26 +35,45 @@ export default function AdminDashboard() {
   }, []);
 
   const cards = [
-    { label: "Total Users", value: stats.users, icon: Users, color: "text-primary" },
-    { label: "Total Rounds", value: stats.rounds, icon: Layers, color: "text-blue-500" },
-    { label: "Active Rounds", value: stats.activeRounds, icon: Activity, color: "text-orange-500" },
-    { label: "Groups", value: stats.groups, icon: Shield, color: "text-purple-500" },
+    { label: "Total Users", value: stats.users, icon: Users, accent: "#2D5016", bg: "#2D501610" },
+    { label: "Total Rounds", value: stats.rounds, icon: Layers, accent: "#1D6DA6", bg: "#1D6DA610" },
+    { label: "Active Rounds", value: stats.activeRounds, icon: Activity, accent: "#C05C1A", bg: "#C05C1A10" },
+    { label: "Groups", value: stats.groups, icon: Shield, accent: "#6B4FAA", bg: "#6B4FAA10" },
   ];
 
   return (
-    <div className="p-4 md:p-6 max-w-5xl">
-      <h1 className="text-xl md:text-2xl font-bold text-foreground mb-4 md:mb-6">Dashboard</h1>
+    <div style={{ padding: "24px 20px", maxWidth: 900, fontFamily: font }}>
+      <h1 style={{
+        fontFamily: "'Pacifico', cursive",
+        fontSize: 26, fontWeight: 400,
+        color: "#1E130A", marginBottom: 24,
+        letterSpacing: "-0.01em",
+      }}>Dashboard</h1>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-8">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 14, marginBottom: 32 }}>
         {cards.map((card) => {
           const Icon = card.icon;
           return (
-            <div key={card.label} className="rounded-xl border border-border bg-card p-5">
-              <div className="flex items-center gap-3 mb-2">
-                <Icon size={20} className={card.color} />
-                <span className="text-sm text-muted-foreground">{card.label}</span>
+            <div key={card.label} style={{
+              background: "#FAF5EC",
+              border: "1px solid #DDD0BB",
+              borderRadius: 16,
+              padding: "20px 18px",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                <div style={{
+                  width: 34, height: 34, borderRadius: 10,
+                  background: card.bg,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  <Icon size={17} color={card.accent} />
+                </div>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "#8B7355", letterSpacing: "0.01em" }}>
+                  {card.label}
+                </span>
               </div>
-              <div className="text-3xl font-bold text-foreground">
+              <div style={{ fontSize: 36, fontWeight: 700, color: "#1E130A", fontFamily: "'JetBrains Mono', monospace" }}>
                 {loading ? "—" : card.value}
               </div>
             </div>

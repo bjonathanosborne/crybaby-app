@@ -8,6 +8,8 @@ import { Search, Pencil, Trash2, X, UserPlus, Shield, ShieldOff, Copy, Check } f
 import { toast } from "@/hooks/use-toast";
 import { loadAllUserRoles, assignAdminRole, removeAdminRole, createInvite } from "@/lib/db";
 
+const font = "'DM Sans', system-ui, sans-serif";
+
 interface Profile {
   user_id: string;
   display_name: string;
@@ -163,107 +165,138 @@ export default function AdminUsersPage() {
     setCopied(false);
   };
 
+  const inputStyle: React.CSSProperties = {
+    fontFamily: font, fontSize: 14,
+    background: "#FAF5EC", border: "1px solid #DDD0BB", borderRadius: 10,
+    padding: "10px 12px", outline: "none", width: "100%", boxSizing: "border-box",
+    color: "#1E130A",
+  };
+
   return (
-    <div className="p-4 md:p-6 max-w-6xl">
-      <div className="flex items-center justify-between mb-4 md:mb-6">
-        <h1 className="text-xl md:text-2xl font-bold text-foreground">Users</h1>
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary">{profiles.length} total</Badge>
-          <Button onClick={() => setShowInviteModal(true)} size="sm" className="gap-2">
-            <UserPlus size={15} /> Invite User
-          </Button>
+    <div style={{ padding: "24px 20px", maxWidth: 1100, fontFamily: font }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+        <h1 style={{ fontFamily: "'Pacifico', cursive", fontSize: 26, fontWeight: 400, color: "#1E130A", margin: 0 }}>
+          Users
+        </h1>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{
+            fontSize: 12, fontWeight: 600, color: "#8B7355",
+            background: "#EDE7D9", borderRadius: 8, padding: "4px 10px",
+          }}>{profiles.length} total</span>
+          <button
+            onClick={() => setShowInviteModal(true)}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "8px 14px", borderRadius: 10, border: "none",
+              background: "#2D5016", color: "#fff",
+              fontFamily: font, fontSize: 13, fontWeight: 600, cursor: "pointer",
+            }}
+          >
+            <UserPlus size={14} /> Invite User
+          </button>
         </div>
       </div>
 
-      <div className="relative mb-4">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Search users..."
+      {/* Search */}
+      <div style={{ position: "relative", marginBottom: 16 }}>
+        <Search size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#A8957B" }} />
+        <input
+          placeholder="Search users…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
+          style={{ ...inputStyle, paddingLeft: 36 }}
         />
       </div>
 
-      <div className="rounded-xl border border-border bg-card overflow-hidden overflow-x-auto">
+      {/* Table */}
+      <div style={{ background: "#FAF5EC", border: "1px solid #DDD0BB", borderRadius: 16, overflow: "hidden", overflowX: "auto", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
         <Table className="min-w-[640px]">
           <TableHeader>
-            <TableRow>
-              <TableHead>User</TableHead>
-              <TableHead>Location</TableHead>
-              <TableHead>Home Course</TableHead>
-              <TableHead>Handicap</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Joined</TableHead>
-              <TableHead className="w-28">Actions</TableHead>
+            <TableRow style={{ borderBottom: "1px solid #DDD0BB" }}>
+              {["User", "Location", "Home Course", "Handicap", "Role", "Joined", "Actions"].map(h => (
+                <TableHead key={h} style={{ fontFamily: font, fontSize: 11, fontWeight: 700, color: "#8B7355", textTransform: "uppercase", letterSpacing: "0.05em", background: "#F0E9D8" }}>{h}</TableHead>
+              ))}
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">Loading...</TableCell>
+                <TableCell colSpan={7} style={{ textAlign: "center", color: "#A8957B", padding: "32px", fontFamily: font }}>Loading…</TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">No users found</TableCell>
+                <TableCell colSpan={7} style={{ textAlign: "center", color: "#A8957B", padding: "32px", fontFamily: font }}>No users found</TableCell>
               </TableRow>
             ) : (
               filtered.map((p) => {
                 const isAdmin = adminUserIds.has(p.user_id);
                 return (
-                  <TableRow key={p.user_id}>
+                  <TableRow key={p.user_id} style={{ borderBottom: "1px solid #EDE7D9" }}>
                     <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-xs font-semibold text-accent-foreground overflow-hidden">
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{
+                          width: 32, height: 32, borderRadius: 16,
+                          background: "#DDD0BB", overflow: "hidden",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontSize: 12, fontWeight: 700, color: "#8B7355",
+                        }}>
                           {p.avatar_url ? (
-                            <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
+                            <img src={p.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                           ) : (
                             (p.first_name?.[0] ?? p.display_name?.[0] ?? "?").toUpperCase()
                           )}
                         </div>
                         <div>
-                          <div className="font-medium text-foreground">
+                          <div style={{ fontWeight: 600, color: "#1E130A", fontSize: 14 }}>
                             {p.first_name && p.last_name ? `${p.first_name} ${p.last_name}` : p.display_name}
                           </div>
-                          <div className="text-xs text-muted-foreground">{p.display_name}</div>
+                          <div style={{ fontSize: 11, color: "#A8957B" }}>{p.display_name}</div>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{p.state || "—"}</TableCell>
-                    <TableCell className="text-muted-foreground">{p.home_course || "—"}</TableCell>
-                    <TableCell>{p.handicap != null ? p.handicap : "—"}</TableCell>
+                    <TableCell style={{ color: "#8B7355", fontSize: 13 }}>{p.state || "—"}</TableCell>
+                    <TableCell style={{ color: "#8B7355", fontSize: 13 }}>{p.home_course || "—"}</TableCell>
+                    <TableCell style={{ fontSize: 13, color: "#1E130A" }}>{p.handicap != null ? p.handicap : "—"}</TableCell>
                     <TableCell>
                       {isAdmin ? (
-                        <Badge className="bg-primary/10 text-primary border-primary/20 gap-1">
-                          <Shield size={10} /> Admin
-                        </Badge>
+                        <span style={{
+                          display: "inline-flex", alignItems: "center", gap: 4,
+                          fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 6,
+                          background: "#2D501610", color: "#2D5016", border: "1px solid #2D501630",
+                        }}>
+                          <Shield size={9} /> Admin
+                        </span>
                       ) : (
-                        <span className="text-xs text-muted-foreground">User</span>
+                        <span style={{ fontSize: 12, color: "#A8957B" }}>User</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-xs">
+                    <TableCell style={{ fontSize: 12, color: "#A8957B" }}>
                       {new Date(p.created_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(p)} title="Edit user">
+                      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                        <button
+                          onClick={() => openEdit(p)}
+                          title="Edit user"
+                          style={{ background: "none", border: "none", cursor: "pointer", padding: 6, borderRadius: 6, color: "#8B7355" }}
+                        >
                           <Pencil size={13} />
-                        </Button>
-                        <Button
-                          variant="ghost" size="icon" className="h-7 w-7"
+                        </button>
+                        <button
                           onClick={() => toggleAdmin(p.user_id)}
                           disabled={roleLoading === p.user_id}
                           title={isAdmin ? "Remove admin" : "Make admin"}
+                          style={{ background: "none", border: "none", cursor: "pointer", padding: 6, borderRadius: 6, color: isAdmin ? "#A8957B" : "#2D5016" }}
                         >
-                          {isAdmin ? <ShieldOff size={13} className="text-muted-foreground" /> : <Shield size={13} className="text-primary" />}
-                        </Button>
-                        <Button
-                          variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
+                          {isAdmin ? <ShieldOff size={13} /> : <Shield size={13} />}
+                        </button>
+                        <button
                           onClick={() => deleteUser(p.user_id, p.display_name ?? p.first_name ?? "user")}
                           title="Delete user"
+                          style={{ background: "none", border: "none", cursor: "pointer", padding: 6, borderRadius: 6, color: "#C0392B" }}
                         >
                           <Trash2 size={13} />
-                        </Button>
+                        </button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -276,35 +309,39 @@ export default function AdminUsersPage() {
 
       {/* Edit Modal */}
       {editTarget && editForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-background rounded-2xl shadow-xl w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold">Edit User</h2>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditTarget(null); setEditForm(null); }}>
-                <X size={15} />
-              </Button>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 16 }}>
+          <div style={{ background: "#FAF5EC", borderRadius: 20, boxShadow: "0 8px 40px rgba(0,0,0,0.18)", width: "100%", maxWidth: 420, padding: 24 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+              <h2 style={{ fontFamily: "'Pacifico', cursive", fontSize: 20, fontWeight: 400, color: "#1E130A", margin: 0 }}>Edit User</h2>
+              <button onClick={() => { setEditTarget(null); setEditForm(null); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#A8957B", padding: 4 }}>
+                <X size={18} />
+              </button>
             </div>
-            <div className="space-y-3">
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {(["display_name", "first_name", "last_name", "home_course", "state", "handicap"] as const).map((field) => (
                 <div key={field}>
-                  <label className="text-xs font-medium text-muted-foreground capitalize mb-1 block">
+                  <label style={{ fontSize: 11, fontWeight: 700, color: "#8B7355", textTransform: "capitalize", display: "block", marginBottom: 4 }}>
                     {field.replace(/_/g, " ")}
                   </label>
-                  <Input
+                  <input
                     value={editForm[field]}
                     onChange={(e) => setEditForm((f) => f ? { ...f, [field]: e.target.value } : f)}
                     type={field === "handicap" ? "number" : "text"}
+                    style={inputStyle}
                   />
                 </div>
               ))}
             </div>
-            <div className="flex gap-2 mt-5">
-              <Button variant="outline" className="flex-1" onClick={() => { setEditTarget(null); setEditForm(null); }}>
-                Cancel
-              </Button>
-              <Button className="flex-1" onClick={saveEdit} disabled={saving}>
-                {saving ? "Saving…" : "Save Changes"}
-              </Button>
+            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+              <button
+                onClick={() => { setEditTarget(null); setEditForm(null); }}
+                style={{ flex: 1, padding: "11px", borderRadius: 10, border: "1px solid #DDD0BB", background: "#EDE7D9", color: "#8B7355", fontFamily: font, fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+              >Cancel</button>
+              <button
+                onClick={saveEdit}
+                disabled={saving}
+                style={{ flex: 1, padding: "11px", borderRadius: 10, border: "none", background: "#2D5016", color: "#fff", fontFamily: font, fontSize: 14, fontWeight: 600, cursor: "pointer", opacity: saving ? 0.6 : 1 }}
+              >{saving ? "Saving…" : "Save Changes"}</button>
             </div>
           </div>
         </div>
@@ -312,35 +349,57 @@ export default function AdminUsersPage() {
 
       {/* Invite Modal */}
       {showInviteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-background rounded-2xl shadow-xl w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold">Invite New User</h2>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={closeInviteModal}>
-                <X size={15} />
-              </Button>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 16 }}>
+          <div style={{ background: "#FAF5EC", borderRadius: 20, boxShadow: "0 8px 40px rgba(0,0,0,0.18)", width: "100%", maxWidth: 420, padding: 24 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+              <h2 style={{ fontFamily: "'Pacifico', cursive", fontSize: 20, fontWeight: 400, color: "#1E130A", margin: 0 }}>Invite New User</h2>
+              <button onClick={closeInviteModal} style={{ background: "none", border: "none", cursor: "pointer", color: "#A8957B", padding: 4 }}>
+                <X size={18} />
+              </button>
             </div>
-            <p className="text-sm text-muted-foreground mb-5">
+            <p style={{ fontSize: 13, color: "#8B7355", marginBottom: 20, lineHeight: 1.5 }}>
               Generate a unique invite link. Share it with the new user — they'll follow it to create their profile and automatically become your friend.
             </p>
-
             {!inviteLink ? (
-              <Button className="w-full" onClick={handleCreateInvite} disabled={inviteLoading}>
-                <UserPlus size={15} className="mr-2" />
+              <button
+                onClick={handleCreateInvite}
+                disabled={inviteLoading}
+                style={{
+                  width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  padding: "12px", borderRadius: 12, border: "none",
+                  background: "#2D5016", color: "#fff",
+                  fontFamily: font, fontSize: 14, fontWeight: 600, cursor: "pointer",
+                  opacity: inviteLoading ? 0.6 : 1,
+                }}
+              >
+                <UserPlus size={15} />
                 {inviteLoading ? "Generating…" : "Generate Invite Link"}
-              </Button>
+              </button>
             ) : (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 p-3 rounded-xl bg-accent border border-border">
-                  <span className="text-sm text-foreground flex-1 break-all font-mono">{inviteLink}</span>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 14px", borderRadius: 12, background: "#EDE7D9", border: "1px solid #DDD0BB" }}>
+                  <span style={{ fontSize: 12, color: "#1E130A", flex: 1, wordBreak: "break-all", fontFamily: "'JetBrains Mono', monospace" }}>{inviteLink}</span>
                 </div>
-                <Button className="w-full gap-2" onClick={copyLink}>
+                <button
+                  onClick={copyLink}
+                  style={{
+                    width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                    padding: "12px", borderRadius: 12, border: "none",
+                    background: "#2D5016", color: "#fff",
+                    fontFamily: font, fontSize: 14, fontWeight: 600, cursor: "pointer",
+                  }}
+                >
                   {copied ? <Check size={15} /> : <Copy size={15} />}
                   {copied ? "Copied!" : "Copy Link"}
-                </Button>
-                <Button variant="outline" className="w-full" onClick={() => { setInviteLink(null); setCopied(false); }}>
-                  Generate Another
-                </Button>
+                </button>
+                <button
+                  onClick={() => { setInviteLink(null); setCopied(false); }}
+                  style={{
+                    width: "100%", padding: "12px", borderRadius: 12,
+                    border: "1px solid #DDD0BB", background: "#EDE7D9",
+                    color: "#8B7355", fontFamily: font, fontSize: 14, fontWeight: 600, cursor: "pointer",
+                  }}
+                >Generate Another</button>
               </div>
             )}
           </div>

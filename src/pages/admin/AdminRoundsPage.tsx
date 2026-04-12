@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Trash2 } from "lucide-react";
+
+const font = "'DM Sans', system-ui, sans-serif";
 
 interface Round {
   id: string;
@@ -33,10 +33,10 @@ export default function AdminRoundsPage() {
 
   useEffect(() => { loadRounds(); }, []);
 
-  const statusColor = (s: string) => {
-    if (s === "active") return "default";
-    if (s === "complete") return "secondary";
-    return "outline";
+  const statusStyle = (s: string): React.CSSProperties => {
+    if (s === "active") return { background: "#2D501612", color: "#2D5016", border: "1px solid #2D501630" };
+    if (s === "complete") return { background: "#EDE7D9", color: "#8B7355", border: "1px solid #DDD0BB" };
+    return { background: "#F5EFE0", color: "#A8957B", border: "1px solid #DDD0BB" };
   };
 
   const setStatus = async (id: string, status: string) => {
@@ -51,71 +51,79 @@ export default function AdminRoundsPage() {
   };
 
   return (
-    <div className="p-4 md:p-6 max-w-6xl">
-      <div className="flex items-center justify-between mb-4 md:mb-6">
-        <h1 className="text-xl md:text-2xl font-bold text-foreground">Rounds</h1>
-        <Badge variant="secondary">{rounds.length} total</Badge>
+    <div style={{ padding: "24px 20px", maxWidth: 1100, fontFamily: font }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+        <h1 style={{ fontFamily: "'Pacifico', cursive", fontSize: 26, fontWeight: 400, color: "#1E130A", margin: 0 }}>
+          Rounds
+        </h1>
+        <span style={{
+          fontSize: 12, fontWeight: 600, color: "#8B7355",
+          background: "#EDE7D9", borderRadius: 8, padding: "4px 10px",
+        }}>{rounds.length} total</span>
       </div>
 
-      <div className="rounded-xl border border-border bg-card overflow-hidden overflow-x-auto">
+      <div style={{ background: "#FAF5EC", border: "1px solid #DDD0BB", borderRadius: 16, overflow: "hidden", overflowX: "auto", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
         <Table className="min-w-[580px]">
           <TableHeader>
-            <TableRow>
-              <TableHead>Course</TableHead>
-              <TableHead>Game Type</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Stakes</TableHead>
-              <TableHead>Broadcast</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead className="w-32">Actions</TableHead>
+            <TableRow style={{ borderBottom: "1px solid #DDD0BB" }}>
+              {["Course", "Game Type", "Status", "Stakes", "Broadcast", "Created", "Actions"].map(h => (
+                <TableHead key={h} style={{ fontFamily: font, fontSize: 11, fontWeight: 700, color: "#8B7355", textTransform: "uppercase", letterSpacing: "0.05em", background: "#F0E9D8" }}>{h}</TableHead>
+              ))}
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">Loading...</TableCell>
+                <TableCell colSpan={7} style={{ textAlign: "center", color: "#A8957B", padding: "32px", fontFamily: font }}>Loading…</TableCell>
               </TableRow>
             ) : rounds.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">No rounds yet</TableCell>
+                <TableCell colSpan={7} style={{ textAlign: "center", color: "#A8957B", padding: "32px", fontFamily: font }}>No rounds yet</TableCell>
               </TableRow>
             ) : (
               rounds.map((r) => (
-                <TableRow key={r.id}>
-                  <TableCell className="font-medium">{r.course || "—"}</TableCell>
-                  <TableCell>{r.game_type}</TableCell>
+                <TableRow key={r.id} style={{ borderBottom: "1px solid #EDE7D9" }}>
+                  <TableCell style={{ fontWeight: 600, color: "#1E130A", fontSize: 14 }}>{r.course || "—"}</TableCell>
+                  <TableCell style={{ fontSize: 13, color: "#8B7355" }}>{r.game_type}</TableCell>
                   <TableCell>
-                    <Badge variant={statusColor(r.status)}>{r.status}</Badge>
+                    <span style={{
+                      fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 6,
+                      textTransform: "capitalize", ...statusStyle(r.status),
+                    }}>{r.status}</span>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{r.stakes || "—"}</TableCell>
-                  <TableCell>{r.is_broadcast ? "Yes" : "No"}</TableCell>
-                  <TableCell className="text-muted-foreground text-xs">
+                  <TableCell style={{ fontSize: 13, color: "#8B7355" }}>{r.stakes || "—"}</TableCell>
+                  <TableCell style={{ fontSize: 13, color: r.is_broadcast ? "#2D5016" : "#A8957B" }}>{r.is_broadcast ? "Yes" : "No"}</TableCell>
+                  <TableCell style={{ fontSize: 12, color: "#A8957B" }}>
                     {new Date(r.created_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-1">
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       {r.status === "active" && (
-                        <Button
-                          variant="outline" size="sm" className="h-7 text-xs px-2"
+                        <button
                           onClick={() => setStatus(r.id, "complete")}
-                        >
-                          Complete
-                        </Button>
+                          style={{
+                            padding: "4px 10px", borderRadius: 8,
+                            border: "1px solid #DDD0BB", background: "#EDE7D9",
+                            color: "#8B7355", fontFamily: font, fontSize: 12, fontWeight: 600, cursor: "pointer",
+                          }}
+                        >Complete</button>
                       )}
                       {r.status === "complete" && (
-                        <Button
-                          variant="outline" size="sm" className="h-7 text-xs px-2"
+                        <button
                           onClick={() => setStatus(r.id, "active")}
-                        >
-                          Reopen
-                        </Button>
+                          style={{
+                            padding: "4px 10px", borderRadius: 8,
+                            border: "1px solid #2D501630", background: "#2D501612",
+                            color: "#2D5016", fontFamily: font, fontSize: 12, fontWeight: 600, cursor: "pointer",
+                          }}
+                        >Reopen</button>
                       )}
-                      <Button
-                        variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
+                      <button
                         onClick={() => deleteRound(r.id, r.course)}
+                        style={{ background: "none", border: "none", cursor: "pointer", padding: 6, borderRadius: 6, color: "#C0392B" }}
                       >
                         <Trash2 size={13} />
-                      </Button>
+                      </button>
                     </div>
                   </TableCell>
                 </TableRow>
