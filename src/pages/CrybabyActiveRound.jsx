@@ -525,7 +525,7 @@ function CrybabSetupModal({ players, totals, onConfirm }) {
         </div>
 
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontFamily: FONT, fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 8 }}>
+          <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 8 }}>
             Crybaby Bet (max ${maxBet})
           </div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16 }}>
@@ -546,7 +546,7 @@ function CrybabSetupModal({ players, totals, onConfirm }) {
         </div>
 
         <div style={{ marginBottom: 20 }}>
-          <div style={{ fontFamily: FONT, fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 8 }}>
+          <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 8 }}>
             Choose Partner
           </div>
           <div style={{ display: "flex", gap: 8 }}>

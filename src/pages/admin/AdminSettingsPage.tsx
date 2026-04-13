@@ -79,10 +79,10 @@ export default function AdminSettingsPage() {
   };
 
   const inputStyle: React.CSSProperties = {
-    fontFamily: font, fontSize: 14,
+    fontFamily: "'JetBrains Mono', monospace", fontSize: 14,
     background: "#FAF5EC", border: "1px solid #DDD0BB", borderRadius: 10,
     padding: "10px 12px", outline: "none", flex: 1, boxSizing: "border-box",
-    color: "#1E130A", fontFamily: "'JetBrains Mono', monospace",
+    color: "#1E130A",
   };
 
   return (

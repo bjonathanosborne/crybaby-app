@@ -135,12 +135,12 @@ export default function SoloRound() {
                     onClick={() => setSelectedTee(tee.name)}
                     style={{
                       flex: 1, padding: "12px 10px", borderRadius: 12,
-                      border: "none", cursor: "pointer",
+                      cursor: "pointer",
                       background: selectedTee === tee.name ? "#2D5016" : "#FAF5EC",
                       color: selectedTee === tee.name ? "#fff" : "#1E130A",
+                      border: selectedTee === tee.name ? "none" : "1px solid #DDD0BB",
                       boxShadow: selectedTee === tee.name ? "0 2px 8px rgba(45,80,22,0.2)" : "0 1px 3px rgba(0,0,0,0.06)",
                       transition: "all 0.18s ease",
-                      border: selectedTee === tee.name ? "none" : "1px solid #DDD0BB",
                     }}
                   >
                     <div style={{ fontFamily: font, fontSize: 14, fontWeight: 700 }}>{tee.name}</div>
