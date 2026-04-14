@@ -29,6 +29,7 @@ import AdminGroupsPage from "./pages/admin/AdminGroupsPage";
 import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
 import RoundSpectateView from "./pages/RoundSpectateView";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
+import TermsPage from "./pages/TermsPage";
 import InvitePage from "./pages/InvitePage";
 import SoloRound from "./pages/SoloRound";
 
@@ -54,6 +55,7 @@ const AppRoutes = () => (
     <Route path="/auth" element={<AuthPage />} />
     <Route path="/reset-password" element={<ResetPassword />} />
     <Route path="/privacy" element={<PrivacyPolicyPage />} />
+    <Route path="/terms" element={<TermsPage />} />
     <Route path="/" element={<RootRedirect />} />
     {/* Standalone full-screen routes — no AppLayout wrapper */}
     <Route path="/round" element={<ProtectedRoute><CrybabyActiveRound /></ProtectedRoute>} />

@@ -115,6 +115,11 @@ export default function AppLayout() {
         paddingBottom: `calc(max(8px, env(safe-area-inset-bottom)) + 64px + ${showBanner ? BANNER_H : 0}px)`,
       }}>
         <Outlet />
+        {/* ── Legal links ── */}
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, padding: "8px 20px 4px", maxWidth: 420, margin: "0 auto" }}>
+          <a href="/terms" style={{ fontSize: 11, color: "#A8957B", textDecoration: "none", fontFamily: "'DM Sans', system-ui, sans-serif" }}>Terms</a>
+          <a href="/privacy" style={{ fontSize: 11, color: "#A8957B", textDecoration: "none", fontFamily: "'DM Sans', system-ui, sans-serif" }}>Privacy</a>
+        </div>
       </div>
 
       <BottomNav />
