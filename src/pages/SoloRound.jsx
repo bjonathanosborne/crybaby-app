@@ -60,27 +60,45 @@ export default function SoloRound() {
     if (!user || !course) return;
     setSaving(true);
     try {
-      await supabase.from("rounds").insert({
-        created_by: user.id,
-        game_type: "solo",
-        course: course.name,
-        course_details: {
-          city: course.city ?? "",
-          state: course.state ?? "",
-          pars: course.pars,
-          handicaps: course.handicaps,
-          selectedTee,
-          tees: course.tees,
-          scores,
-          totalStrokes,
-          totalDiff,
-          holes,
-        },
-        stakes: null,
-        status: "complete",
-        scorekeeper_mode: false,
-        is_broadcast: false,
+      // 1. Create the round
+      const { data: round, error: roundError } = await supabase
+        .from("rounds")
+        .insert({
+          created_by: user.id,
+          game_type: "solo",
+          course: course.name,
+          course_details: {
+            city: course.city ?? "",
+            state: course.state ?? "",
+            pars: course.pars,
+            handicaps: course.handicaps,
+            selectedTee,
+            tees: course.tees,
+          },
+          stakes: null,
+          status: "complete",
+          scorekeeper_mode: false,
+          is_broadcast: false,
+        })
+        .select()
+        .single();
+
+      if (roundError) throw roundError;
+
+      // 2. Create round_players entry with hole-by-hole scores
+      //    Format matches CrybabyActiveRound: { "1": 4, "2": 5, ... }
+      const holeScores = {};
+      scores.forEach((s, i) => { holeScores[String(i + 1)] = s; });
+
+      await supabase.from("round_players").insert({
+        round_id: round.id,
+        user_id: user.id,
+        guest_name: null,
+        hole_scores: holeScores,
+        total_score: totalStrokes,
+        is_scorekeeper: true,
       });
+
       navigate("/feed");
     } catch (err) {
       console.error("Failed to save solo round:", err);

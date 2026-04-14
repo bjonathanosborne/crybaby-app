@@ -262,7 +262,9 @@ export default function RoundSpectateView() {
           <div style={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 14, overflow: "hidden" }}>
             {scoreboard.map((p, i) => {
               const name = p.guest_name || "Player";
-              const holesPlayed = Array.isArray(p.hole_scores) ? p.hole_scores.filter(s => s != null && s !== "").length : 0;
+              const rawHS = p.hole_scores;
+              const hsList = Array.isArray(rawHS) ? rawHS : (rawHS && typeof rawHS === "object" ? Object.values(rawHS) : []);
+              const holesPlayed = hsList.filter(s => s != null && s !== "").length;
               const total = p.total_score ?? 0;
               return (
                 <div

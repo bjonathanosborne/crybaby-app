@@ -44,7 +44,13 @@ export default function StatsPage() {
         (p: any) => p.user_id === user?.id
       );
       const totalScore = myPlayer?.total_score || 0;
-      const holeScores: number[] = Array.isArray(myPlayer?.hole_scores) ? myPlayer.hole_scores : [];
+      // hole_scores can be an array [4,5,3,...] or an object {"1":4,"2":5,...}
+      const rawHS = myPlayer?.hole_scores;
+      const holeScores: number[] = Array.isArray(rawHS)
+        ? rawHS
+        : rawHS && typeof rawHS === "object"
+          ? Object.keys(rawHS).sort((a, b) => Number(a) - Number(b)).map(k => rawHS[k])
+          : [];
       const holesPlayed = holeScores.filter((s: number) => s > 0).length;
       const pars = (r.course_details as any)?.pars || [];
       const totalPar = pars.slice(0, holesPlayed).reduce((sum: number, p: number) => sum + (p || 0), 0);
