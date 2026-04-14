@@ -5,7 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import crybabyLogo from "@/assets/crybaby-logo.png";
 import AddClubModal from "@/components/AddClubModal";
-import { Users, RotateCcw, Flag, Coins, Sliders, Globe, Lock, EyeOff, Eye } from "lucide-react";
+import { Users, RotateCcw, Flag, Coins, Sliders, Globe, Lock, EyeOff, Eye, ClipboardList } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { WolfIcon, HammerIcon, CrybabyBottleIcon, BirdieIcon, MoneyIcon, PressIcon } from "@/components/icons/CrybIcons";
 import CourseSearch from "@/components/CourseSearch";
 
@@ -67,6 +68,16 @@ const GAME_FORMATS = [
     requiresCarts: false,
   },
   {
+    id: "solo",
+    name: "Just Me",
+    players: { min: 1, max: 1 },
+    description: "Keep your own score. No bets, no opponents — just you and the course.",
+    mechanics: [],
+    defaultHoles: 18,
+    teamStructure: "solo",
+    requiresCarts: false,
+  },
+  {
     id: "custom",
     name: "Custom Game",
     players: { min: 2, max: 6 },
@@ -85,6 +96,7 @@ const GAME_ICON = {
   nassau:               (s) => <Flag size={s} strokeWidth={1.75} />,
   skins:                (s) => <MoneyIcon size={s} />,
   wolf:                 (s) => <WolfIcon size={s} />,
+  solo:                 (s) => <ClipboardList size={s} strokeWidth={1.75} />,
   custom:               (s) => <Sliders size={s} strokeWidth={1.75} />,
 };
 
@@ -765,6 +777,7 @@ function ReviewSection({ label, value, icon }) {
 export default function CrybabSetupWizard() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const font = "'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
   const mono = "'SF Mono', 'JetBrains Mono', monospace";
 
@@ -1437,6 +1450,7 @@ export default function CrybabSetupWizard() {
         <button
           disabled={!canProceed()}
           onClick={() => {
+            if (step === 0 && selectedFormat === "solo") { navigate("/solo"); return; }
             if (step < 4) setStep(step + 1);
             else setRoundStarted(true);
           }}
