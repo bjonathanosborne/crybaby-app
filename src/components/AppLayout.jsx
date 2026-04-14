@@ -51,8 +51,9 @@ export default function AppLayout() {
             <HamburgerMenu />
           </div>
 
-          {/* Logo — absolutely centred */}
+          {/* Logo — absolutely centred, tappable → home */}
           <div
+            onClick={() => navigate("/feed")}
             style={{
               position: "absolute",
               left: "50%",
@@ -64,7 +65,7 @@ export default function AppLayout() {
               color: "#2D5016",
               lineHeight: 1,
               whiteSpace: "nowrap",
-              pointerEvents: "none",
+              cursor: "pointer",
               userSelect: "none",
               textShadow: "0 1px 8px rgba(212, 175, 55, 0.35)",
             }}
