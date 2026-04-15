@@ -1081,27 +1081,45 @@ export default function CrybabActiveRound() {
   if (error || !round) {
     const isTimeout = error && error.includes("timed out");
     return (
-      <div style={{ maxWidth: 420, margin: "0 auto", minHeight: "100vh", background: "#F5EFE0", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONT }}>
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>{isTimeout ? "📶" : "😬"}</div>
-          <div style={{ fontSize: 16, fontWeight: 600, color: "#8B7355", marginBottom: 16 }}>{error || "Round not found"}</div>
-          {isTimeout ? (
-            <button onClick={() => window.location.reload()} style={{
-              padding: "12px 24px", borderRadius: 12, border: "none", cursor: "pointer",
-              fontFamily: FONT, fontSize: 14, fontWeight: 700,
-              background: "#1E130A", color: "#fff",
-            }}>
-              Retry
-            </button>
-          ) : (
+      <div style={{ maxWidth: 420, margin: "0 auto", minHeight: "100vh", background: "#F5EFE0", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONT, padding: 24 }}>
+        <div style={{ textAlign: "center", maxWidth: 320 }}>
+          <div style={{ fontSize: 56, marginBottom: 16, lineHeight: 1 }}>{isTimeout ? "📶" : "⛳"}</div>
+          <div style={{
+            fontFamily: "'Pacifico', cursive", fontSize: 22, color: "#1E130A", marginBottom: 8,
+          }}>
+            {isTimeout ? "Connection Lost" : "Round Not Found"}
+          </div>
+          <div style={{ fontSize: 14, color: "#8B7355", lineHeight: 1.5, marginBottom: 28 }}>
+            {isTimeout
+              ? "Looks like your signal took a mulligan. Check your connection and try again."
+              : "This round may have ended or the link is no longer valid. Head back and start fresh."}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {isTimeout ? (
+              <button onClick={() => window.location.reload()} style={{
+                padding: "14px 24px", borderRadius: 14, border: "none", cursor: "pointer",
+                fontFamily: FONT, fontSize: 15, fontWeight: 700,
+                background: "#1E130A", color: "#FAF5EC",
+              }}>
+                Try Again
+              </button>
+            ) : (
+              <button onClick={() => navigate("/feed")} style={{
+                padding: "14px 24px", borderRadius: 14, border: "none", cursor: "pointer",
+                fontFamily: FONT, fontSize: 15, fontWeight: 700,
+                background: "#1E130A", color: "#FAF5EC",
+              }}>
+                Back to Home
+              </button>
+            )}
             <button onClick={() => navigate("/setup")} style={{
-              padding: "12px 24px", borderRadius: 12, border: "none", cursor: "pointer",
-              fontFamily: FONT, fontSize: 14, fontWeight: 700,
-              background: "#1E130A", color: "#fff",
+              padding: "12px 24px", borderRadius: 14, border: "2px solid #DDD0BB", cursor: "pointer",
+              fontFamily: FONT, fontSize: 14, fontWeight: 600,
+              background: "transparent", color: "#8B7355",
             }}>
               Start New Round
             </button>
-          )}
+          </div>
         </div>
       </div>
     );
