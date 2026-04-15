@@ -1017,6 +1017,29 @@ export default function CrybabActiveRound() {
         if (saved.currentHole > 1) setCurrentHole(saved.currentHole);
         if (saved.carryOver) setCarryOver(saved.carryOver);
         if (saved.totals) setTotals(saved.totals);
+
+        // Restore per-hole stroke scores from round_players.hole_scores
+        const restoredScores = {};
+        dbPlayers.forEach(p => {
+          if (p.hole_scores && typeof p.hole_scores === "object") {
+            Object.entries(p.hole_scores).forEach(([hole, score]) => {
+              if (!restoredScores[hole]) restoredScores[hole] = {};
+              restoredScores[hole][p.id] = score;
+            });
+          }
+        });
+        if (Object.keys(restoredScores).length) setScores(restoredScores);
+
+        // Reconstruct holeResults for all played holes so progress dots,
+        // roundIsComplete, and the scorecard work correctly on resume.
+        const playedHoles = saved.currentHole > 1 ? saved.currentHole - 1 : 0;
+        if (playedHoles > 0) {
+          const restored = [];
+          for (let h = 1; h <= playedHoles; h++) {
+            restored.push({ hole: h, push: false, resumed: true });
+          }
+          setHoleResults(restored);
+        }
       }
     }
   }, [round, totalsInitialized]);
