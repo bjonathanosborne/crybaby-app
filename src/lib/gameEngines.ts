@@ -562,3 +562,81 @@ export function calculateFoldResult(
 export function isRoundComplete(gameMode: GameMode, currentHole: number, totalHoles: number, holeResultsCount: number): boolean {
   return currentHole >= totalHoles && holeResultsCount >= totalHoles - 1;
 }
+
+// --- ROUND REPLAY (for post-round score editing) ---
+
+export interface ReplayHoleInput {
+  holeNumber: number;
+  scores: Record<string, number>;
+  hammerDepth: number;
+  folded: boolean;
+  foldWinnerTeamId?: string;
+}
+
+export interface ReplayRoundResult {
+  totals: Record<string, number>;
+  holeResults: (HoleResult & { hole: number })[];
+}
+
+/**
+ * Replays all 18 holes through the appropriate game engine with (possibly corrected) scores.
+ * Returns new per-player money totals and per-hole results.
+ * Wolf is NOT supported for money recalculation (partner selections not stored).
+ */
+export function replayRound(
+  gameMode: GameMode,
+  players: Player[],
+  pars: number[],
+  handicaps: number[],
+  holeValue: number,
+  settings: GameSettings,
+  holes: ReplayHoleInput[],
+  flipTeams?: TeamInfo | null,
+): ReplayRoundResult {
+  const lowestHandicap = Math.min(...players.map(p => p.handicap));
+  const totals: Record<string, number> = {};
+  players.forEach(p => { totals[p.id] = 0; });
+  const holeResults: (HoleResult & { hole: number })[] = [];
+  let carryOver = 0;
+  const carryOverCap = settings.carryOverCap || "∞";
+
+  for (const hole of holes) {
+    const { holeNumber, scores, hammerDepth, folded, foldWinnerTeamId } = hole;
+    const par = pars[holeNumber - 1];
+    const holeHandicapRank = handicaps[holeNumber - 1];
+
+    // Determine teams for this hole
+    const teams = getTeamsForHole(gameMode, holeNumber, players, flipTeams);
+
+    let result: HoleResult;
+
+    if (folded && teams && foldWinnerTeamId) {
+      // Folded hole — score-independent, amount = pot at fold time
+      const foldValue = holeValue * Math.pow(2, hammerDepth) + carryOver;
+      result = calculateFoldResult(players, teams, foldValue, foldWinnerTeamId);
+      result.carryOver = 0;
+    } else if (gameMode === 'skins' || gameMode === 'custom') {
+      result = calculateSkinsResult(players, scores, par, holeNumber, holeValue, carryOver, settings, lowestHandicap, holeHandicapRank);
+    } else if (gameMode === 'nassau') {
+      const nassauTeams = players.length === 4
+        ? { teamA: { name: 'Team 1', players: [players[0], players[1]], color: '#16A34A' }, teamB: { name: 'Team 2', players: [players[2], players[3]], color: '#3B82F6' } }
+        : null;
+      result = calculateNassauHoleResult(players, nassauTeams, scores, par, holeNumber, holeValue, settings, lowestHandicap, holeHandicapRank);
+    } else if (teams) {
+      // DOC / Flip — team best ball
+      result = calculateTeamHoleResult(players, teams, scores, par, holeValue, carryOver, hammerDepth, settings, lowestHandicap, holeHandicapRank, carryOverCap);
+    } else {
+      // DOC crybaby phase (holes 16-18) — skins scoring
+      result = calculateSkinsResult(players, scores, par, holeNumber, holeValue, carryOver, settings, lowestHandicap, holeHandicapRank);
+    }
+
+    result.playerResults.forEach(pr => {
+      totals[pr.id] = (totals[pr.id] || 0) + pr.amount;
+    });
+
+    carryOver = result.carryOver || 0;
+    holeResults.push({ hole: holeNumber, ...result });
+  }
+
+  return { totals, holeResults };
+}

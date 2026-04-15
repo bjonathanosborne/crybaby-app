@@ -911,6 +911,47 @@ export async function loadGameState(roundId: string): Promise<{ currentHole: num
   return (round?.course_details as any)?.game_state ?? null;
 }
 
+// Delete non-manual settlements for a round (used before recalculation)
+export async function deleteRoundSettlements(roundId: string): Promise<void> {
+  const { error } = await supabase
+    .from("round_settlements")
+    .delete()
+    .eq("round_id", roundId)
+    .is("is_manual_adjustment", false);
+  if (error) throw error;
+}
+
+// Update scores + settlements after post-round score editing
+export async function updateRoundScoresAndSettlements(
+  roundId: string,
+  playerUpdates: { playerId: string; holeScores: Record<string, number>; totalScore: number }[],
+  settlements: { userId?: string | null; guestName?: string | null; amount: number }[],
+): Promise<void> {
+  // 1. Delete old non-manual settlements
+  await deleteRoundSettlements(roundId);
+
+  // 2. Update each player's scores
+  for (const pu of playerUpdates) {
+    const { error } = await supabase
+      .from("round_players")
+      .update({ hole_scores: pu.holeScores, total_score: pu.totalScore })
+      .eq("id", pu.playerId);
+    if (error) throw error;
+  }
+
+  // 3. Insert recalculated settlements
+  const inserts = settlements.map(s => ({
+    round_id: roundId,
+    user_id: s.userId || null,
+    guest_name: s.guestName || null,
+    amount: s.amount,
+  }));
+  const { error: insertError } = await supabase
+    .from("round_settlements")
+    .insert(inserts);
+  if (insertError) throw insertError;
+}
+
 // Add manual adjustment
 export async function addManualAdjustment(roundId: string, amount: number, notes: string) {
   const { data: { user } } = await supabase.auth.getUser();

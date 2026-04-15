@@ -32,6 +32,7 @@ import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import TermsPage from "./pages/TermsPage";
 import InvitePage from "./pages/InvitePage";
 import SoloRound from "./pages/SoloRound";
+import RoundEditScores from "./pages/RoundEditScores";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +61,7 @@ const AppRoutes = () => (
     {/* Standalone full-screen routes — no AppLayout wrapper */}
     <Route path="/round" element={<ProtectedRoute><CrybabyActiveRound /></ProtectedRoute>} />
     <Route path="/solo" element={<ProtectedRoute><SoloRound /></ProtectedRoute>} />
+    <Route path="/edit-scores" element={<ProtectedRoute><RoundEditScores /></ProtectedRoute>} />
 
     <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
       <Route path="/home" element={<Navigate to="/feed" replace />} />

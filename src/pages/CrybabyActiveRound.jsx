@@ -844,6 +844,7 @@ export default function CrybabActiveRound() {
   const [totals, setTotals] = useState({});
   const [holeResults, setHoleResults] = useState([]);
   const [hammerDepth, setHammerDepth] = useState(0);
+  const [hammerHistory, setHammerHistory] = useState([]);
   const [hammerPending, setHammerPending] = useState(false);
   const [lastHammerBy, setLastHammerBy] = useState(null);
   const [showHammer, setShowHammer] = useState(false);
@@ -1017,6 +1018,7 @@ export default function CrybabActiveRound() {
         if (saved.currentHole > 1) setCurrentHole(saved.currentHole);
         if (saved.carryOver) setCarryOver(saved.carryOver);
         if (saved.totals) setTotals(saved.totals);
+        if (saved.hammerHistory) setHammerHistory(saved.hammerHistory);
 
         // Restore per-hole stroke scores from round_players.hole_scores
         const restoredScores = {};
@@ -1399,6 +1401,21 @@ export default function CrybabActiveRound() {
       });
       setTotals(newTotals);
       setHoleResults(prev => [...prev, { hole: currentHole, ...showResult }]);
+      // Determine fold winner team from playerResults if folded
+      let foldWinnerTeamId = null;
+      if (showResult.folded && teams) {
+        const winnerPlayer = showResult.playerResults.find(pr => pr.amount > 0);
+        if (winnerPlayer) {
+          foldWinnerTeamId = teams.teamA.players.some(p => p.id === winnerPlayer.id) ? "A" : "B";
+        }
+      }
+      const newHammerHistory = [...hammerHistory, {
+        hole: currentHole,
+        hammerDepth,
+        folded: !!showResult.folded,
+        foldWinnerTeamId,
+      }];
+      setHammerHistory(newHammerHistory);
       setCarryOver(showResult.carryOver || 0);
       setHammerDepth(0);
       setHammerPending(false);
@@ -1421,7 +1438,7 @@ export default function CrybabActiveRound() {
         // If offline, mark lastSaveFailed so the UI shows a warning badge.
         const nextHole = currentHole < 18 ? currentHole + 1 : 18;
         const newCarryOver = showResult.carryOver || 0;
-        saveGameState(roundId, { currentHole: nextHole, carryOver: newCarryOver, totals: newTotals })
+        saveGameState(roundId, { currentHole: nextHole, carryOver: newCarryOver, totals: newTotals, hammerHistory: newHammerHistory })
           .then(() => setLastSaveFailed(false))
           .catch(err => {
             console.error("Failed to save game state:", err);
@@ -1774,7 +1791,7 @@ export default function CrybabActiveRound() {
             <button
               onClick={() => {
                 if (roundId) {
-                  saveGameState(roundId, { currentHole, carryOver, totals })
+                  saveGameState(roundId, { currentHole, carryOver, totals, hammerHistory })
                     .then(() => setLastSaveFailed(false))
                     .catch(() => {});
                 }

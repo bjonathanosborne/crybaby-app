@@ -227,6 +227,14 @@ export default function RoundSpectateView() {
             Follow
           </button>
         )}
+        {user && round && user.id === round.created_by && round.status === "completed" && (
+          <button
+            onClick={() => navigate(`/edit-scores?id=${roundId}`)}
+            style={{ fontSize: 12, fontWeight: 700, color: "#1E130A", background: "#FAF5EC", border: "1px solid #DDD0BB", borderRadius: 10, padding: "7px 12px", cursor: "pointer" }}
+          >
+            Edit Scores
+          </button>
+        )}
       </div>
 
       {/* Round header */}
