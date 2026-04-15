@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import crybabyLogo from "@/assets/crybaby-logo.png";
-import { useNavigate, useSearchParams, useBlocker } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { loadRound, updatePlayerScores, completeRound, cancelRound, createPost, saveAICommentary, insertSettlements, createRoundEvent, toggleBroadcast, saveGameState } from "@/lib/db";
 import { supabase } from "@/integrations/supabase/client";
 import RoundLiveFeed from "@/components/RoundLiveFeed";
@@ -876,10 +876,22 @@ export default function CrybabActiveRound() {
   // Round is considered complete once all 18 holes have results saved, or explicitly canceled
   const roundIsComplete = settlementsSaved || isCanceled || (currentHole >= 18 && holeResults.length >= 18);
 
-  // Block in-app navigation while round is active
-  const blocker = useBlocker(({ currentLocation, nextLocation }) =>
-    !roundIsComplete && currentLocation.pathname !== nextLocation.pathname
-  );
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const pendingNavRef = useRef(null);
+
+  // Guard back-button navigation while round is active
+  useEffect(() => {
+    if (roundIsComplete) return;
+    // Push a duplicate history entry so the back button pops to the same page
+    window.history.pushState(null, "", window.location.href);
+    const handler = () => {
+      // Re-push so repeated back-button presses keep hitting our handler
+      window.history.pushState(null, "", window.location.href);
+      setShowLeaveConfirm(true);
+    };
+    window.addEventListener("popstate", handler);
+    return () => window.removeEventListener("popstate", handler);
+  }, [roundIsComplete]);
 
   // Warn on browser refresh / tab close while round is active
   useEffect(() => {
@@ -1739,7 +1751,7 @@ export default function CrybabActiveRound() {
       )}
 
       {/* Leave Round Confirmation Dialog */}
-      {blocker.state === "blocked" && (
+      {showLeaveConfirm && (
         <div style={{
           position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)",
           backdropFilter: "blur(8px)", zIndex: 9999,
@@ -1759,7 +1771,7 @@ export default function CrybabActiveRound() {
               Scores are saved. You can resume from the Feed or home screen anytime.
             </div>
             <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={() => blocker.reset()} style={{
+              <button onClick={() => setShowLeaveConfirm(false)} style={{
                 flex: 1, padding: "14px", borderRadius: 14,
                 border: "2px solid #DDD0BB", background: "#FAF5EC",
                 fontFamily: FONT, fontSize: 15, fontWeight: 700,
@@ -1767,7 +1779,7 @@ export default function CrybabActiveRound() {
               }}>
                 Stay in Round
               </button>
-              <button onClick={() => blocker.proceed()} style={{
+              <button onClick={() => { setShowLeaveConfirm(false); navigate("/feed", { replace: true }); }} style={{
                 flex: 1, padding: "14px", borderRadius: 14,
                 border: "2px solid #DDD0BB", background: "#FAF5EC",
                 fontFamily: FONT, fontSize: 14, fontWeight: 700,
