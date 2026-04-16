@@ -1,14 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
 import { acceptInvite } from "@/lib/db";
 
 export default function AuthPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,16 +16,28 @@ export default function AuthPage() {
   const [ghin, setGhin] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Track whether the user was already logged in when auth finished loading.
+  // If so, don't auto-redirect — let them see the landing page.
+  // If user signs in fresh (Google OAuth return or email), redirect to feed.
+  const wasLoggedInRef = useRef<boolean | null>(null);
   useEffect(() => {
-    if (user) {
-      const pendingToken = localStorage.getItem("pending_invite_token");
-      if (pendingToken) {
-        localStorage.removeItem("pending_invite_token");
-        acceptInvite(pendingToken).catch(() => {});
-      }
-      navigate("/feed", { replace: true });
+    // Wait for auth to finish loading before deciding
+    if (authLoading) return;
+    // Record initial auth state once
+    if (wasLoggedInRef.current === null) {
+      wasLoggedInRef.current = !!user;
     }
-  }, [user, navigate]);
+    if (!user) return;
+    const pendingToken = localStorage.getItem("pending_invite_token");
+    if (pendingToken) {
+      localStorage.removeItem("pending_invite_token");
+      acceptInvite(pendingToken).catch(() => {});
+    }
+    // Already logged in when page loaded — stay on landing page
+    if (wasLoggedInRef.current) return;
+    // Fresh sign-in — enter the app
+    navigate("/feed", { replace: true });
+  }, [user, authLoading, navigate]);
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
