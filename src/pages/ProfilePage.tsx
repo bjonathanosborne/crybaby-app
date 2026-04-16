@@ -128,6 +128,7 @@ export default function ProfilePage() {
 
   const handleSaveProfile = async () => {
     try {
+      const isComplete = !!(editForm.first_name?.trim() && editForm.last_name?.trim() && editForm.ghin?.trim());
       await updateProfile({
         display_name: editForm.display_name,
         handicap: editForm.handicap ? Number(editForm.handicap) : null,
@@ -136,6 +137,7 @@ export default function ProfilePage() {
         last_name: editForm.last_name || "",
         state: editForm.state || "",
         ghin: editForm.ghin || null,
+        profile_completed: isComplete,
       });
       setProfile((prev: any) => ({
         ...prev,
@@ -238,11 +240,8 @@ export default function ProfilePage() {
               <div style={{ display: "flex", gap: 8 }}>
                 <input value={editForm.handicap} onChange={e => setEditForm(f => ({ ...f, handicap: e.target.value }))}
                   placeholder="Handicap" type="number" style={{ ...inputStyle, flex: 1 }} />
-                <div style={{ flex: 1, position: "relative" }}>
-                  <input value={editForm.ghin} disabled
-                    placeholder="GHIN #" style={{ ...inputStyle, flex: 1, opacity: 0.5, cursor: "not-allowed", background: "#EDE7D9" }} />
-                  <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", fontSize: 9, fontWeight: 700, color: "#A8957B", textTransform: "uppercase" }}>Coming Soon</span>
-                </div>
+                <input value={editForm.ghin} onChange={e => setEditForm(f => ({ ...f, ghin: e.target.value.replace(/\D/g, "") }))}
+                  placeholder="GHIN #" maxLength={10} style={{ ...inputStyle, flex: 1 }} />
               </div>
 
               {/* Home Course Search */}

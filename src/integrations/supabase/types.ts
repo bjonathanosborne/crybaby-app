@@ -277,6 +277,7 @@ export type Database = {
           home_course: string | null
           id: string
           last_name: string
+          profile_completed: boolean
           state: string
           updated_at: string
           user_id: string
@@ -293,6 +294,7 @@ export type Database = {
           home_course?: string | null
           id?: string
           last_name?: string
+          profile_completed?: boolean
           state?: string
           updated_at?: string
           user_id: string
@@ -309,6 +311,7 @@ export type Database = {
           home_course?: string | null
           id?: string
           last_name?: string
+          profile_completed?: boolean
           state?: string
           updated_at?: string
           user_id?: string

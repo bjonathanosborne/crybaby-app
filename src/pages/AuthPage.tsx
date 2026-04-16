@@ -12,7 +12,9 @@ export default function AuthPage() {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [displayName, setDisplayName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [ghin, setGhin] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -35,7 +37,12 @@ export default function AuthPage() {
           email,
           password,
           options: {
-            data: { display_name: displayName },
+            data: {
+              display_name: `${firstName} ${lastName}`.trim(),
+              first_name: firstName,
+              last_name: lastName,
+              ghin: ghin,
+            },
             emailRedirectTo: window.location.origin,
           },
         });
@@ -126,11 +133,26 @@ export default function AuthPage() {
         {/* Email Form */}
         <form onSubmit={handleEmailAuth} className="flex flex-col gap-3">
           {mode === "signup" && (
-            <input
-              type="text" placeholder="Display Name" value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)} required
-              className="w-full p-3 rounded-2xl border border-border bg-card text-[15px] text-foreground outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-muted-foreground"
-            />
+            <>
+              <div className="flex gap-2">
+                <input
+                  type="text" placeholder="First Name" value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)} required
+                  className="w-full p-3 rounded-2xl border border-border bg-card text-[15px] text-foreground outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-muted-foreground"
+                />
+                <input
+                  type="text" placeholder="Last Name" value={lastName}
+                  onChange={(e) => setLastName(e.target.value)} required
+                  className="w-full p-3 rounded-2xl border border-border bg-card text-[15px] text-foreground outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-muted-foreground"
+                />
+              </div>
+              <input
+                type="text" placeholder="GHIN # (7 digits)" value={ghin}
+                onChange={(e) => setGhin(e.target.value.replace(/\D/g, ""))}
+                maxLength={10} required
+                className="w-full p-3 rounded-2xl border border-border bg-card text-[15px] text-foreground outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-muted-foreground"
+              />
+            </>
           )}
           <input
             type="email" placeholder="Email" value={email}

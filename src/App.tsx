@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,8 +6,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import SplashScreen from "./components/SplashScreen";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { loadProfile } from "@/lib/db";
 import AuthPage from "./pages/AuthPage";
 import ResetPassword from "./pages/ResetPassword";
+import ProfileCompletionPage from "./pages/ProfileCompletionPage";
 import CrybabySetupWizard from "./pages/CrybabySetupWizard";
 import CrybabyActiveRound from "./pages/CrybabyActiveRound";
 import CrybabyFeed from "./pages/CrybabyFeed";
@@ -51,6 +53,24 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function ProfileGate({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const [checked, setChecked] = useState(false);
+  const [complete, setComplete] = useState(true);
+
+  useEffect(() => {
+    if (!user) { setChecked(true); return; }
+    loadProfile().then((p) => {
+      setComplete(p?.profile_completed ?? false);
+      setChecked(true);
+    }).catch(() => { setChecked(true); });
+  }, [user]);
+
+  if (!checked) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>Loading...</div>;
+  if (!complete) return <Navigate to="/complete-profile" replace />;
+  return <>{children}</>;
+}
+
 const AppRoutes = () => (
   <Routes>
     <Route path="/auth" element={<AuthPage />} />
@@ -58,12 +78,14 @@ const AppRoutes = () => (
     <Route path="/privacy" element={<PrivacyPolicyPage />} />
     <Route path="/terms" element={<TermsPage />} />
     <Route path="/" element={<RootRedirect />} />
+    {/* Profile completion — no ProfileGate (this IS the gate destination) */}
+    <Route path="/complete-profile" element={<ProtectedRoute><ProfileCompletionPage /></ProtectedRoute>} />
     {/* Standalone full-screen routes — no AppLayout wrapper */}
-    <Route path="/round" element={<ProtectedRoute><CrybabyActiveRound /></ProtectedRoute>} />
-    <Route path="/solo" element={<ProtectedRoute><SoloRound /></ProtectedRoute>} />
-    <Route path="/edit-scores" element={<ProtectedRoute><RoundEditScores /></ProtectedRoute>} />
+    <Route path="/round" element={<ProtectedRoute><ProfileGate><CrybabyActiveRound /></ProfileGate></ProtectedRoute>} />
+    <Route path="/solo" element={<ProtectedRoute><ProfileGate><SoloRound /></ProfileGate></ProtectedRoute>} />
+    <Route path="/edit-scores" element={<ProtectedRoute><ProfileGate><RoundEditScores /></ProfileGate></ProtectedRoute>} />
 
-    <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+    <Route element={<ProtectedRoute><ProfileGate><AppLayout /></ProfileGate></ProtectedRoute>}>
       <Route path="/home" element={<Navigate to="/feed" replace />} />
       <Route path="/setup" element={<CrybabySetupWizard />} />
       <Route path="/feed" element={<CrybabyFeed />} />
@@ -76,7 +98,7 @@ const AppRoutes = () => (
       <Route path="/stats" element={<StatsPage />} />
       <Route path="/watch" element={<RoundSpectateView />} />
     </Route>
-    <Route path="/join/:code" element={<ProtectedRoute><JoinGroupPage /></ProtectedRoute>} />
+    <Route path="/join/:code" element={<ProtectedRoute><ProfileGate><JoinGroupPage /></ProfileGate></ProtectedRoute>} />
     <Route path="/invite/:token" element={<InvitePage />} />
     <Route element={<AdminLayout />}>
       <Route path="/admin" element={<AdminDashboard />} />
