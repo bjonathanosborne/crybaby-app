@@ -42,7 +42,8 @@ function RootRedirect() {
   const { user, loading } = useAuth();
   if (import.meta.env.DEV) return <Navigate to="/feed" replace />;
   if (loading) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>Loading...</div>;
-  return <Navigate to={user ? "/feed" : "/auth"} replace />;
+  // Always show sign-in/sign-up landing at root — never auto-redirect into the app
+  return <Navigate to="/auth" replace />;
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {

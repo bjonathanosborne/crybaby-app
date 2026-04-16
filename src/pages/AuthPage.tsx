@@ -24,7 +24,7 @@ export default function AuthPage() {
         localStorage.removeItem("pending_invite_token");
         acceptInvite(pendingToken).catch(() => {});
       }
-      navigate("/home", { replace: true });
+      navigate("/feed", { replace: true });
     }
   }, [user, navigate]);
 
