@@ -26,6 +26,7 @@ export default function ProfileCompletionPage() {
   const [saving, setSaving] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [state, setState] = useState("");
   const [ghin, setGhin] = useState("");
 
   useEffect(() => {
@@ -41,8 +42,9 @@ export default function ProfileCompletionPage() {
       if (p.first_name) setFirstName(p.first_name);
       if (p.last_name) setLastName(p.last_name);
       if (p.ghin) setGhin(p.ghin);
-      // Try to split display_name for Google OAuth users
-      if (!p.first_name && !p.last_name && p.display_name) {
+      if (p.state) setState(p.state);
+      // Try to split display_name for Google OAuth users (skip if it looks like an email)
+      if (!p.first_name && !p.last_name && p.display_name && !p.display_name.includes("@")) {
         const parts = p.display_name.trim().split(/\s+/);
         if (parts.length >= 2) {
           setFirstName(parts[0]);
@@ -55,7 +57,7 @@ export default function ProfileCompletionPage() {
     }).catch(() => setLoading(false));
   }, [user, navigate]);
 
-  const canSubmit = firstName.trim() && lastName.trim() && ghin.trim();
+  const canSubmit = firstName.trim() && lastName.trim() && state.trim() && ghin.trim();
 
   const handleSave = async () => {
     if (!canSubmit) return;
@@ -64,6 +66,7 @@ export default function ProfileCompletionPage() {
       await updateProfile({
         first_name: firstName.trim(),
         last_name: lastName.trim(),
+        state: state.trim(),
         ghin: ghin.trim(),
         display_name: `${firstName.trim()} ${lastName.trim()}`,
         profile_completed: true,
@@ -94,7 +97,7 @@ export default function ProfileCompletionPage() {
     }}>
       {/* Header */}
       <div style={{
-        background: "#1E130A", padding: "60px 32px 36px",
+        background: "#4A3C2A", padding: "60px 32px 36px",
         borderRadius: "0 0 36px 36px", textAlign: "center",
       }}>
         <div style={{ fontSize: 48, marginBottom: 12 }}>⛳</div>
@@ -141,6 +144,21 @@ export default function ProfileCompletionPage() {
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
             placeholder="Last name"
+            style={inputStyle}
+          />
+        </div>
+
+        <div>
+          <label style={{
+            fontFamily: FONT, fontSize: 12, fontWeight: 600, color: "#8B7355",
+            display: "block", marginBottom: 6,
+          }}>
+            State
+          </label>
+          <input
+            value={state}
+            onChange={(e) => setState(e.target.value)}
+            placeholder="e.g. Texas"
             style={inputStyle}
           />
         </div>
