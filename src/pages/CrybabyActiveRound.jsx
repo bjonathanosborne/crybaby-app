@@ -1091,6 +1091,22 @@ export default function CrybabActiveRound() {
     saveRoundSettlements();
   }, [currentHole, holeResults.length, settlementsSaved]);
 
+  // Wire isOnline to real network events so the offline badge reflects actual connectivity.
+  // On reconnect, clear the badge and trigger a game state re-save if a previous save failed.
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      setPendingSync(0);
+    };
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
   // --- Early returns (after all hooks) ---
   if (loading) {
     return (
@@ -1552,22 +1568,6 @@ export default function CrybabActiveRound() {
     setNassauPresses(prev => [...prev, newPress]);
     setNassauState(prev => ({ ...prev, presses: [...prev.presses, newPress] }));
   };
-
-  // Wire isOnline to real network events so the offline badge reflects actual connectivity.
-  // On reconnect, clear the badge and trigger a game state re-save if a previous save failed.
-  useEffect(() => {
-    const handleOnline = () => {
-      setIsOnline(true);
-      setPendingSync(0);
-    };
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
-  }, []);
 
   // Completed round
   if (currentHole >= 18 && holeResults.length >= 18) {
