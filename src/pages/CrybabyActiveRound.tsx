@@ -1,13 +1,17 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import crybabyLogo from "@/assets/crybaby-logo.png";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { loadRound, updatePlayerScores, completeRound, cancelRound, createPost, saveAICommentary, insertSettlements, createRoundEvent, toggleBroadcast, saveGameState } from "@/lib/db";
+import { loadRound, updatePlayerScores, completeRound, cancelRound, createPost, saveAICommentary, insertSettlements, createRoundEvent, toggleBroadcast, saveGameState, RoundLoadError } from "@/lib/db";
+import { useRoundState } from "@/hooks/useRoundState";
+import { useRoundPersistence } from "@/hooks/useRoundPersistence";
+import { useRoundGameModes } from "@/hooks/useRoundGameModes";
 import { supabase } from "@/integrations/supabase/client";
 import RoundLiveFeed from "@/components/RoundLiveFeed";
 import {
   getStrokesOnHole, getTeamsForHole, getPhaseLabel, getPhaseDisplayLabel, getPhaseColor,
   supportsTeams, supportsHammer, supportsCrybaby,
   calculateTeamHoleResult, calculateSkinsResult, calculateNassauHoleResult,
+  calculateNassauSettlement,
   calculateWolfHoleResult, calculateFoldResult as calcFoldResult,
   generateFlipTeams, initWolfState, getWolfForHole, initNassauState,
   isRoundComplete,
@@ -838,47 +842,59 @@ export default function CrybabActiveRound() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // ALL hooks must be declared before any conditional returns
-  const [currentHole, setCurrentHole] = useState(1);
-  const [scores, setScores] = useState({});
-  const [totals, setTotals] = useState({});
-  const [holeResults, setHoleResults] = useState([]);
-  const [hammerDepth, setHammerDepth] = useState(0);
-  const [hammerHistory, setHammerHistory] = useState([]);
-  const [hammerPending, setHammerPending] = useState(false);
-  const [lastHammerBy, setLastHammerBy] = useState(null);
-  const [showHammer, setShowHammer] = useState(false);
-  const [showResult, setShowResult] = useState(null);
-  const [showCrybabSetup, setShowCrybabSetup] = useState(false);
-  const [crybabConfig, setCrybabConfig] = useState(null);
-  const [carryOver, setCarryOver] = useState(0);
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [isOnline, setIsOnline] = useState(true);
-  const [pendingSync, setPendingSync] = useState(0);
-  const [showLiveFeed, setShowLiveFeed] = useState(false);
+  // ----------------------------------------------------------------
+  // Decomposed hooks — keep local names to minimize downstream diff.
+  // All hooks must be declared before any conditional returns (preserves
+  // the fix from commit 747ef77 for React error #310).
+  // ----------------------------------------------------------------
+  const rs = useRoundState();
+  const persist = useRoundPersistence();
+  const gm = useRoundGameModes();
+
+  // Round state (owned by useRoundState)
+  const { currentHole, setCurrentHole } = rs;
+  const { scores, setScores } = rs;
+  const { totals, setTotals } = rs;
+  const { holeResults, setHoleResults } = rs;
+  const { hammerDepth, setHammerDepth } = rs;
+  const { hammerHistory, setHammerHistory } = rs;
+  const { hammerPending, setHammerPending } = rs;
+  const { lastHammerBy, setLastHammerBy } = rs;
+  const { carryOver, setCarryOver } = rs;
+  const { flipTeams, setFlipTeams } = rs;
+  const { wolfState, setWolfState } = rs;
+  const { nassauState, setNassauState } = rs;
+  const { nassauPresses, setNassauPresses } = rs;
+
+  // Persistence + network (owned by useRoundPersistence)
+  const { isOnline, lastSaveFailed, pendingSync, setPendingSync } = persist;
+
+  // Modal / UI mode state (owned by useRoundGameModes)
+  const { showHammer, setShowHammer } = gm;
+  const { showResult, setShowResult } = gm;
+  const { showCrybabSetup, setShowCrybabSetup } = gm;
+  const { crybabConfig, setCrybabConfig } = gm;
+  const { showLeaderboard, setShowLeaderboard } = gm;
+  const { showLiveFeed, setShowLiveFeed } = gm;
+  const { showFlipModal, setShowFlipModal } = gm;
+  const { wolfPartner, setWolfPartner } = gm;
+  const { isLoneWolf, setIsLoneWolf } = gm;
+  const { showWolfModal, setShowWolfModal } = gm;
+  const { wolfModalShownForHole, setWolfModalShownForHole } = gm;
+  const { showPressModal, setShowPressModal } = gm;
+  const { showCancelConfirm, setShowCancelConfirm } = gm;
+  const { canceling, setCanceling } = gm;
+  const { isCanceled, setIsCanceled } = gm;
+  const { showLeaveConfirm, setShowLeaveConfirm } = gm;
+  const pendingNavRef = gm.pendingNavRef;
+
+  // Stays local — tightly coupled to round loading / completion flow
   const [isBroadcast, setIsBroadcast] = useState(false);
-  const [flipTeams, setFlipTeams] = useState(null);
-  const [showFlipModal, setShowFlipModal] = useState(false);
-  const [wolfState, setWolfState] = useState({ wolfOrder: [], currentWolfIndex: 0, partnerSelected: null, isLoneWolf: false });
-  const [wolfPartner, setWolfPartner] = useState(null);
-  const [isLoneWolf, setIsLoneWolf] = useState(false);
-  const [showWolfModal, setShowWolfModal] = useState(false);
-  const [wolfModalShownForHole, setWolfModalShownForHole] = useState(0);
-  const [nassauState, setNassauState] = useState({ frontMatch: {}, backMatch: {}, overallMatch: {}, presses: [] });
-  const [nassauPresses, setNassauPresses] = useState([]);
-  const [showPressModal, setShowPressModal] = useState(false);
   const [settlementsSaved, setSettlementsSaved] = useState(false);
   const [totalsInitialized, setTotalsInitialized] = useState(false);
-  const [lastSaveFailed, setLastSaveFailed] = useState(false);
-  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  const [canceling, setCanceling] = useState(false);
-  const [isCanceled, setIsCanceled] = useState(false);
 
   // Round is considered complete once all 18 holes have results saved, or explicitly canceled
   const roundIsComplete = settlementsSaved || isCanceled || (currentHole >= 18 && holeResults.length >= 18);
-
-  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
-  const pendingNavRef = useRef(null);
 
   // Guard back-button navigation while round is active
   useEffect(() => {
@@ -922,20 +938,19 @@ export default function CrybabActiveRound() {
     }
   }, [roundId, navigate]);
 
-  // Load round from DB — 10-second timeout guards against silent hangs on golf courses
+  // Load round from DB — 10-second timeout is enforced inside loadRound() via
+  // AbortController. Failures surface as typed RoundLoadError with a kind we
+  // dispatch on for the error UI.
+  // retryNonce forces a re-fetch when the user taps the Retry button.
+  const [retryNonce, setRetryNonce] = useState(0);
+
   useEffect(() => {
     if (!roundId) return;
+    setLoading(true);
+    setError(null);
     const load = async () => {
       try {
-        const timeout = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Load timed out — check your connection")), 10000)
-        );
-        const data = await Promise.race([loadRound(roundId), timeout]);
-        if (!data) {
-          setError("Round not found");
-          setLoading(false);
-          return;
-        }
+        const data = await loadRound(roundId);
         setDbRound(data.round);
         setDbPlayers(data.players);
 
@@ -953,12 +968,17 @@ export default function CrybabActiveRound() {
         setLoading(false);
       } catch (err) {
         console.error("Failed to load round:", err);
-        setError(err.message || "Failed to load round");
+        // Surface typed error kind so the UI can route the recovery path
+        if (err instanceof RoundLoadError) {
+          setError({ kind: err.kind, message: err.message, roundId: err.roundId });
+        } else {
+          setError({ kind: "network", message: err?.message || "Failed to load round", roundId });
+        }
         setLoading(false);
       }
     };
     load();
-  }, [roundId]);
+  }, [roundId, retryNonce]);
 
   // Build round object from DB
   const round = dbRound ? {
@@ -1091,21 +1111,7 @@ export default function CrybabActiveRound() {
     saveRoundSettlements();
   }, [currentHole, holeResults.length, settlementsSaved]);
 
-  // Wire isOnline to real network events so the offline badge reflects actual connectivity.
-  // On reconnect, clear the badge and trigger a game state re-save if a previous save failed.
-  useEffect(() => {
-    const handleOnline = () => {
-      setIsOnline(true);
-      setPendingSync(0);
-    };
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
-  }, []);
+  // Online/offline wiring is owned by useRoundPersistence.
 
   // --- Early returns (after all hooks) ---
   if (loading) {
@@ -1120,39 +1126,59 @@ export default function CrybabActiveRound() {
   }
 
   if (error || !round) {
-    const isTimeout = error && error.includes("timed out");
+    // Pattern-match the typed error kind to pick the right recovery path.
+    const kind = error?.kind || (error ? "network" : "not_found");
+    const copy = {
+      timeout: {
+        emoji: "📶",
+        title: "Connection Lost",
+        body: "Looks like your signal took a mulligan. Check your connection and try again.",
+        primary: "Try Again",
+        onPrimary: () => setRetryNonce(n => n + 1),
+      },
+      not_found: {
+        emoji: "⛳",
+        title: "Round Not Found",
+        body: "This round may have ended or the link is no longer valid. Head back and start fresh.",
+        primary: "Back to Home",
+        onPrimary: () => navigate("/feed"),
+      },
+      unauthorized: {
+        emoji: "🔒",
+        title: "Sign in required",
+        body: "Your session expired. Sign in to keep scoring.",
+        primary: "Sign In",
+        onPrimary: () => navigate("/auth"),
+      },
+      network: {
+        emoji: "⚠️",
+        title: "Couldn't load round",
+        body: "Something went wrong loading this round. Tap retry or head home.",
+        primary: "Try Again",
+        onPrimary: () => setRetryNonce(n => n + 1),
+      },
+    }[kind];
+
     return (
       <div style={{ maxWidth: 420, margin: "0 auto", minHeight: "100vh", background: "#F5EFE0", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONT, padding: 24 }}>
         <div style={{ textAlign: "center", maxWidth: 320 }}>
-          <div style={{ fontSize: 56, marginBottom: 16, lineHeight: 1 }}>{isTimeout ? "📶" : "⛳"}</div>
+          <div style={{ fontSize: 56, marginBottom: 16, lineHeight: 1 }}>{copy.emoji}</div>
           <div style={{
             fontFamily: "'Pacifico', cursive", fontSize: 22, color: "#1E130A", marginBottom: 8,
           }}>
-            {isTimeout ? "Connection Lost" : "Round Not Found"}
+            {copy.title}
           </div>
           <div style={{ fontSize: 14, color: "#8B7355", lineHeight: 1.5, marginBottom: 28 }}>
-            {isTimeout
-              ? "Looks like your signal took a mulligan. Check your connection and try again."
-              : "This round may have ended or the link is no longer valid. Head back and start fresh."}
+            {copy.body}
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {isTimeout ? (
-              <button onClick={() => window.location.reload()} style={{
-                padding: "14px 24px", borderRadius: 14, border: "none", cursor: "pointer",
-                fontFamily: FONT, fontSize: 15, fontWeight: 700,
-                background: "#1E130A", color: "#FAF5EC",
-              }}>
-                Try Again
-              </button>
-            ) : (
-              <button onClick={() => navigate("/feed")} style={{
-                padding: "14px 24px", borderRadius: 14, border: "none", cursor: "pointer",
-                fontFamily: FONT, fontSize: 15, fontWeight: 700,
-                background: "#1E130A", color: "#FAF5EC",
-              }}>
-                Back to Home
-              </button>
-            )}
+            <button onClick={copy.onPrimary} style={{
+              padding: "14px 24px", borderRadius: 14, border: "none", cursor: "pointer",
+              fontFamily: FONT, fontSize: 15, fontWeight: 700,
+              background: "#1E130A", color: "#FAF5EC",
+            }}>
+              {copy.primary}
+            </button>
             <button onClick={() => navigate("/setup")} style={{
               padding: "12px 24px", borderRadius: 14, border: "2px solid #DDD0BB", cursor: "pointer",
               fontFamily: FONT, fontSize: 14, fontWeight: 600,
@@ -1411,10 +1437,71 @@ export default function CrybabActiveRound() {
 
   const advanceHole = () => {
     if (showResult) {
-      const newTotals = { ...totals };
-      showResult.playerResults.forEach(pr => {
-        newTotals[pr.id] = (newTotals[pr.id] || 0) + pr.amount;
-      });
+      // --- Nassau: compute the post-hole state, then derive totals from segment settlement ---
+      // For Nassau, per-hole amounts are always 0 (see calculateNassauHoleResult). Money comes
+      // from segment/press bets settled via calculateNassauSettlement. We compute the new
+      // nassauState synchronously here so we can feed it to the settlement function without
+      // waiting for React's setState to flush.
+      let newNassauState = nassauState;
+      let newTotals = { ...totals };
+
+      if (round.gameMode === 'nassau') {
+        // Apply this hole's winners to a fresh copy of nassauState
+        const winnerIds = (showResult.winnerIds && showResult.winnerIds.length > 0)
+          ? showResult.winnerIds
+          : showResult.playerResults.filter(pr => pr.amount > 0).map(pr => pr.id); // legacy fallback
+        newNassauState = {
+          frontMatch: { ...nassauState.frontMatch },
+          backMatch: { ...nassauState.backMatch },
+          overallMatch: { ...nassauState.overallMatch },
+          presses: nassauState.presses.map(p => ({ startHole: p.startHole, match: { ...p.match } })),
+        };
+        if (!showResult.push && winnerIds.length > 0) {
+          const bump = (map, id) => { map[id] = (map[id] || 0) + 1; };
+          winnerIds.forEach(wid => {
+            if (currentHole <= 9) bump(newNassauState.frontMatch, wid);
+            else bump(newNassauState.backMatch, wid);
+            bump(newNassauState.overallMatch, wid);
+          });
+          newNassauState.presses = newNassauState.presses.map(press => {
+            // Press runs from startHole through end of its segment (hole 9 for a
+            // front-9 press, hole 18 for a back-9 press). Don't credit holes past
+            // the segment boundary.
+            const segmentEnd = press.startHole <= 9 ? 9 : 18;
+            if (currentHole >= press.startHole && currentHole <= segmentEnd) {
+              const updated = { ...press.match };
+              winnerIds.forEach(wid => bump(updated, wid));
+              return { ...press, match: updated };
+            }
+            return press;
+          });
+        }
+        setNassauState(newNassauState);
+
+        // Derive provisional totals from segment settlement based on holes completed so far
+        const nassauTeams = round.players.length === 4
+          ? {
+              teamA: { name: 'Team 1', players: [round.players[0], round.players[1]], color: '#16A34A' },
+              teamB: { name: 'Team 2', players: [round.players[2], round.players[3]], color: '#3B82F6' },
+            }
+          : null;
+        const settlement = calculateNassauSettlement(
+          round.players,
+          nassauTeams,
+          newNassauState,
+          round.holeValue,
+          currentHole, // completedHoles = this hole just wrapped
+        );
+        round.players.forEach(p => {
+          newTotals[p.id] = settlement.playerAmounts[p.id] || 0;
+        });
+      } else {
+        // Non-Nassau modes: sum per-hole amounts as before
+        showResult.playerResults.forEach(pr => {
+          newTotals[pr.id] = (newTotals[pr.id] || 0) + pr.amount;
+        });
+      }
+
       setTotals(newTotals);
       setHoleResults(prev => [...prev, { hole: currentHole, ...showResult }]);
       // Determine fold winner team from playerResults if folded
@@ -1462,30 +1549,7 @@ export default function CrybabActiveRound() {
           });
       }
 
-      // Update nassau state
-      if (round.gameMode === 'nassau' && !showResult.push) {
-        setNassauState(prev => {
-          const next = { ...prev };
-          const winnerId = showResult.playerResults.find(pr => pr.amount > 0)?.id;
-          if (winnerId) {
-            if (currentHole <= 9) {
-              next.frontMatch = { ...prev.frontMatch, [winnerId]: (prev.frontMatch[winnerId] || 0) + 1 };
-            } else {
-              next.backMatch = { ...prev.backMatch, [winnerId]: (prev.backMatch[winnerId] || 0) + 1 };
-            }
-            next.overallMatch = { ...prev.overallMatch, [winnerId]: (prev.overallMatch[winnerId] || 0) + 1 };
-
-            // Update presses
-            next.presses = prev.presses.map(press => {
-              if (currentHole >= press.startHole) {
-                return { ...press, match: { ...press.match, [winnerId]: (press.match[winnerId] || 0) + 1 } };
-              }
-              return press;
-            });
-          }
-          return next;
-        });
-      }
+      // Nassau state update is handled inline above (see newNassauState).
 
       // Emit live feed event
       if (roundId) {

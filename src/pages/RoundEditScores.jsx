@@ -30,8 +30,9 @@ export default function RoundEditScores() {
     if (!roundId) return;
     (async () => {
       try {
+        // loadRound now throws RoundLoadError instead of returning null;
+        // propagate to the catch below so the error UI renders consistently.
         const data = await loadRound(roundId);
-        if (!data) { setError("Round not found"); setLoading(false); return; }
         setDbRound(data.round);
         setDbPlayers(data.players);
 

@@ -1,4 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
+import { RoundLoadError, classifyRoundLoadError } from "@/lib/roundErrors";
+
+// Re-export typed errors so existing callers keep importing from "@/lib/db"
+export { RoundLoadError, classifyRoundLoadError };
+export type { RoundLoadErrorKind } from "@/lib/roundErrors";
 
 // ─── Notifications ───
 
@@ -151,25 +156,65 @@ export async function createRound({ gameType, course, courseDetails, stakes, hol
 }
 
 // Load a round with players
-export async function loadRound(roundId) {
-  const { data: round, error: roundError } = await supabase
-    .from("rounds")
-    .select("*")
-    .eq("id", roundId)
-    .maybeSingle();
+/**
+ * Load a round and its players with a 10-second hard timeout.
+ *
+ * Throws `RoundLoadError` on failure. Callers should pattern-match on `.kind`:
+ *   - "timeout"      — connection too slow; show retry
+ *   - "not_found"    — round id doesn't exist or is no longer visible
+ *   - "unauthorized" — RLS rejected or JWT expired; redirect to /auth
+ *   - "network"      — anything else (show generic error + retry)
+ *
+ * Uses AbortController + supabase-js .abortSignal() so requests are actually
+ * cancelled on timeout (not just ignored).
+ */
+export async function loadRound(
+  roundId: string,
+  options: { timeoutMs?: number } = {},
+): Promise<{ round: any; players: any[] }> {
+  const timeoutMs = options.timeoutMs ?? 10_000;
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
 
-  if (roundError) throw roundError;
-  if (!round) return null;
+  const throwTimeout = () => {
+    throw new RoundLoadError("timeout", roundId, `loadRound timed out after ${timeoutMs}ms`);
+  };
 
-  const { data: players, error: playersError } = await supabase
-    .from("round_players")
-    .select("*")
-    .eq("round_id", roundId)
-    .order("created_at");
+  try {
+    const { data: round, error: roundError } = await supabase
+      .from("rounds")
+      .select("*")
+      .eq("id", roundId)
+      .abortSignal(controller.signal)
+      .maybeSingle();
 
-  if (playersError) throw playersError;
+    if (timedOut) throwTimeout();
+    if (roundError) throw classifyRoundLoadError(roundError, roundId);
+    if (!round) {
+      throw new RoundLoadError("not_found", roundId, "Round not found");
+    }
 
-  return { round, players };
+    const { data: players, error: playersError } = await supabase
+      .from("round_players")
+      .select("*")
+      .eq("round_id", roundId)
+      .abortSignal(controller.signal)
+      .order("created_at");
+
+    if (timedOut) throwTimeout();
+    if (playersError) throw classifyRoundLoadError(playersError, roundId);
+
+    return { round, players: players || [] };
+  } catch (err) {
+    if (timedOut) throwTimeout();
+    throw classifyRoundLoadError(err, roundId);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // Update hole scores for a player
@@ -900,15 +945,48 @@ export async function saveGameState(roundId: string, state: { currentHole: numbe
   if (error) throw error;
 }
 
-// Load saved game state from course_details JSONB (returns null if no save exists).
-export async function loadGameState(roundId: string): Promise<{ currentHole: number; carryOver: number; totals: Record<string, number> } | null> {
-  const { data: round, error } = await supabase
-    .from("rounds")
-    .select("course_details")
-    .eq("id", roundId)
-    .single();
-  if (error) throw error;
-  return (round?.course_details as any)?.game_state ?? null;
+/**
+ * Load saved game state from course_details JSONB (returns null if no save exists).
+ * Uses the same 10-second AbortController timeout as loadRound and throws
+ * RoundLoadError on failure.
+ */
+export async function loadGameState(
+  roundId: string,
+  options: { timeoutMs?: number } = {},
+): Promise<{ currentHole: number; carryOver: number; totals: Record<string, number> } | null> {
+  const timeoutMs = options.timeoutMs ?? 10_000;
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+
+  try {
+    const { data: round, error } = await supabase
+      .from("rounds")
+      .select("course_details")
+      .eq("id", roundId)
+      .abortSignal(controller.signal)
+      .single();
+
+    if (timedOut) {
+      throw new RoundLoadError("timeout", roundId, `loadGameState timed out after ${timeoutMs}ms`);
+    }
+    if (error) {
+      // Not-found is treated as null (no save exists) rather than an error
+      if ((error as any).code === "PGRST116") return null;
+      throw classifyRoundLoadError(error, roundId);
+    }
+    return (round?.course_details as any)?.game_state ?? null;
+  } catch (err) {
+    if (timedOut) {
+      throw new RoundLoadError("timeout", roundId, `loadGameState timed out after ${timeoutMs}ms`);
+    }
+    throw classifyRoundLoadError(err, roundId);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // Delete non-manual settlements for a round (used before recalculation)
