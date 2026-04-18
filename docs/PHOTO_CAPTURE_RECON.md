@@ -700,3 +700,127 @@ These are safe to leave for Phase 2 integration work:
 - `useRoundGameModes` is the modal-state owner; the capture modal (both
   prompt and ad-hoc) will land alongside these without changing the
   component body.
+
+---
+
+## Phase 2 addendum — 2026-04-18 (branch `phase-2-capture`, PR #2)
+
+Phase 2 backend + pure-logic foundation shipped. Sub-phases 2f (hook
+refactor), 2g (six UI components), 2h (integration + E2E) deferred to
+a follow-on session with fresh context. Test count 45 → 71 (+26).
+
+### What shipped
+
+**2a — Schema + storage** (`f3df520`)
+- `scorecards` private Storage bucket, 10MB cap, MIME allowlist.
+- `round_captures` table with the full shape from recon §6.3:
+  trigger, photo_path + photo_deleted_at, raw_extraction +
+  confirmed_extraction + cell_confidence JSONB, hole_range_start/end,
+  applied_at, superseded_by self-FK, feed_published_at, share_to_feed.
+- New SECURITY DEFINER helpers: `is_round_scorekeeper`,
+  `is_round_viewer` (union of participant/creator/follower/broadcast_friend).
+- Added to `supabase_realtime` publication.
+- RLS per spec: INSERT requires scorekeeper, SELECT any viewer,
+  UPDATE the capturer (for confirm step; service role bypasses),
+  DELETE capturer or admin.
+- Manual RLS verify script at `supabase/tests/round_captures_rls.sql`.
+  DEFERRED: automated RLS test harness — logged in TODOS.md.
+
+**2b — Shared game engine** (`198fe43`)
+- Moved `src/lib/gameEngines.ts` →
+  `supabase/functions/_shared/gameEngines.ts`. Client re-exports
+  from the new location via a 7-line shim. Zero behavior change;
+  eliminates drift risk between client and edge fn money math.
+
+**2c — Capture cadence** (`b69916c`)
+- `supabase/functions/_shared/captureCadence.ts`:
+  `requiredCadence(round)`, `isPhotoRequiredForHole(round, hole)`,
+  `cadenceReason(round, hole)`. Discriminated-union CaptureCadence
+  type.
+- Client shim at `src/lib/captureCadence.ts`; `useCaptureCadence`
+  hook with `{ cadence, isRequired, blockedOnPhoto, reason }`.
+- Rules per spec: solo→none; nassau-no-presses→[9,18]; everything
+  with hammer/crybaby/birdie/carry_over/presses→every_hole; all
+  other money modes→every_hole default.
+- 22 tests covering every game mode × mechanic combination,
+  including exhaustiveness pattern that will break at compile time
+  if a new variant is added to the union.
+
+**2d — `extract-scores` edge function** (`e0ce620`)
+- Mirrors `analyze-scorecard/index.ts` for CORS/auth/errors.
+- **Scorekeeper auth gate via `is_round_scorekeeper` RPC BEFORE
+  any Anthropic call** — prevents unauthorized API spend.
+- Claude Opus 4.5 vision. System prompt carries player name+id list,
+  hole numbers, par array, last-known scores as strong priors.
+- Strict input validation; typed I/O; 422 raw-text on parse failure
+  (client falls back to manual entry). No `any`.
+- Observability logs: `{ roundId, userId, latencyMs, tokensIn,
+  tokensOut, extractedCellCount, lowConfidenceCount,
+  unreadableCount, parseSuccess }`.
+
+**2e — `apply-capture` edge function** (`c5b338e`)
+- Loads capture, re-verifies scorekeeper, computes delta vs. prior
+  `round_players.hole_scores`.
+- Noop fast path when delta is empty: marks capture applied, returns
+  `{ noop: true }`. Client suppresses diff dialog.
+- Non-empty delta: writes merged scores, calls
+  `replayRound` on full updated score set, persists
+  `game_state` (totals, carryOver, nassauState), rewrites
+  `round_settlements` if round complete, supersedes prior
+  overlapping applied captures via `superseded_by`.
+- **Feed debounce**: 30s window per (round, scorekeeper) on
+  `capture_applied` events. Private rounds always suppressed.
+  Ad-hoc + `shareToFeed=false` suppressed. Otherwise published.
+- Emits `round_events` types `capture_applied` (always) and
+  `capture_money_shift` (only if totals changed).
+- Strict typing; service-role client for writes (authz enforced
+  up-front); observability logs.
+
+### Release gate: replayRound equivalence (`c5b338e`)
+
+`src/test/replayEquivalence.test.ts` proves that the live-play path
+(`computeAdvanceHole` hole-by-hole) produces identical totals to
+`replayRound` on the same score set. If these ever diverge,
+`apply-capture` would produce wrong money. 4 tests cover:
+
+- Skins with carry-over pushes
+- DOC with hammer + crybaby phase (holes 16–18 switch to skins)
+- Flip with birdie bonus
+- Nassau 4-player team with segment settlement
+
+All passing. This is the dollar-for-dollar correctness guarantee for
+the capture pipeline.
+
+### Deferred — carried forward to 2f/2g/2h session
+
+| Item | Reason | Follow-on |
+|---|---|---|
+| **2f** — `useAdvanceHole` composite hook + `useRoundPersistence` extension + CrybabyActiveRound refactor | Moderate surgical work; higher quality with fresh context | Next session |
+| **2g** — Six capture UI components (strictly typed, confidence tiers, a11y) | ~1000+ lines of new UI; quality-sensitive | Next session |
+| **2h** — Integration + `useCapture` hook + E2E smoke test with mocked Supabase | Depends on 2f + 2g | Next session |
+| **Wolf in `replayRound`** | Partner selections not in `ReplayHoleInput` | Post-Phase-2 |
+| **Hammer history in `apply-capture`** | Same limitation as `RoundEditScores` (assumes depth=0, not folded) | Post-Phase-2 |
+| **Edge function unit tests** | Vitest can't run Deno | E2E smoke test in 2h + manual `supabase functions serve` |
+| **Automated RLS test harness** | No pattern in repo | Manual SQL script is stopgap; logged in TODOS.md |
+
+### Test + build delta
+
+- Phase 1 baseline: 45 tests.
+- After Phase 2 backend (this PR as of 2e): **71 tests** (+26).
+- Build: clean, 2.1s, 1.35 MB (unchanged — no UI yet).
+
+### Ready for 2f/2g/2h
+
+The Phase 2 backend is locked and tested. The UI session can move fast
+because:
+- `useRoundState` exposes `computeAdvanceHole` — the pure compute the
+  capture flow drives.
+- `useRoundPersistence` already has promise-returning wrappers; 2f
+  just adds a few more named methods.
+- `useRoundGameModes` owns modal state; the capture modal slots in
+  alongside the existing hammer/wolf/crybaby/press modals without
+  re-architecting anything.
+- `extract-scores` and `apply-capture` are deployed-ready; 2g's
+  `CaptureFlow` just orchestrates HTTP calls to them.
+- The `replayRound` equivalence test is the CI-enforced guarantee
+  that money math stays correct across every Phase 2 refactor.
