@@ -16,10 +16,16 @@ export type ConfidenceTier = "high" | "medium" | "low";
  * Classify a raw 0..1 confidence score (or "unreadable" sentinel) into a tier.
  * - high   ≥ 0.85 (no decoration)
  * - medium 0.60–0.84 (yellow border + triangle)
- * - low    <0.60 or unreadable (red border + question mark, apply-blocking)
+ * - low    <0.60 or "unreadable" sentinel (red border + question mark, apply-blocking)
+ *
+ * `null` means "no extraction attempt was made for this cell" — the cell is
+ * treated as high-tier (no decoration, user can fill or leave blank). This is
+ * NOT the same as "unreadable", which explicitly signals the model saw the
+ * cell but couldn't parse it.
  */
 export function classifyConfidence(score: number | "unreadable" | null): ConfidenceTier {
-  if (score === "unreadable" || score === null) return "low";
+  if (score === "unreadable") return "low";
+  if (score === null) return "high";
   if (score >= 0.85) return "high";
   if (score >= 0.60) return "medium";
   return "low";

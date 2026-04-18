@@ -37,17 +37,20 @@ function computeDiff(
   prior: Record<string, Record<number, number>>,
   playerNames: Record<string, string>,
 ): DiffRow[] {
+  // A diff row is produced ONLY when the prior cell exists AND differs from
+  // the confirmed value. Cells that were previously empty (never scored) are
+  // new data, not a dispute — they apply silently.
   const out: DiffRow[] = [];
   for (const pid of Object.keys(confirmed)) {
     for (const [h, v] of Object.entries(confirmed[pid])) {
       const hole = Number(h);
       const priorVal = prior[pid]?.[hole];
-      if (priorVal !== v) {
+      if (typeof priorVal === "number" && priorVal !== v) {
         out.push({
           playerId: pid,
           playerName: playerNames[pid] ?? pid,
           hole,
-          prior: typeof priorVal === "number" ? priorVal : null,
+          prior: priorVal,
           next: v,
         });
       }
