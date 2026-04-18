@@ -2,6 +2,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import crybabyLogo from "@/assets/crybaby-logo.png";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { loadRound, updatePlayerScores, completeRound, cancelRound, createPost, saveAICommentary, insertSettlements, createRoundEvent, toggleBroadcast, saveGameState, RoundLoadError } from "@/lib/db";
+import { useRoundState } from "@/hooks/useRoundState";
+import { useRoundPersistence } from "@/hooks/useRoundPersistence";
+import { useRoundGameModes } from "@/hooks/useRoundGameModes";
 import { supabase } from "@/integrations/supabase/client";
 import RoundLiveFeed from "@/components/RoundLiveFeed";
 import {
@@ -839,47 +842,59 @@ export default function CrybabActiveRound() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // ALL hooks must be declared before any conditional returns
-  const [currentHole, setCurrentHole] = useState(1);
-  const [scores, setScores] = useState({});
-  const [totals, setTotals] = useState({});
-  const [holeResults, setHoleResults] = useState([]);
-  const [hammerDepth, setHammerDepth] = useState(0);
-  const [hammerHistory, setHammerHistory] = useState([]);
-  const [hammerPending, setHammerPending] = useState(false);
-  const [lastHammerBy, setLastHammerBy] = useState(null);
-  const [showHammer, setShowHammer] = useState(false);
-  const [showResult, setShowResult] = useState(null);
-  const [showCrybabSetup, setShowCrybabSetup] = useState(false);
-  const [crybabConfig, setCrybabConfig] = useState(null);
-  const [carryOver, setCarryOver] = useState(0);
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [isOnline, setIsOnline] = useState(true);
-  const [pendingSync, setPendingSync] = useState(0);
-  const [showLiveFeed, setShowLiveFeed] = useState(false);
+  // ----------------------------------------------------------------
+  // Decomposed hooks — keep local names to minimize downstream diff.
+  // All hooks must be declared before any conditional returns (preserves
+  // the fix from commit 747ef77 for React error #310).
+  // ----------------------------------------------------------------
+  const rs = useRoundState();
+  const persist = useRoundPersistence();
+  const gm = useRoundGameModes();
+
+  // Round state (owned by useRoundState)
+  const { currentHole, setCurrentHole } = rs;
+  const { scores, setScores } = rs;
+  const { totals, setTotals } = rs;
+  const { holeResults, setHoleResults } = rs;
+  const { hammerDepth, setHammerDepth } = rs;
+  const { hammerHistory, setHammerHistory } = rs;
+  const { hammerPending, setHammerPending } = rs;
+  const { lastHammerBy, setLastHammerBy } = rs;
+  const { carryOver, setCarryOver } = rs;
+  const { flipTeams, setFlipTeams } = rs;
+  const { wolfState, setWolfState } = rs;
+  const { nassauState, setNassauState } = rs;
+  const { nassauPresses, setNassauPresses } = rs;
+
+  // Persistence + network (owned by useRoundPersistence)
+  const { isOnline, lastSaveFailed, pendingSync, setPendingSync } = persist;
+
+  // Modal / UI mode state (owned by useRoundGameModes)
+  const { showHammer, setShowHammer } = gm;
+  const { showResult, setShowResult } = gm;
+  const { showCrybabSetup, setShowCrybabSetup } = gm;
+  const { crybabConfig, setCrybabConfig } = gm;
+  const { showLeaderboard, setShowLeaderboard } = gm;
+  const { showLiveFeed, setShowLiveFeed } = gm;
+  const { showFlipModal, setShowFlipModal } = gm;
+  const { wolfPartner, setWolfPartner } = gm;
+  const { isLoneWolf, setIsLoneWolf } = gm;
+  const { showWolfModal, setShowWolfModal } = gm;
+  const { wolfModalShownForHole, setWolfModalShownForHole } = gm;
+  const { showPressModal, setShowPressModal } = gm;
+  const { showCancelConfirm, setShowCancelConfirm } = gm;
+  const { canceling, setCanceling } = gm;
+  const { isCanceled, setIsCanceled } = gm;
+  const { showLeaveConfirm, setShowLeaveConfirm } = gm;
+  const pendingNavRef = gm.pendingNavRef;
+
+  // Stays local — tightly coupled to round loading / completion flow
   const [isBroadcast, setIsBroadcast] = useState(false);
-  const [flipTeams, setFlipTeams] = useState(null);
-  const [showFlipModal, setShowFlipModal] = useState(false);
-  const [wolfState, setWolfState] = useState({ wolfOrder: [], currentWolfIndex: 0, partnerSelected: null, isLoneWolf: false });
-  const [wolfPartner, setWolfPartner] = useState(null);
-  const [isLoneWolf, setIsLoneWolf] = useState(false);
-  const [showWolfModal, setShowWolfModal] = useState(false);
-  const [wolfModalShownForHole, setWolfModalShownForHole] = useState(0);
-  const [nassauState, setNassauState] = useState({ frontMatch: {}, backMatch: {}, overallMatch: {}, presses: [] });
-  const [nassauPresses, setNassauPresses] = useState([]);
-  const [showPressModal, setShowPressModal] = useState(false);
   const [settlementsSaved, setSettlementsSaved] = useState(false);
   const [totalsInitialized, setTotalsInitialized] = useState(false);
-  const [lastSaveFailed, setLastSaveFailed] = useState(false);
-  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  const [canceling, setCanceling] = useState(false);
-  const [isCanceled, setIsCanceled] = useState(false);
 
   // Round is considered complete once all 18 holes have results saved, or explicitly canceled
   const roundIsComplete = settlementsSaved || isCanceled || (currentHole >= 18 && holeResults.length >= 18);
-
-  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
-  const pendingNavRef = useRef(null);
 
   // Guard back-button navigation while round is active
   useEffect(() => {
@@ -1096,21 +1111,7 @@ export default function CrybabActiveRound() {
     saveRoundSettlements();
   }, [currentHole, holeResults.length, settlementsSaved]);
 
-  // Wire isOnline to real network events so the offline badge reflects actual connectivity.
-  // On reconnect, clear the badge and trigger a game state re-save if a previous save failed.
-  useEffect(() => {
-    const handleOnline = () => {
-      setIsOnline(true);
-      setPendingSync(0);
-    };
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
-  }, []);
+  // Online/offline wiring is owned by useRoundPersistence.
 
   // --- Early returns (after all hooks) ---
   if (loading) {
