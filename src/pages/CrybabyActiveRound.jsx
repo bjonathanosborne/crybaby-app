@@ -8,6 +8,7 @@ import {
   getStrokesOnHole, getTeamsForHole, getPhaseLabel, getPhaseDisplayLabel, getPhaseColor,
   supportsTeams, supportsHammer, supportsCrybaby,
   calculateTeamHoleResult, calculateSkinsResult, calculateNassauHoleResult,
+  calculateNassauSettlement,
   calculateWolfHoleResult, calculateFoldResult as calcFoldResult,
   generateFlipTeams, initWolfState, getWolfForHole, initNassauState,
   isRoundComplete,
@@ -1411,10 +1412,71 @@ export default function CrybabActiveRound() {
 
   const advanceHole = () => {
     if (showResult) {
-      const newTotals = { ...totals };
-      showResult.playerResults.forEach(pr => {
-        newTotals[pr.id] = (newTotals[pr.id] || 0) + pr.amount;
-      });
+      // --- Nassau: compute the post-hole state, then derive totals from segment settlement ---
+      // For Nassau, per-hole amounts are always 0 (see calculateNassauHoleResult). Money comes
+      // from segment/press bets settled via calculateNassauSettlement. We compute the new
+      // nassauState synchronously here so we can feed it to the settlement function without
+      // waiting for React's setState to flush.
+      let newNassauState = nassauState;
+      let newTotals = { ...totals };
+
+      if (round.gameMode === 'nassau') {
+        // Apply this hole's winners to a fresh copy of nassauState
+        const winnerIds = (showResult.winnerIds && showResult.winnerIds.length > 0)
+          ? showResult.winnerIds
+          : showResult.playerResults.filter(pr => pr.amount > 0).map(pr => pr.id); // legacy fallback
+        newNassauState = {
+          frontMatch: { ...nassauState.frontMatch },
+          backMatch: { ...nassauState.backMatch },
+          overallMatch: { ...nassauState.overallMatch },
+          presses: nassauState.presses.map(p => ({ startHole: p.startHole, match: { ...p.match } })),
+        };
+        if (!showResult.push && winnerIds.length > 0) {
+          const bump = (map, id) => { map[id] = (map[id] || 0) + 1; };
+          winnerIds.forEach(wid => {
+            if (currentHole <= 9) bump(newNassauState.frontMatch, wid);
+            else bump(newNassauState.backMatch, wid);
+            bump(newNassauState.overallMatch, wid);
+          });
+          newNassauState.presses = newNassauState.presses.map(press => {
+            // Press runs from startHole through end of its segment (hole 9 for a
+            // front-9 press, hole 18 for a back-9 press). Don't credit holes past
+            // the segment boundary.
+            const segmentEnd = press.startHole <= 9 ? 9 : 18;
+            if (currentHole >= press.startHole && currentHole <= segmentEnd) {
+              const updated = { ...press.match };
+              winnerIds.forEach(wid => bump(updated, wid));
+              return { ...press, match: updated };
+            }
+            return press;
+          });
+        }
+        setNassauState(newNassauState);
+
+        // Derive provisional totals from segment settlement based on holes completed so far
+        const nassauTeams = round.players.length === 4
+          ? {
+              teamA: { name: 'Team 1', players: [round.players[0], round.players[1]], color: '#16A34A' },
+              teamB: { name: 'Team 2', players: [round.players[2], round.players[3]], color: '#3B82F6' },
+            }
+          : null;
+        const settlement = calculateNassauSettlement(
+          round.players,
+          nassauTeams,
+          newNassauState,
+          round.holeValue,
+          currentHole, // completedHoles = this hole just wrapped
+        );
+        round.players.forEach(p => {
+          newTotals[p.id] = settlement.playerAmounts[p.id] || 0;
+        });
+      } else {
+        // Non-Nassau modes: sum per-hole amounts as before
+        showResult.playerResults.forEach(pr => {
+          newTotals[pr.id] = (newTotals[pr.id] || 0) + pr.amount;
+        });
+      }
+
       setTotals(newTotals);
       setHoleResults(prev => [...prev, { hole: currentHole, ...showResult }]);
       // Determine fold winner team from playerResults if folded
@@ -1462,30 +1524,7 @@ export default function CrybabActiveRound() {
           });
       }
 
-      // Update nassau state
-      if (round.gameMode === 'nassau' && !showResult.push) {
-        setNassauState(prev => {
-          const next = { ...prev };
-          const winnerId = showResult.playerResults.find(pr => pr.amount > 0)?.id;
-          if (winnerId) {
-            if (currentHole <= 9) {
-              next.frontMatch = { ...prev.frontMatch, [winnerId]: (prev.frontMatch[winnerId] || 0) + 1 };
-            } else {
-              next.backMatch = { ...prev.backMatch, [winnerId]: (prev.backMatch[winnerId] || 0) + 1 };
-            }
-            next.overallMatch = { ...prev.overallMatch, [winnerId]: (prev.overallMatch[winnerId] || 0) + 1 };
-
-            // Update presses
-            next.presses = prev.presses.map(press => {
-              if (currentHole >= press.startHole) {
-                return { ...press, match: { ...press.match, [winnerId]: (press.match[winnerId] || 0) + 1 } };
-              }
-              return press;
-            });
-          }
-          return next;
-        });
-      }
+      // Nassau state update is handled inline above (see newNassauState).
 
       // Emit live feed event
       if (roundId) {

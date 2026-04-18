@@ -29,6 +29,13 @@ export interface HoleResult {
   folded?: boolean;
   birdiePush?: boolean;
   skinWinner?: string;
+  /**
+   * Explicit ids of the players who won the hole. For individual play this is
+   * a single id; for team play it's all the winning team's player ids; on a
+   * push it's empty. Added so callers can track match state without relying on
+   * `amount > 0` (which doesn't work when per-hole amounts are 0, e.g. Nassau).
+   */
+  winnerIds?: string[];
 }
 
 export interface GameSettings {
@@ -252,6 +259,18 @@ export function initNassauState(players: Player[]): NassauState {
   };
 }
 
+/**
+ * Compute which side won a Nassau hole.
+ *
+ * **Payout model:** Nassau pays by segment (front-9, back-9, overall) and by
+ * press — NOT per hole. This function therefore returns `amount: 0` and zero
+ * per-player amounts. Hole winners are carried via the `winnerIds` field so
+ * callers can update `NassauState` and compute segment settlement at round
+ * end via `calculateNassauSettlement`.
+ *
+ * `winnerName` and `quip` are still populated for narrative UI (live feed,
+ * hole summaries) — only the money is suppressed.
+ */
 export function calculateNassauHoleResult(
   players: Player[],
   teams: TeamInfo | null,
@@ -263,6 +282,8 @@ export function calculateNassauHoleResult(
   lowestHandicap: number,
   holeHandicapRank: number,
 ): HoleResult {
+  const zeroResults = () => players.map(p => ({ id: p.id, name: p.name, amount: 0 }));
+
   // For individual Nassau (2-3 players)
   if (!teams) {
     const netScores: Record<string, number> = {};
@@ -280,8 +301,9 @@ export function calculateNassauHoleResult(
         winnerName: null,
         amount: 0,
         carryOver: 0,
-        playerResults: players.map(p => ({ id: p.id, name: p.name, amount: 0 })),
+        playerResults: zeroResults(),
         quip: 'Halved. Nobody wins this hole.',
+        winnerIds: [],
       };
     }
 
@@ -289,13 +311,11 @@ export function calculateNassauHoleResult(
     return {
       push: false,
       winnerName: winner.name,
-      amount: holeValue,
+      amount: 0,
       carryOver: 0,
-      playerResults: players.map(p => ({
-        id: p.id, name: p.name,
-        amount: p.id === winner.id ? holeValue * (players.length - 1) : -holeValue,
-      })),
+      playerResults: zeroResults(),
       quip: `${winner.name} wins the hole.`,
+      winnerIds: [winner.id],
     };
   }
 
@@ -315,8 +335,9 @@ export function calculateNassauHoleResult(
       winnerName: null,
       amount: 0,
       carryOver: 0,
-      playerResults: players.map(p => ({ id: p.id, name: p.name, amount: 0 })),
+      playerResults: zeroResults(),
       quip: 'Halved. All square.',
+      winnerIds: [],
     };
   }
 
@@ -326,13 +347,188 @@ export function calculateNassauHoleResult(
   return {
     push: false,
     winnerName: winnerTeam.name,
-    amount: holeValue,
+    amount: 0,
     carryOver: 0,
-    playerResults: players.map(p => ({
-      id: p.id, name: p.name,
-      amount: winnerTeam.players.some(tp => tp.id === p.id) ? holeValue : -holeValue,
-    })),
+    playerResults: zeroResults(),
     quip: `${winnerTeam.name} takes the hole. ${loserTeam.name} needs to answer.`,
+    winnerIds: winnerTeam.players.map(p => p.id),
+  };
+}
+
+// --- NASSAU SETTLEMENT ---
+
+/**
+ * Result of a single Nassau segment (front / back / overall) or a press.
+ * winner is a player id (individual play) or team name (team play), or null on push.
+ */
+export interface NassauSegmentResult {
+  winner: string | null;
+  amount: number;    // $ changed hands on this bet (0 on push or unsettled)
+  settled: boolean;  // false when the segment did not complete (e.g. abandoned round)
+}
+
+export interface NassauPressResult extends NassauSegmentResult {
+  startHole: number;
+  segment: "front" | "back";
+}
+
+export interface NassauSettlement {
+  /** Per-player dollar amounts (positive = won, negative = owed). */
+  playerAmounts: Record<string, number>;
+  front: NassauSegmentResult;
+  back: NassauSegmentResult;
+  overall: NassauSegmentResult;
+  presses: NassauPressResult[];
+}
+
+/**
+ * Aggregated "holes won by each side" for a single Nassau match. Used internally
+ * by the settlement function to determine the winning side.
+ */
+type SideKey = string; // player.id for individual; players.id per-team-member for team (see below)
+
+/**
+ * For a given match-count map, determine which *side* won the segment.
+ *
+ * - Individual (2-3 player): sides are player ids. The side with the highest
+ *   holes-won total wins; any tie at the top pushes the segment.
+ * - Team (4-player 2v2): we aggregate each team's total by taking the MAX of
+ *   its two players' counts. This is deliberate and robust against either
+ *   tracking style: the current inline update in CrybabyActiveRound credits
+ *   only the "first winner" per hole (one player per winning team), so that
+ *   player's count equals the team's true count while the other teammate's
+ *   stays at zero; if a future refactor instead credits both teammates, MAX
+ *   still returns the team's true count. SUM would over-count in the
+ *   double-credit case, so we avoid it.
+ *
+ * Returns { winner, contenderCount } where winner is null on push.
+ */
+function decideNassauSegment(
+  players: Player[],
+  teams: TeamInfo | null,
+  matchCounts: Record<string, number>,
+): { winner: string | null } {
+  if (teams) {
+    const teamATotal = Math.max(...teams.teamA.players.map(p => matchCounts[p.id] || 0));
+    const teamBTotal = Math.max(...teams.teamB.players.map(p => matchCounts[p.id] || 0));
+    if (teamATotal > teamBTotal) return { winner: teams.teamA.name };
+    if (teamBTotal > teamATotal) return { winner: teams.teamB.name };
+    return { winner: null };
+  }
+  // Individual — pick the player with strictly most holes won
+  let bestCount = -1;
+  let bestIds: string[] = [];
+  players.forEach(p => {
+    const c = matchCounts[p.id] || 0;
+    if (c > bestCount) {
+      bestCount = c;
+      bestIds = [p.id];
+    } else if (c === bestCount) {
+      bestIds.push(p.id);
+    }
+  });
+  if (bestIds.length === 1) {
+    return { winner: bestIds[0] };
+  }
+  return { winner: null }; // tie at the top = push (even if only 2 of 3 tie)
+}
+
+/**
+ * Calculate the final Nassau settlement after the round has been played
+ * (or abandoned early).
+ *
+ * Nassau is three independent bets per round:
+ *   1. Front 9 — side with more holes won on holes 1–9 wins `segmentValue`.
+ *   2. Back 9  — side with more holes won on holes 10–18 wins `segmentValue`.
+ *   3. Overall — side with more holes won across all 18 wins `segmentValue`.
+ *
+ * Each declared *press* creates an additional bet running from the press's
+ * start hole through the end of its segment (a press on hole ≤9 settles at
+ * hole 9; a press on holes 10–18 settles at hole 18). Presses pay at the
+ * same `segmentValue`. Presses that compound (multiple within one segment)
+ * each pay independently.
+ *
+ * Ties push — no money changes hands for a pushed segment or press.
+ *
+ * **Abandoned rounds:** we deliberately do *not* settle unfinished bets.
+ *   - Front segment settles only if `completedHoles >= 9`.
+ *   - Back and Overall settle only if `completedHoles >= 18`.
+ *   - A press settles only if its segment has settled.
+ * Unsettled bets return `settled: false, amount: 0, winner: null`.
+ *
+ * **Handicap pops:** pops are applied at the hole level inside
+ * `calculateNassauHoleResult` (via `getStrokesOnHole`). By the time holes are
+ * counted in `NassauState`, net scoring has already decided each hole's winner.
+ * This function trusts those counts; it does not re-apply handicap.
+ *
+ * **Player payouts:**
+ *   - 2-player individual: winner +segmentValue, loser −segmentValue.
+ *   - 3-player individual: winner +segmentValue × (players − 1); each loser −segmentValue.
+ *   - 4-player team (2v2): each winning-team player +segmentValue; each losing-team player −segmentValue.
+ *
+ * @param players        All round participants (2–4).
+ * @param teams          2v2 team split (pass for 4-player team Nassau; null for individual).
+ * @param state          Accumulated match counts from `calculateNassauHoleResult` results.
+ * @param segmentValue   Dollars paid per segment or press (= round.holeValue).
+ * @param completedHoles How many of the 18 holes were actually played (defaults to 18).
+ */
+export function calculateNassauSettlement(
+  players: Player[],
+  teams: TeamInfo | null,
+  state: NassauState,
+  segmentValue: number,
+  completedHoles: number = 18,
+): NassauSettlement {
+  const playerAmounts: Record<string, number> = {};
+  players.forEach(p => { playerAmounts[p.id] = 0; });
+
+  /** Credit a segment win to the winning side; null winner = push (no-op). */
+  const creditSegment = (winner: string | null): number => {
+    if (!winner) return 0;
+    if (teams) {
+      const winTeam = teams.teamA.name === winner ? teams.teamA : teams.teamB;
+      const loseTeam = teams.teamA.name === winner ? teams.teamB : teams.teamA;
+      winTeam.players.forEach(p => { playerAmounts[p.id] += segmentValue; });
+      loseTeam.players.forEach(p => { playerAmounts[p.id] -= segmentValue; });
+      return segmentValue * winTeam.players.length;
+    }
+    // Individual — winner collects from every other player
+    players.forEach(p => {
+      if (p.id === winner) playerAmounts[p.id] += segmentValue * (players.length - 1);
+      else playerAmounts[p.id] -= segmentValue;
+    });
+    return segmentValue * (players.length - 1);
+  };
+
+  const frontSettled = completedHoles >= 9;
+  const backSettled = completedHoles >= 18;
+  const overallSettled = completedHoles >= 18;
+
+  const frontDecision = frontSettled ? decideNassauSegment(players, teams, state.frontMatch) : { winner: null };
+  const backDecision = backSettled ? decideNassauSegment(players, teams, state.backMatch) : { winner: null };
+  const overallDecision = overallSettled ? decideNassauSegment(players, teams, state.overallMatch) : { winner: null };
+
+  const frontAmount = frontSettled ? creditSegment(frontDecision.winner) : 0;
+  const backAmount = backSettled ? creditSegment(backDecision.winner) : 0;
+  const overallAmount = overallSettled ? creditSegment(overallDecision.winner) : 0;
+
+  const pressResults: NassauPressResult[] = state.presses.map(press => {
+    const segment: "front" | "back" = press.startHole <= 9 ? "front" : "back";
+    const settled = segment === "front" ? frontSettled : backSettled;
+    if (!settled) {
+      return { startHole: press.startHole, segment, winner: null, amount: 0, settled: false };
+    }
+    const decision = decideNassauSegment(players, teams, press.match);
+    const amount = creditSegment(decision.winner);
+    return { startHole: press.startHole, segment, winner: decision.winner, amount, settled: true };
+  });
+
+  return {
+    playerAmounts,
+    front: { winner: frontDecision.winner, amount: frontAmount, settled: frontSettled },
+    back: { winner: backDecision.winner, amount: backAmount, settled: backSettled },
+    overall: { winner: overallDecision.winner, amount: overallAmount, settled: overallSettled },
+    presses: pressResults,
   };
 }
 
@@ -576,12 +772,24 @@ export interface ReplayHoleInput {
 export interface ReplayRoundResult {
   totals: Record<string, number>;
   holeResults: (HoleResult & { hole: number })[];
+  /**
+   * Nassau-only: segment and press settlement detail. Undefined for other game modes.
+   */
+  nassauSettlement?: NassauSettlement;
 }
 
 /**
- * Replays all 18 holes through the appropriate game engine with (possibly corrected) scores.
- * Returns new per-player money totals and per-hole results.
- * Wolf is NOT supported for money recalculation (partner selections not stored).
+ * Replays all 18 holes through the appropriate game engine with (possibly
+ * corrected) scores. Returns new per-player money totals and per-hole results.
+ *
+ * **Nassau:** per-hole results carry no money (see `calculateNassauHoleResult`);
+ * totals come from `calculateNassauSettlement` applied to the reconstructed
+ * `NassauState`. This replay does NOT know about presses declared mid-round
+ * (press history isn't carried in `ReplayHoleInput`), so post-round score
+ * edits on Nassau rounds will re-settle segments only. Persist press history
+ * separately if edits need to preserve it.
+ *
+ * **Wolf:** money recalculation not supported (partner selections not stored).
  */
 export function replayRound(
   gameMode: GameMode,
@@ -599,6 +807,15 @@ export function replayRound(
   const holeResults: (HoleResult & { hole: number })[] = [];
   let carryOver = 0;
   const carryOverCap = settings.carryOverCap || "∞";
+
+  // Nassau match state reconstructed as we replay
+  const nassauState: NassauState | null = gameMode === 'nassau' ? initNassauState(players) : null;
+  const nassauTeams: TeamInfo | null = gameMode === 'nassau' && players.length === 4
+    ? {
+        teamA: { name: 'Team 1', players: [players[0], players[1]], color: '#16A34A' },
+        teamB: { name: 'Team 2', players: [players[2], players[3]], color: '#3B82F6' },
+      }
+    : null;
 
   for (const hole of holes) {
     const { holeNumber, scores, hammerDepth, folded, foldWinnerTeamId } = hole;
@@ -618,9 +835,6 @@ export function replayRound(
     } else if (gameMode === 'skins' || gameMode === 'custom') {
       result = calculateSkinsResult(players, scores, par, holeNumber, holeValue, carryOver, settings, lowestHandicap, holeHandicapRank);
     } else if (gameMode === 'nassau') {
-      const nassauTeams = players.length === 4
-        ? { teamA: { name: 'Team 1', players: [players[0], players[1]], color: '#16A34A' }, teamB: { name: 'Team 2', players: [players[2], players[3]], color: '#3B82F6' } }
-        : null;
       result = calculateNassauHoleResult(players, nassauTeams, scores, par, holeNumber, holeValue, settings, lowestHandicap, holeHandicapRank);
     } else if (teams) {
       // DOC / Flip — team best ball
@@ -630,13 +844,37 @@ export function replayRound(
       result = calculateSkinsResult(players, scores, par, holeNumber, holeValue, carryOver, settings, lowestHandicap, holeHandicapRank);
     }
 
-    result.playerResults.forEach(pr => {
-      totals[pr.id] = (totals[pr.id] || 0) + pr.amount;
-    });
+    // Nassau per-hole amounts are 0; accumulate match state instead
+    if (gameMode === 'nassau' && nassauState && result.winnerIds && result.winnerIds.length > 0) {
+      const bump = (map: Record<string, number>, id: string) =>
+        (map[id] = (map[id] || 0) + 1);
+      result.winnerIds.forEach(wid => {
+        if (holeNumber <= 9) bump(nassauState.frontMatch, wid);
+        else bump(nassauState.backMatch, wid);
+        bump(nassauState.overallMatch, wid);
+      });
+    } else {
+      result.playerResults.forEach(pr => {
+        totals[pr.id] = (totals[pr.id] || 0) + pr.amount;
+      });
+    }
 
     carryOver = result.carryOver || 0;
     holeResults.push({ hole: holeNumber, ...result });
   }
 
-  return { totals, holeResults };
+  // Final Nassau settlement — segments only (presses not carried through replay)
+  let nassauSettlement: NassauSettlement | undefined;
+  if (gameMode === 'nassau' && nassauState) {
+    nassauSettlement = calculateNassauSettlement(
+      players,
+      nassauTeams,
+      nassauState,
+      holeValue,
+      holes.length,
+    );
+    players.forEach(p => { totals[p.id] = nassauSettlement!.playerAmounts[p.id] || 0; });
+  }
+
+  return { totals, holeResults, nassauSettlement };
 }
