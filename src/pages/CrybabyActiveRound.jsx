@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import crybabyLogo from "@/assets/crybaby-logo.png";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { loadRound, updatePlayerScores, completeRound, cancelRound, createPost, saveAICommentary, insertSettlements, createRoundEvent, toggleBroadcast, saveGameState } from "@/lib/db";
+import { loadRound, updatePlayerScores, completeRound, cancelRound, createPost, saveAICommentary, insertSettlements, createRoundEvent, toggleBroadcast, saveGameState, RoundLoadError } from "@/lib/db";
 import { supabase } from "@/integrations/supabase/client";
 import RoundLiveFeed from "@/components/RoundLiveFeed";
 import {
@@ -923,20 +923,19 @@ export default function CrybabActiveRound() {
     }
   }, [roundId, navigate]);
 
-  // Load round from DB — 10-second timeout guards against silent hangs on golf courses
+  // Load round from DB — 10-second timeout is enforced inside loadRound() via
+  // AbortController. Failures surface as typed RoundLoadError with a kind we
+  // dispatch on for the error UI.
+  // retryNonce forces a re-fetch when the user taps the Retry button.
+  const [retryNonce, setRetryNonce] = useState(0);
+
   useEffect(() => {
     if (!roundId) return;
+    setLoading(true);
+    setError(null);
     const load = async () => {
       try {
-        const timeout = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Load timed out — check your connection")), 10000)
-        );
-        const data = await Promise.race([loadRound(roundId), timeout]);
-        if (!data) {
-          setError("Round not found");
-          setLoading(false);
-          return;
-        }
+        const data = await loadRound(roundId);
         setDbRound(data.round);
         setDbPlayers(data.players);
 
@@ -954,12 +953,17 @@ export default function CrybabActiveRound() {
         setLoading(false);
       } catch (err) {
         console.error("Failed to load round:", err);
-        setError(err.message || "Failed to load round");
+        // Surface typed error kind so the UI can route the recovery path
+        if (err instanceof RoundLoadError) {
+          setError({ kind: err.kind, message: err.message, roundId: err.roundId });
+        } else {
+          setError({ kind: "network", message: err?.message || "Failed to load round", roundId });
+        }
         setLoading(false);
       }
     };
     load();
-  }, [roundId]);
+  }, [roundId, retryNonce]);
 
   // Build round object from DB
   const round = dbRound ? {
@@ -1121,39 +1125,59 @@ export default function CrybabActiveRound() {
   }
 
   if (error || !round) {
-    const isTimeout = error && error.includes("timed out");
+    // Pattern-match the typed error kind to pick the right recovery path.
+    const kind = error?.kind || (error ? "network" : "not_found");
+    const copy = {
+      timeout: {
+        emoji: "📶",
+        title: "Connection Lost",
+        body: "Looks like your signal took a mulligan. Check your connection and try again.",
+        primary: "Try Again",
+        onPrimary: () => setRetryNonce(n => n + 1),
+      },
+      not_found: {
+        emoji: "⛳",
+        title: "Round Not Found",
+        body: "This round may have ended or the link is no longer valid. Head back and start fresh.",
+        primary: "Back to Home",
+        onPrimary: () => navigate("/feed"),
+      },
+      unauthorized: {
+        emoji: "🔒",
+        title: "Sign in required",
+        body: "Your session expired. Sign in to keep scoring.",
+        primary: "Sign In",
+        onPrimary: () => navigate("/auth"),
+      },
+      network: {
+        emoji: "⚠️",
+        title: "Couldn't load round",
+        body: "Something went wrong loading this round. Tap retry or head home.",
+        primary: "Try Again",
+        onPrimary: () => setRetryNonce(n => n + 1),
+      },
+    }[kind];
+
     return (
       <div style={{ maxWidth: 420, margin: "0 auto", minHeight: "100vh", background: "#F5EFE0", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONT, padding: 24 }}>
         <div style={{ textAlign: "center", maxWidth: 320 }}>
-          <div style={{ fontSize: 56, marginBottom: 16, lineHeight: 1 }}>{isTimeout ? "📶" : "⛳"}</div>
+          <div style={{ fontSize: 56, marginBottom: 16, lineHeight: 1 }}>{copy.emoji}</div>
           <div style={{
             fontFamily: "'Pacifico', cursive", fontSize: 22, color: "#1E130A", marginBottom: 8,
           }}>
-            {isTimeout ? "Connection Lost" : "Round Not Found"}
+            {copy.title}
           </div>
           <div style={{ fontSize: 14, color: "#8B7355", lineHeight: 1.5, marginBottom: 28 }}>
-            {isTimeout
-              ? "Looks like your signal took a mulligan. Check your connection and try again."
-              : "This round may have ended or the link is no longer valid. Head back and start fresh."}
+            {copy.body}
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {isTimeout ? (
-              <button onClick={() => window.location.reload()} style={{
-                padding: "14px 24px", borderRadius: 14, border: "none", cursor: "pointer",
-                fontFamily: FONT, fontSize: 15, fontWeight: 700,
-                background: "#1E130A", color: "#FAF5EC",
-              }}>
-                Try Again
-              </button>
-            ) : (
-              <button onClick={() => navigate("/feed")} style={{
-                padding: "14px 24px", borderRadius: 14, border: "none", cursor: "pointer",
-                fontFamily: FONT, fontSize: 15, fontWeight: 700,
-                background: "#1E130A", color: "#FAF5EC",
-              }}>
-                Back to Home
-              </button>
-            )}
+            <button onClick={copy.onPrimary} style={{
+              padding: "14px 24px", borderRadius: 14, border: "none", cursor: "pointer",
+              fontFamily: FONT, fontSize: 15, fontWeight: 700,
+              background: "#1E130A", color: "#FAF5EC",
+            }}>
+              {copy.primary}
+            </button>
             <button onClick={() => navigate("/setup")} style={{
               padding: "12px 24px", borderRadius: 14, border: "2px solid #DDD0BB", cursor: "pointer",
               fontFamily: FONT, fontSize: 14, fontWeight: 600,
