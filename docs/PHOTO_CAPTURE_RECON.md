@@ -824,3 +824,167 @@ because:
   `CaptureFlow` just orchestrates HTTP calls to them.
 - The `replayRound` equivalence test is the CI-enforced guarantee
   that money math stays correct across every Phase 2 refactor.
+
+---
+
+## Phase 2 completion addendum — 2026-04-18 (branch `phase-2-capture`, PR #3)
+
+Phase 2 complete. 2f, 2g, 2h shipped in a follow-on session after
+2a–2e landed. Total delta vs. Phase 1: **86 tests** (+41 from Phase 1's
+45 baseline), **~35 kB** added to gzipped bundle, end-to-end capture
+flow compiling cleanly, passing release-gate equivalence, rendering
+without runtime errors.
+
+### What landed in 2f/2g/2h
+
+**2f — Persistence Result envelope + `useAdvanceHole`** (`de35e3f`)
+- `useRoundPersistence` methods return `PersistResult<T>` — a
+  discriminated union `{ok: true, data} | {ok: false, error}` with
+  kind `network | conflict | auth | unknown`. No thrown errors.
+- `useAdvanceHole` composite hook sequences capture-gate → pure
+  `computeAdvanceHole` → `Promise.all` of `persistPlayerScores` +
+  `persistGameState` → React commit. Gate check is FIRST so we
+  never partially commit before rejecting.
+- `CaptureRequiredError` class the UI dispatches on; `PersistFailureError`
+  aggregates per-step failures.
+- Two `any`s narrowed: `showResult → HoleResult | null`,
+  `crybabConfig → CrybabConfig | null`.
+- +7 tests: clean advance, capture-gate block, holes-cadence
+  non-blocking, unblock-after-apply, persistence failure (single +
+  multi-step), unsaved-round path.
+
+**2g — Six capture UI components** (`a137195`)
+- Shared types with `classifyConfidence` function.
+- `CaptureShutter` — `<input capture="environment">` + preview +
+  Retake/Use photo. HEIC passthrough.
+- `CaptureAnalyzing` — `role="status"` skeleton grid, focus-trapped
+  Cancel.
+- `CaptureConfirmGrid` — editable hole × player grid, three
+  confidence channels (color + icon + aria-label). Apply disabled
+  while any low-tier cell empty.
+- `CaptureDisputeDialog` — only constructed on genuine overwrites.
+- `CaptureFlow` — shadcn Dialog container, state machine
+  `shutter → analyzing → confirm (+ optional dispute) → applying →
+  done | error`. Parallel photo upload + extract-scores call.
+- `CaptureButton` + `CapturePrompt` — presentational; parent gates
+  visibility.
+- All components have `data-testid`. Zero `any`.
+
+**2h — Integration + `useCapture` + E2E smoke** (`0d02ebf`)
+- `useCapture` coordinator ensures one modal instance shared between
+  FAB + banner.
+- Minimal-touch integration into CrybabyActiveRound.tsx:
+  CapturePrompt at top (when blocked), CaptureButton as FAB,
+  CaptureFlow when a capture is open. All gated by
+  `isScorekeeper && status === "active"`.
+- Two bugs fixed during integration:
+  - `classifyConfidence(null)` returning `"low"` → corrected to
+    `"high"` (no extraction ≠ unreadable).
+  - Dispute dialog firing on first-time captures → corrected so only
+    cells with a non-null PRIOR value produce diff rows.
+- +8 E2E tests in `src/test/captureFlow.e2e.test.tsx` with mocked
+  Supabase covering all six spec scenarios.
+
+### Concerns from PR #2 review — how each was addressed
+
+| Concern | Resolution |
+|---|---|
+| 1. `is_round_scorekeeper` edge cases | Helper doesn't check status (correct for `post_round_correction`). UI defensive gate via `dbRound?.status === "active"`. Guest scorekeepers deferred (TODOS.md). |
+| 2. Shared `ANTHROPIC_API_KEY` | `extract-scores` logs prefix `[extract-scores]` vs. `analyze-scorecard`'s prefix — distinguishable. Split-key deferred. |
+| 3. Noop toast differentiation | Implemented: ad-hoc noop → toast "Scores unchanged"; game-driven noop → silent close. Capture row always written. |
+| 4. Upload race | Photo upload runs in parallel; apply proceeds with null `photo_path`; upload UPDATE fires on completion. Confirm grid shows upload status but never blocks. |
+| 5. CaptureButton visibility | Gated by `isScorekeeper && status === "active" && !capture.isOpen`. |
+| 6. CapturePrompt blocks advance | Banner non-dismissible. `isBlockedOnPhoto` + `CaptureRequiredError` in `useAdvanceHole` are the mechanism. Existing inline `advanceHole` not yet rerouted through the hook — deferred (TODOS.md). |
+
+### Deferrals added to TODOS.md "Phase 2 deferrals"
+
+- Automated RLS test harness (manual SQL script is stopgap).
+- Wolf in `replayRound` (partner selections not stored).
+- Hammer history in `apply-capture` (replay assumes depth=0).
+- Guest-scorekeeper schema-level CHECK constraint.
+- Route inline `advanceHole` through `useAdvanceHole` (hook + gate
+  exist; inline body still works but doesn't use the hook).
+- Post-launch: split `ANTHROPIC_API_KEY` per edge function if spend
+  gets noisy.
+
+### Ship status
+
+- **86/86 tests pass** (+41 from Phase 1 baseline).
+- **Build clean**: 2.3s, 1.38 MB bundle (371 kB gzipped).
+- **Live smoke**: `/feed` renders, no runtime errors.
+- **Release-gate equivalence**: `computeAdvanceHole == replayRound`
+  across Skins/DOC/Flip/Nassau still green.
+- **Zero `any`** in any Phase 2 code.
+
+### Manual test script (for the user to run)
+
+**Setup — once, before first test:**
+1. Ensure Supabase migrations `20260418100000_scorecards_bucket.sql`
+   and `20260418100100_round_captures.sql` are applied (`supabase db
+   push` if not).
+2. Deploy the edge functions:
+   `supabase functions deploy extract-scores`
+   `supabase functions deploy apply-capture`
+3. Confirm `ANTHROPIC_API_KEY` Supabase secret is set (same key used
+   by `analyze-scorecard` in Phase 1).
+
+**Test 1 — happy path ad-hoc capture:**
+1. Sign in, tap **Start Action** on /feed.
+2. Create a 4-player Nassau round. Mark yourself **scorekeeper**.
+3. On the round page: you see a camera FAB button (bottom-right),
+   no "photo needed" banner.
+4. Enter scores for hole 1 (Alice 4, Bob 5, Carol 4, Dave 5) and tap
+   **Next Hole**. You advance to hole 2 normally.
+5. Tap the **camera FAB**. The capture modal opens on the Shutter step.
+6. Tap **Take photo** (camera opens on mobile; file picker on desktop).
+   Pick any photo — a scorecard or a test image.
+7. Review the preview. Tap **Use photo**.
+8. The **Analyzing** step shows a shimmer for a few seconds.
+9. The **confirm grid** appears with 4 players × 18 holes.
+   Cells have confidence decoration: yellow for medium, red "?" for
+   unreadable.
+10. Fill any red "?" cells.
+11. Leave **Share to feed** unchecked (ad-hoc default).
+12. Tap **Apply**. Expect: "Saving scores…" spinner → "Scores updated"
+    toast → modal closes.
+13. Check /feed: no new post (ad-hoc + share off = private).
+14. Return to /round: running totals reflect the applied scores.
+
+**Test 2 — noop re-capture:**
+1. Same round, no edits. Tap **camera FAB** again.
+2. Walk through photo → analyze → confirm.
+3. Tap **Apply** without editing. Expect: "Scores unchanged" toast,
+   modal closes silently, NO dispute dialog.
+
+**Test 3 — game-driven capture on Nassau hole 9:**
+1. Play holes 1-9 manually.
+2. After entering hole 9 scores and submitting: a yellow banner at
+   the top reads "Photo needed to continue — End of front 9 — photo
+   to settle segment."
+3. The Next-hole button is disabled.
+4. Tap **Capture now**. Modal opens in game-driven mode for hole 9
+   only.
+5. Take photo, confirm, apply. Banner disappears; you can advance.
+
+**Test 4 — diff dialog on overwrite:**
+1. After applying scores from test 1, tap the camera FAB again.
+2. Upload a photo with different scores (e.g. Alice hole 3 now 6
+   instead of 4 — or manually edit the extracted cell before apply).
+3. Tap **Apply**. Expect: dispute dialog with heading "Overwrite
+   current scores?", table showing `5 → 4` (or whatever differs),
+   buttons Cancel / Overwrite with new.
+4. Tap **Overwrite with new**. Scores update; "Scores updated" toast.
+
+**Test 5 — non-scorekeeper view:**
+1. In a second browser / incognito, join the round as a participant
+   (NOT scorekeeper).
+2. Open the round page. Expect: NO camera FAB, NO prompt banner.
+3. Scores update in real time via the existing realtime subscription.
+
+### Recommendation
+
+**Merge PR #3.** Phase 2 is end-to-end complete, all tests pass, the
+release gate is green, and the manual test script above is the
+acceptance checklist. Deferred items are logged in TODOS.md and do
+not block the feature — they become visible at higher scale or
+specific game modes that are out of MVP scope.
