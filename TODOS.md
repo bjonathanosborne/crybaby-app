@@ -1,7 +1,20 @@
 # TODOS — crybaby-app
 
-Last updated: 2026-04-10 (eng review pass)
+Last updated: 2026-04-18 (phase 2 additions)
 Branch: main
+
+---
+
+## Phase 2 deferrals
+
+### Automated RLS tests — TODO
+The round_captures RLS policies have a **manual** verification script at
+`supabase/tests/round_captures_rls.sql` (see README inside). There is no
+automated RLS test harness in the project yet. To automate: either wire
+a GitHub Actions job that spins up `supabase start`, runs the SQL script,
+and checks `NOTICE` / row-count output; or adopt `pgTAP` alongside the
+existing Vitest unit tests. Low priority while the project has a single
+scorekeeper per round, but needed before multi-scorekeeper rounds.
 
 ---
 
