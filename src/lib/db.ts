@@ -1058,6 +1058,98 @@ export async function addManualAdjustment(roundId: string, amount: number, notes
   if (error) throw error;
 }
 
+// ============================================================
+// Round detail loader — used by /round/:id/summary.
+//
+// Fetches round + players + settlements + events + participant
+// display names in parallel. Shape is loose on purpose (the UI
+// narrows it at render); callers should not mutate.
+// ============================================================
+
+export interface RoundDetailBundle {
+  round: {
+    id: string;
+    course: string;
+    game_type: string;
+    status: string;
+    created_at: string;
+    course_details: {
+      pars?: number[];
+      handicaps?: number[];
+      selectedTee?: string;
+      privacy?: string;
+      playerConfig?: Array<{ name?: string; handicap?: number; color?: string }>;
+      [k: string]: unknown;
+    } | null;
+    [k: string]: unknown;
+  };
+  players: Array<{
+    id: string;
+    user_id: string | null;
+    guest_name: string | null;
+    hole_scores: Record<string, number> | number[] | null;
+    total_score: number | null;
+    is_scorekeeper: boolean | null;
+  }>;
+  settlements: Array<{
+    user_id: string | null;
+    guest_name: string | null;
+    amount: number;
+    is_manual_adjustment?: boolean | null;
+    notes?: string | null;
+  }>;
+  events: Array<{
+    id: string;
+    hole_number: number | null;
+    event_type: string;
+    event_data: Record<string, unknown> | null;
+    created_at: string;
+  }>;
+  participant_names: Record<string, string>;
+}
+
+export async function loadRoundDetail(roundId: string): Promise<RoundDetailBundle> {
+  const [roundRes, playersRes, settleRes, eventRes] = await Promise.all([
+    supabase.from("rounds").select("*").eq("id", roundId).maybeSingle(),
+    supabase.from("round_players").select("*").eq("round_id", roundId).order("created_at"),
+    supabase.from("round_settlements").select("user_id, guest_name, amount, is_manual_adjustment, notes").eq("round_id", roundId),
+    supabase.from("round_events").select("id, hole_number, event_type, event_data, created_at").eq("round_id", roundId).order("created_at"),
+  ]);
+  if (roundRes.error) throw roundRes.error;
+  if (!roundRes.data) throw new RoundLoadError("not_found", roundId, "Round not found");
+  if (playersRes.error) throw playersRes.error;
+
+  const players = (playersRes.data || []) as RoundDetailBundle["players"];
+  const participantIds = Array.from(
+    new Set(players.map(p => p.user_id).filter((v): v is string => Boolean(v))),
+  );
+  const participant_names: Record<string, string> = {};
+  if (participantIds.length > 0) {
+    const { data: profs } = await supabase
+      .from("profiles")
+      .select("user_id, display_name, first_name, last_name")
+      .in("user_id", participantIds);
+    for (const p of profs || []) {
+      const full = [p.first_name, p.last_name].filter(Boolean).join(" ").trim();
+      participant_names[p.user_id] = full || p.display_name || "Player";
+    }
+  }
+
+  return {
+    round: roundRes.data as RoundDetailBundle["round"],
+    players,
+    settlements: (settleRes.data || []).map(s => ({
+      user_id: s.user_id,
+      guest_name: s.guest_name,
+      amount: Number(s.amount),
+      is_manual_adjustment: s.is_manual_adjustment ?? null,
+      notes: s.notes ?? null,
+    })),
+    events: (eventRes.data || []) as RoundDetailBundle["events"],
+    participant_names,
+  };
+}
+
 // Load another user's profile
 export async function loadUserProfile(userId: string) {
   const { data } = await supabase

@@ -21,6 +21,7 @@ import JoinGroupPage from "./pages/JoinGroupPage";
 import NotificationSettings from "./pages/NotificationSettings";
 import InboxPage from "./pages/InboxPage";
 import StatsPage from "./pages/StatsPage";
+import RoundDetailPage from "./pages/RoundDetailPage";
 import UserProfilePage from "./pages/UserProfilePage";
 import NotFound from "./pages/NotFound";
 import AdminLayout from "./pages/admin/AdminLayout";
@@ -97,6 +98,7 @@ const AppRoutes = () => (
       <Route path="/notifications/settings" element={<NotificationSettings />} />
       <Route path="/inbox" element={<InboxPage />} />
       <Route path="/stats" element={<StatsPage />} />
+      <Route path="/round/:id/summary" element={<RoundDetailPage />} />
       <Route path="/watch" element={<RoundSpectateView />} />
     </Route>
     <Route path="/join/:code" element={<ProtectedRoute><ProfileGate><JoinGroupPage /></ProfileGate></ProtectedRoute>} />
