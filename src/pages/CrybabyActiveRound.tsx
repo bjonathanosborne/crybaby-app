@@ -13,6 +13,7 @@ import CaptureButton from "@/components/capture/CaptureButton";
 import CapturePrompt from "@/components/capture/CapturePrompt";
 import CaptureFlow from "@/components/capture/CaptureFlow";
 import EditHammerModal from "@/components/capture/hammer/EditHammerModal";
+import FinalPhotoGate from "@/components/FinalPhotoGate";
 import { supabase } from "@/integrations/supabase/client";
 import RoundLiveFeed from "@/components/RoundLiveFeed";
 import {
@@ -900,6 +901,18 @@ export default function CrybabActiveRound() {
   const [isBroadcast, setIsBroadcast] = useState(false);
   const [settlementsSaved, setSettlementsSaved] = useState(false);
   const [totalsInitialized, setTotalsInitialized] = useState(false);
+
+  // Bug 2: pre-completion final-photo gate.
+  //   pending  — hole 18 scored, waiting on user decision (gate is visible)
+  //   captured — user took a scorecard photo from the gate, apply succeeded
+  //   skipped  — user tapped Skip; needs_final_photo has been set in DB
+  //
+  // The settlements-save useEffect is blocked until decision !== "pending".
+  // gateCaptureInFlight tracks when a capture was launched from the gate so
+  // onApplied can distinguish it from an earlier ad-hoc capture.
+  const [finalPhotoDecision, setFinalPhotoDecision] = useState<"pending" | "captured" | "skipped">("pending");
+  const [skipInFlight, setSkipInFlight] = useState(false);
+  const gateCaptureInFlightRef = useRef<boolean>(false);
   // Phase 2 capture: tracks the hole number we most recently applied a
   // capture for. Used to clear the CapturePrompt banner after apply and
   // to re-gate advance on the next hole.
@@ -1002,6 +1015,16 @@ export default function CrybabActiveRound() {
       if (!result.noop) {
         // Force a reload of the round so totals/hole_scores match the server.
         setRetryNonce(n => n + 1);
+      }
+      // Bug 2: if this apply was launched from the final-photo gate, mark
+      // the gate decision as "captured" so the settlements effect proceeds.
+      // A successful capture implicitly clears the needs_final_photo flag
+      // on the server (the apply-capture edge fn handles that on
+      // post_round_correction, and here we ensure a full-range ad-hoc on
+      // hole 18 counts as having a final photo).
+      if (gateCaptureInFlightRef.current) {
+        gateCaptureInFlightRef.current = false;
+        setFinalPhotoDecision("captured");
       }
     },
   });
@@ -1202,10 +1225,16 @@ export default function CrybabActiveRound() {
   // `settlementsSaved` only flips to true when BOTH writes succeed — leaving
   // it false on failure lets a retry re-fire when the effect's deps change
   // (or the component remounts).
+  //
+  // Bug 2 gate: blocked while finalPhotoDecision === "pending". The
+  // FinalPhotoGate modal renders when hole 18 is done and the decision is
+  // still pending; the user MUST choose Take Photo or Skip before this
+  // effect can save settlements / complete the round.
   useEffect(() => {
     if (!round) return;
     const isComplete = currentHole >= 18 && holeResults.length >= 18;
     if (!isComplete || settlementsSaved || !roundId) return;
+    if (finalPhotoDecision === "pending") return;
 
     const saveRoundSettlements = async () => {
       const completionResult = await persist.persistRoundCompletion(roundId);
@@ -1236,7 +1265,50 @@ export default function CrybabActiveRound() {
       setSettlementsSaved(true);
     };
     saveRoundSettlements();
-  }, [currentHole, holeResults.length, settlementsSaved, roundId, persist, round, totals]);
+  }, [currentHole, holeResults.length, settlementsSaved, roundId, persist, round, totals, finalPhotoDecision]);
+
+  // Bug 2: final-photo gate handlers.
+  //
+  // Take Photo: launch CaptureFlow ad-hoc on holeRange [1, 18]. We set the
+  // ref before opening so onApplied (above) knows this capture came from
+  // the gate and can flip decision → "captured". If the user cancels the
+  // flow mid-way, the ref is cleared by onCancel (handled below) and the
+  // gate re-renders.
+  const handleTakeFinalPhoto = useCallback(() => {
+    gateCaptureInFlightRef.current = true;
+    capture.openAdHoc();
+  }, [capture]);
+
+  // Skip: persist needs_final_photo=true, then flip decision → "skipped"
+  // so the settlements effect proceeds. On failure we keep the gate open
+  // and toast — the completion flow intentionally does NOT proceed without
+  // either a photo or the skip-flag recorded.
+  const handleSkipFinalPhoto = useCallback(async () => {
+    if (!roundId) return;
+    setSkipInFlight(true);
+    const result = await persist.persistNeedsFinalPhoto(roundId, true);
+    setSkipInFlight(false);
+    if (!result.ok) {
+      toast({
+        title: "Couldn't save your choice",
+        description: "Check your connection and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setFinalPhotoDecision("skipped");
+  }, [roundId, persist]);
+
+  // If the user cancels the capture flow mid-way after launching it from
+  // the gate, clear the ref so they land back on the gate with no state
+  // change. (capture.activeCapture goes null on cancel; watch the open
+  // state and reset the ref when the flow closes without having flipped
+  // the decision.)
+  useEffect(() => {
+    if (!capture.isOpen && gateCaptureInFlightRef.current && finalPhotoDecision === "pending") {
+      gateCaptureInFlightRef.current = false;
+    }
+  }, [capture.isOpen, finalPhotoDecision]);
 
   // Online/offline wiring is owned by useRoundPersistence.
 
@@ -1985,6 +2057,25 @@ export default function CrybabActiveRound() {
 
       {/* Phase 2 capture flow modal — shared by ad-hoc + game-driven paths via useCapture. */}
       {capture.activeCapture && <CaptureFlow {...capture.activeCapture} />}
+
+      {/* Bug 2: pre-completion final-photo gate.
+          Rendered ONLY for the scorekeeper (only they can capture) when
+          hole 18 is scored, no capture flow is currently open, and the
+          gate decision is still pending. This is the single entry point
+          for launching a [1,18] capture that blocks completeRound. */}
+      <FinalPhotoGate
+        open={
+          isScorekeeper &&
+          !capture.isOpen &&
+          currentHole >= 18 &&
+          holeResults.length >= 18 &&
+          finalPhotoDecision === "pending" &&
+          !settlementsSaved
+        }
+        onTakePhoto={handleTakeFinalPhoto}
+        onSkip={handleSkipFinalPhoto}
+        skipping={skipInFlight}
+      />
 
       {/* Phase 2.5 "Fix hammers" retro-correction entry point.
           Scorekeeper-only; only visible when hammer mechanic is active and

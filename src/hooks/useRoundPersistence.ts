@@ -6,6 +6,7 @@ import {
   completeRound,
   insertSettlements,
   cancelRound,
+  setNeedsFinalPhoto,
   toggleBroadcast,
 } from "@/lib/db";
 
@@ -124,6 +125,11 @@ export interface UseRoundPersistenceReturn {
   persistCancel: (roundId: string) => Promise<PersistResult<void>>;
 
   persistBroadcast: (roundId: string, enabled: boolean) => Promise<PersistResult<void>>;
+
+  persistNeedsFinalPhoto: (
+    roundId: string,
+    value: boolean,
+  ) => Promise<PersistResult<void>>;
 }
 
 export function useRoundPersistence(): UseRoundPersistenceReturn {
@@ -242,6 +248,23 @@ export function useRoundPersistence(): UseRoundPersistenceReturn {
     [],
   );
 
+  const persistNeedsFinalPhoto = useCallback<UseRoundPersistenceReturn["persistNeedsFinalPhoto"]>(
+    async (roundId, value) => {
+      const result = await run<void>(async () => {
+        await setNeedsFinalPhoto(roundId, value);
+      });
+      if (!result.ok) {
+        console.error("[persistence] setNeedsFinalPhoto failed", {
+          roundId,
+          value,
+          kind: result.error.kind,
+        });
+      }
+      return result;
+    },
+    [],
+  );
+
   const persistBroadcast = useCallback<UseRoundPersistenceReturn["persistBroadcast"]>(
     async (roundId, enabled) => {
       const result = await run<void>(async () => {
@@ -271,5 +294,6 @@ export function useRoundPersistence(): UseRoundPersistenceReturn {
     persistSettlements,
     persistCancel,
     persistBroadcast,
+    persistNeedsFinalPhoto,
   };
 }
