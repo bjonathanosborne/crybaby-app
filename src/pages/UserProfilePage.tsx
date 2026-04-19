@@ -154,8 +154,15 @@ export default function UserProfilePage() {
             <div className="flex-1 min-w-0">
               <div className="text-lg font-extrabold text-foreground truncate">{fullName}</div>
               <div className="flex flex-wrap gap-2 mt-1">
-                {profile.handicap != null && (
-                  <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded font-mono">
+                {/* Handicap respects the viewed user's handicap_visible_to_friends flag.
+                    Default is true (visible). In-round contexts bypass this entirely —
+                    they read the LOCKED round_players handicap from course_details JSONB,
+                    not profiles.handicap, so this toggle has no effect on scoring surfaces. */}
+                {profile.handicap != null && profile.handicap_visible_to_friends !== false && (
+                  <span
+                    data-testid="user-profile-handicap"
+                    className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded font-mono"
+                  >
                     HCP {profile.handicap}
                   </span>
                 )}

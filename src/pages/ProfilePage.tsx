@@ -27,7 +27,10 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [ledgerPeriod, setLedgerPeriod] = useState<LedgerPeriod>("monthly");
   const [editingProfile, setEditingProfile] = useState(false);
-  const [editForm, setEditForm] = useState({ display_name: "", handicap: "", home_course: "", first_name: "", last_name: "", state: "", ghin: "" });
+  const [editForm, setEditForm] = useState({
+    display_name: "", handicap: "", home_course: "", first_name: "", last_name: "", state: "", ghin: "",
+    handicap_visible_to_friends: true,
+  });
   const [showAddCourse, setShowAddCourse] = useState(false);
   const [newCourseName, setNewCourseName] = useState("");
   const [newCourseCity, setNewCourseCity] = useState("");
@@ -79,6 +82,7 @@ export default function ProfilePage() {
         last_name: p.last_name || "",
         state: p.state || "",
         ghin: p.ghin || "",
+        handicap_visible_to_friends: p.handicap_visible_to_friends !== false,
       });
     }).catch(() => {
       toast({ title: "Failed to load profile", description: "Please refresh and try again.", variant: "destructive" });
@@ -137,6 +141,7 @@ export default function ProfilePage() {
         last_name: editForm.last_name || "",
         state: editForm.state || "",
         ghin: editForm.ghin || null,
+        handicap_visible_to_friends: editForm.handicap_visible_to_friends,
         profile_completed: isComplete,
       });
       setProfile((prev: any) => ({
@@ -243,6 +248,35 @@ export default function ProfilePage() {
                 <input value={editForm.ghin} onChange={e => setEditForm(f => ({ ...f, ghin: e.target.value.replace(/\D/g, "") }))}
                   placeholder="GHIN #" maxLength={10} style={{ ...inputStyle, flex: 1 }} />
               </div>
+
+              {/* Handicap privacy toggle — affects passive browsing (friend profiles + leaderboards)
+                  only. Your handicap is always visible to players in a round you're actively in. */}
+              <label
+                data-testid="handicap-visibility-toggle"
+                style={{
+                  display: "flex", alignItems: "flex-start", gap: 10,
+                  padding: "10px 12px", borderRadius: 10,
+                  border: "1px solid #DDD0BB", background: "#FAF5EC",
+                  cursor: "pointer",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={editForm.handicap_visible_to_friends}
+                  onChange={e => setEditForm(f => ({ ...f, handicap_visible_to_friends: e.target.checked }))}
+                  style={{ marginTop: 2, accentColor: "#2D5016" }}
+                  aria-describedby="handicap-visibility-help"
+                />
+                <span style={{ fontSize: 13, color: "#1E130A", lineHeight: 1.4 }}>
+                  Show my handicap on friends' profiles
+                  <span
+                    id="handicap-visibility-help"
+                    style={{ display: "block", fontSize: 11, color: "#8B7355", marginTop: 2 }}
+                  >
+                    Players in your active rounds see it either way.
+                  </span>
+                </span>
+              </label>
 
               {/* Home Course Search */}
               <CourseSearch
