@@ -98,7 +98,10 @@ export function cadenceReason(
 ): string | null {
   if (!isPhotoRequiredForHole(round, justCompletedHole)) return null;
   const { gameType, mechanics } = round;
-  if (mechanics.includes("hammer")) return "Hammer is active — photo after every hole.";
+  // Phase 2.5: when hammer is enabled, the scorekeeper needs to walk the
+  // sequenced hammer prompt after each hole (hammers can't be derived
+  // from scores). Copy reflects the prompt flow.
+  if (mechanics.includes("hammer")) return "Hammer active — photo and hammer prompt required each hole.";
   if (mechanics.includes("crybaby") && justCompletedHole >= 15)
     return "Crybaby phase needs a fresh photo each hole.";
   if (mechanics.includes("presses")) return "Presses need current match state — photo each hole.";
