@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import CaptureButton from "@/components/capture/CaptureButton";
 import CapturePrompt from "@/components/capture/CapturePrompt";
 import CaptureFlow from "@/components/capture/CaptureFlow";
+import EditHammerModal from "@/components/capture/hammer/EditHammerModal";
 import { supabase } from "@/integrations/supabase/client";
 import RoundLiveFeed from "@/components/RoundLiveFeed";
 import {
@@ -903,6 +904,9 @@ export default function CrybabActiveRound() {
   // to re-gate advance on the next hole.
   const [lastCapturedHole, setLastCapturedHole] = useState<number>(0);
 
+  // Phase 2.5: retro hammer-fix modal state.
+  const [showEditHammerModal, setShowEditHammerModal] = useState<boolean>(false);
+
   // Round is considered complete once all 18 holes have results saved, or explicitly canceled
   const roundIsComplete = settlementsSaved || isCanceled || (currentHole >= 18 && holeResults.length >= 18);
 
@@ -933,20 +937,61 @@ export default function CrybabActiveRound() {
     currentScoresByPlayer[p.id] = converted;
   });
 
+  // Build capture Player[] from DB rows (name from playerConfig if available).
+  const capturePlayers = dbRound
+    ? dbPlayers.map(p => {
+        const cfg = dbRound.course_details?.playerConfig?.[dbPlayers.indexOf(p)] || {};
+        return {
+          id: p.id,
+          name: p.guest_name || cfg.name || "Player",
+          handicap: typeof cfg.handicap === "number" ? cfg.handicap : 0,
+          cart: cfg.cart,
+          position: cfg.position,
+          color: cfg.color || "#3B82F6",
+          userId: p.user_id,
+        };
+      })
+    : [];
+
+  const mechanicsList = (dbRound?.course_details?.mechanics || []) as string[];
+
+  // For hammer prompt: build the team split. Phase 2.5 supports DOC/Flip
+  // with 4-player teams. Nassau 2v2 could land later. If the round isn't
+  // a 4-player hammer mode, hammerTeams stays undefined and the flow
+  // skips the hammer step (mechanics.includes('hammer') must ALSO be
+  // true for the step to render).
+  const hammerTeams = mechanicsList.includes("hammer") && capturePlayers.length === 4
+    ? (() => {
+        // DOC uses drivers/riders for holes 1-5, then carts. For the
+        // capture prompt we use the "whoever is on cart A vs cart B"
+        // split as the canonical team split (stable across the round,
+        // matches the hammer thrower/responder labels in the UI).
+        const cartA = capturePlayers.filter(p => p.cart === "A");
+        const cartB = capturePlayers.filter(p => p.cart === "B");
+        if (cartA.length === 2 && cartB.length === 2) {
+          return {
+            A: { name: "Cart A", players: cartA },
+            B: { name: "Cart B", players: cartB },
+          };
+        }
+        // Fallback: first two vs last two (covers Flip and unconfigured carts).
+        return {
+          A: { name: "Team A", players: capturePlayers.slice(0, 2) },
+          B: { name: "Team B", players: capturePlayers.slice(2, 4) },
+        };
+      })()
+    : undefined;
+
   const capture = useCapture({
     base: {
       roundId: roundId || "",
-      players: (dbRound ? dbPlayers.map(p => ({
-        id: p.id,
-        name: p.guest_name || (dbRound.course_details?.playerConfig?.[dbPlayers.indexOf(p)]?.name) || "Player",
-        handicap: 0,
-        color: "#3B82F6",
-        userId: p.user_id,
-      })) : []),
+      players: capturePlayers,
       pars: dbRound?.course_details?.pars || Array(18).fill(4),
       handicaps: dbRound?.course_details?.handicaps || Array.from({ length: 18 }, (_, i) => i + 1),
       currentScores: currentScoresByPlayer,
       roundPrivacy: (dbRound?.course_details?.privacy === "private") ? "private" : "public",
+      mechanics: mechanicsList,
+      hammerTeams,
     },
     onApplied: (result) => {
       setLastCapturedHole(currentHole);
@@ -1922,6 +1967,39 @@ export default function CrybabActiveRound() {
 
       {/* Phase 2 capture flow modal — shared by ad-hoc + game-driven paths via useCapture. */}
       {capture.activeCapture && <CaptureFlow {...capture.activeCapture} />}
+
+      {/* Phase 2.5 "Fix hammers" retro-correction entry point.
+          Scorekeeper-only; only visible when hammer mechanic is active and
+          4-player team split is resolvable. Opens EditHammerModal which
+          re-runs the hammer prompt and re-applies via apply-capture with
+          trigger='hammer_correction' (no score changes). */}
+      {isScorekeeper && roundIsActiveStatus && mechanicsList.includes("hammer") && hammerTeams && (
+        <button
+          type="button"
+          onClick={() => setShowEditHammerModal(true)}
+          className="fixed bottom-20 left-4 z-40 rounded-full bg-background border-2 border-border px-3 py-2 text-xs font-semibold text-foreground shadow-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+          data-testid="fix-hammers-button"
+        >
+          🔨 Fix hammers
+        </button>
+      )}
+      {hammerTeams && roundId && (
+        <EditHammerModal
+          open={showEditHammerModal}
+          onOpenChange={setShowEditHammerModal}
+          roundId={roundId}
+          holeRange={[1, Math.max(1, currentHole)]}
+          teams={hammerTeams}
+          pars={dbRound?.course_details?.pars || Array(18).fill(4)}
+          initialHammerState={
+            (dbRound?.course_details?.game_state?.hammerStateByHole)
+              ? { byHole: dbRound.course_details.game_state.hammerStateByHole }
+              : undefined
+          }
+          currentScores={currentScoresByPlayer}
+          onApplied={() => setRetryNonce(n => n + 1)}
+        />
+      )}
 
       {/* Offline / unsaved warning banner */}
       {(!isOnline || lastSaveFailed) && (

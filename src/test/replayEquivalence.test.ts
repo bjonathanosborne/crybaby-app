@@ -283,3 +283,214 @@ describe("replayRound equivalence — Nassau segments (no presses)", () => {
     expect(replay.nassauSettlement?.overall.winner).toBe("Team 1");
   });
 });
+
+// ---------------------------------------------------------------------
+// Phase 2.5 — Hammer equivalence (release gate for the correctness rule)
+//
+// These tests exercise replayRound's hammer path. The critical rule:
+// when a team LAYS DOWN at depth D, the thrower at D wins regardless of
+// scores. translateToLegacy (from hammerMath) produces the legacy
+// {hammerDepth, folded, foldWinnerTeamId?} triple replayRound consumes;
+// these tests verify the full chain.
+// ---------------------------------------------------------------------
+
+describe("replayRound — hammer scenarios (Phase 2.5 release gate)", () => {
+  const players = makePlayers4DOC();
+  const settings = makeSettings({ hammer: true, birdieBonus: false });
+  const pars = Array(18).fill(4);
+  const handicaps = Array.from({ length: 18 }, (_, i) => i + 1);
+  const holeValue = 2;
+
+  // Helper: 18-hole replay with a specific hammer setup on one hole.
+  // Other holes are no-hammer. Uses DOC drivers phase (holes 1-5) where
+  // teamA = drivers (a,c) and teamB = riders (b,d).
+  function replay18WithHammerOnHole(
+    targetHole: number,
+    scores: Record<string, number>,
+    hammerEntry: { hammerDepth: number; folded: boolean; foldWinnerTeamId?: "A" | "B" },
+  ) {
+    const holes: ReplayHoleInput[] = [];
+    for (let h = 1; h <= 18; h++) {
+      if (h === targetHole) {
+        holes.push({ holeNumber: h, scores, ...hammerEntry });
+      } else {
+        holes.push({
+          holeNumber: h,
+          scores: { a: 4, b: 4, c: 4, d: 4 }, // all tied, pushes
+          hammerDepth: 0,
+          folded: false,
+        });
+      }
+    }
+    return replayRound("drivers_others_carts", players, pars, handicaps, holeValue, settings, holes);
+  }
+
+  it("no hammer: winner by score, 1× multiplier", () => {
+    // Hole 1, drivers phase. a=3 (birdie no actually 4 pars), b=4, c=4, d=4
+    // drivers (a+c) beat riders (b+d) at hole 1: min(a,c)=3 < min(b,d)=4 → drivers win
+    const result = replay18WithHammerOnHole(
+      1,
+      { a: 3, b: 4, c: 4, d: 4 },
+      { hammerDepth: 0, folded: false },
+    );
+    // Drivers win hole 1 at 1× = $2. Each driver +$2, each rider -$2.
+    expect(result.totals.a).toBe(2);
+    expect(result.totals.c).toBe(2);
+    expect(result.totals.b).toBe(-2);
+    expect(result.totals.d).toBe(-2);
+  });
+
+  it("depth 1 accepted, scored out, Team A (drivers) wins → 2× multiplier", () => {
+    // Drivers win by score at 2×: +$4 each driver, -$4 each rider.
+    const result = replay18WithHammerOnHole(
+      1,
+      { a: 3, b: 4, c: 4, d: 4 },
+      { hammerDepth: 1, folded: false },
+    );
+    expect(result.totals.a).toBe(4);
+    expect(result.totals.c).toBe(4);
+    expect(result.totals.b).toBe(-4);
+    expect(result.totals.d).toBe(-4);
+  });
+
+  it("depth 1 accepted, scored out, Team B (riders) wins → 2× multiplier", () => {
+    // Riders win: b=3 < a=c=4. At 2×: riders +$4 each, drivers -$4 each.
+    const result = replay18WithHammerOnHole(
+      1,
+      { a: 4, b: 3, c: 4, d: 4 },
+      { hammerDepth: 1, folded: false },
+    );
+    expect(result.totals.b).toBe(4);
+    expect(result.totals.d).toBe(4);
+    expect(result.totals.a).toBe(-4);
+    expect(result.totals.c).toBe(-4);
+  });
+
+  it("CRITICAL: depth 2 laid down by Team A (riders threw at 2) → Team B wins at 2× regardless of scores", () => {
+    // Scores would say drivers won (a=3 vs b=5). But riders threw hammer
+    // at depth 2 and drivers laid down, so riders win at 2× per the
+    // critical correctness rule.
+    // translateToLegacy for "depth 2 laid_down by B thrower" → hammerDepth=1,
+    // folded=true, foldWinnerTeamId='B'.
+    const result = replay18WithHammerOnHole(
+      1,
+      { a: 3, b: 5, c: 3, d: 5 }, // drivers would outscore riders
+      { hammerDepth: 1, folded: true, foldWinnerTeamId: "B" },
+    );
+    // foldValue = holeValue * 2^1 = $4. Riders win $4 each, drivers -$4 each.
+    expect(result.totals.b).toBe(4);
+    expect(result.totals.d).toBe(4);
+    expect(result.totals.a).toBe(-4);
+    expect(result.totals.c).toBe(-4);
+  });
+
+  it("depth 3 scored out at 8× — winner by score", () => {
+    // hammerDepth=3 → 2^3 = 8× multiplier. Drivers win by score (a=3).
+    const result = replay18WithHammerOnHole(
+      1,
+      { a: 3, b: 4, c: 4, d: 4 },
+      { hammerDepth: 3, folded: false },
+    );
+    expect(result.totals.a).toBe(16); // holeValue * 2^3 = 16
+    expect(result.totals.c).toBe(16);
+    expect(result.totals.b).toBe(-16);
+    expect(result.totals.d).toBe(-16);
+  });
+
+  it("depth 4 laid down by Team B at 8× — Team A wins regardless of score", () => {
+    // "Depth 4 laid down by B thrower was A at 4" — translateToLegacy:
+    // hammerDepth = D-1 = 3, folded=true, foldWinnerTeamId='A'.
+    // foldValue = 2 * 2^3 = 16. A wins 16/player, B loses 16/player.
+    // Scores say riders outscore drivers but the fold overrides.
+    const result = replay18WithHammerOnHole(
+      1,
+      { a: 5, b: 3, c: 5, d: 3 }, // riders would outscore
+      { hammerDepth: 3, folded: true, foldWinnerTeamId: "A" },
+    );
+    expect(result.totals.a).toBe(16);
+    expect(result.totals.c).toBe(16);
+    expect(result.totals.b).toBe(-16);
+    expect(result.totals.d).toBe(-16);
+  });
+
+  it("hammer + gross birdie by winning team: multiplier doubles per birdieMultiplier", () => {
+    const settingsWithBirdie = makeSettings({ hammer: true, birdieBonus: true, birdieMultiplier: 2 });
+    // Hole 1 par 4, drivers birdie (a=3 is 1 under par). Depth 1 accepted.
+    // Expected: 2× hammer × 2× birdie = 4× on $2 = $8 per player.
+    const holes: ReplayHoleInput[] = Array.from({ length: 18 }, (_, i) => ({
+      holeNumber: i + 1,
+      scores: i === 0 ? { a: 3, b: 5, c: 4, d: 5 } : { a: 4, b: 4, c: 4, d: 4 },
+      hammerDepth: i === 0 ? 1 : 0,
+      folded: false,
+    }));
+    const result = replayRound(
+      "drivers_others_carts",
+      players,
+      pars,
+      handicaps,
+      holeValue,
+      settingsWithBirdie,
+      holes,
+    );
+    expect(result.totals.a).toBe(8);
+    expect(result.totals.c).toBe(8);
+    expect(result.totals.b).toBe(-8);
+    expect(result.totals.d).toBe(-8);
+  });
+
+  it("losing (folding) team had a gross birdie: no birdie bonus on fold value", () => {
+    // Riders had birdie (b=3) but laid down at depth 2. Drivers win fold.
+    // Since it's a fold (calculateFoldResult), birdie bonus does NOT apply
+    // — birdie multiplier only activates in calculateTeamHoleResult.
+    // translateToLegacy: laid_down at depth 2 by B thrower was A at 2 →
+    // folded by B → wait: laid down by Team A responder means A conceded.
+    // Last event depth 2 thrower=B response=laid_down. Actually let me
+    // re-read: "laid down by B" means B conceded, so A wins.
+    // For this test: B (riders) threw hammer at depth 2, A (drivers)
+    // laid down. A is the folder, B wins. Riders had b=3 birdie.
+    // translateToLegacy: events end laid_down at depth 2 by B thrower
+    // means thrower at final depth is B; resolveHammerOutcome says winner
+    // is thrower = B. legacy: hammerDepth=D-1=1, folded=true, winner='B'.
+    const settingsWithBirdie = makeSettings({ hammer: true, birdieBonus: true, birdieMultiplier: 2 });
+    const holes: ReplayHoleInput[] = Array.from({ length: 18 }, (_, i) => ({
+      holeNumber: i + 1,
+      scores: i === 0 ? { a: 5, b: 3, c: 5, d: 5 } : { a: 4, b: 4, c: 4, d: 4 },
+      hammerDepth: i === 0 ? 1 : 0,
+      folded: i === 0,
+      foldWinnerTeamId: i === 0 ? "B" : undefined,
+    }));
+    const result = replayRound(
+      "drivers_others_carts",
+      players,
+      pars,
+      handicaps,
+      holeValue,
+      settingsWithBirdie,
+      holes,
+    );
+    // Fold value = 2 * 2^1 = $4 per player. Birdie bonus NOT applied on folds.
+    expect(result.totals.b).toBe(4);
+    expect(result.totals.d).toBe(4);
+    expect(result.totals.a).toBe(-4);
+    expect(result.totals.c).toBe(-4);
+  });
+
+  it("no hammers across all 18 holes produces standard 1× payouts (regression check)", () => {
+    // All holes pushed except hole 5 where drivers outscore. Standard
+    // DOC drivers phase (hole <= 5).
+    const holes: ReplayHoleInput[] = Array.from({ length: 18 }, (_, i) => ({
+      holeNumber: i + 1,
+      scores: i === 4 ? { a: 3, b: 4, c: 4, d: 4 } : { a: 4, b: 4, c: 4, d: 4 },
+      hammerDepth: 0,
+      folded: false,
+    }));
+    const result = replayRound("drivers_others_carts", players, pars, handicaps, holeValue, settings, holes);
+    // Hole 5: drivers win at 1× with some carry-over from prior pushes.
+    // Prior 4 pushes accumulate $2*4 = $8 in carry. Win is $2 + $8 = $10.
+    // Drivers each +$10, riders each -$10.
+    expect(result.totals.a).toBe(10);
+    expect(result.totals.c).toBe(10);
+    expect(result.totals.b).toBe(-10);
+    expect(result.totals.d).toBe(-10);
+  });
+});

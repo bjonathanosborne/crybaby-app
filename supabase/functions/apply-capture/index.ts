@@ -24,6 +24,15 @@ import {
   type ReplayHoleInput,
   type TeamInfo,
 } from "../_shared/gameEngines.ts";
+import {
+  translateToLegacy,
+  validateHammerState,
+} from "../_shared/hammerMath.ts";
+import type {
+  CaptureHammerState,
+  HoleHammerState,
+  LegacyHammerEntry,
+} from "../_shared/hammerTypes.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -37,6 +46,13 @@ interface ApplyCaptureInput {
   captureId: string;
   confirmedScores: Record<string, Record<number, number>>;
   shareToFeed: boolean;
+  /**
+   * Optional per-hole hammer state captured from the sequenced prompt
+   * (Phase 2.5c). Omit for non-hammer rounds or when only score
+   * corrections are being applied. Server merges into
+   * course_details.game_state.hammerHistory via translateToLegacy.
+   */
+  hammerState?: CaptureHammerState;
 }
 
 interface ApplyCaptureResult {
@@ -73,6 +89,20 @@ function validateInput(body: unknown): ApplyCaptureInput | string {
       if (typeof s !== "number" || !Number.isInteger(s) || s < 1 || s > 20) {
         return `confirmedScores.${pid}.${h} must be integer 1..20`;
       }
+    }
+  }
+  // Optional hammerState: { byHole: { <hole>: HoleHammerState } }
+  if (b.hammerState !== undefined && b.hammerState !== null) {
+    const hs = b.hammerState as Record<string, unknown>;
+    if (typeof hs !== "object" || hs === null) return "hammerState must be an object";
+    const byHole = hs.byHole as Record<string, unknown> | undefined;
+    if (!byHole || typeof byHole !== "object") return "hammerState.byHole required";
+    for (const [holeKey, stateVal] of Object.entries(byHole)) {
+      const hn = Number(holeKey);
+      if (!Number.isInteger(hn) || hn < 1 || hn > 18) return `hammerState.byHole: invalid hole key ${holeKey}`;
+      if (typeof stateVal !== "object" || stateVal === null) return `hammerState.byHole.${holeKey} must be an object`;
+      const validation = validateHammerState(stateVal as HoleHammerState);
+      if (!validation.ok) return `hammerState.byHole.${holeKey} invalid: ${validation.errors.join("; ")}`;
     }
   }
   return b as unknown as ApplyCaptureInput;
@@ -221,8 +251,14 @@ serve(async (req) => {
     }
     const delta = computeDelta(priorScores, input.confirmedScores);
 
-    // --- Noop path: scores unchanged ---
-    if (delta.length === 0) {
+    // --- Noop path: scores AND hammer state both unchanged ---
+    // If hammerState was submitted with any byHole entries, fall through to
+    // the apply path so translateToLegacy updates hammerHistory. A "noop"
+    // response is only valid when the submission adds nothing.
+    const hammerHasEntries =
+      input.hammerState !== undefined && input.hammerState !== null &&
+      Object.keys(input.hammerState.byHole || {}).length > 0;
+    if (delta.length === 0 && !hammerHasEntries) {
       await service
         .from("round_captures")
         .update({
@@ -312,6 +348,37 @@ serve(async (req) => {
     const completedHoles = Object.values(nextScoresByPlayer)
       .flatMap(p => Object.keys(p).map(Number))
       .reduce((a, b) => Math.max(a, b), 0);
+
+    // Merge any submitted hammer state into the persisted hammerHistory
+    // via translateToLegacy. Holes not present in hammerState keep whatever
+    // legacy entry already existed (or default to no-hammer).
+    const gameState = (courseDetails.game_state || {}) as Record<string, unknown>;
+    const existingLegacyHistory = Array.isArray(gameState.hammerHistory)
+      ? (gameState.hammerHistory as Array<{ hole: number; hammerDepth: number; folded: boolean; foldWinnerTeamId?: "A" | "B" }>)
+      : [];
+    const existingByHole = new Map<number, { hammerDepth: number; folded: boolean; foldWinnerTeamId?: "A" | "B" }>();
+    for (const entry of existingLegacyHistory) {
+      existingByHole.set(entry.hole, entry);
+    }
+
+    // Store the rich hammer state per-hole so we can preserve it across
+    // applies (client may submit only a subset of holes; we keep prior
+    // rich state for the rest).
+    const existingHammerStateByHole = (gameState.hammerStateByHole || {}) as Record<string, HoleHammerState>;
+    const mergedHammerStateByHole: Record<string, HoleHammerState> = { ...existingHammerStateByHole };
+
+    if (input.hammerState && input.hammerState.byHole) {
+      for (const [holeKey, holeState] of Object.entries(input.hammerState.byHole)) {
+        mergedHammerStateByHole[holeKey] = holeState;
+        const legacy: LegacyHammerEntry = translateToLegacy(Number(holeKey), holeState);
+        existingByHole.set(Number(holeKey), {
+          hammerDepth: legacy.hammerDepth,
+          folded: legacy.folded,
+          foldWinnerTeamId: legacy.foldWinnerTeamId,
+        });
+      }
+    }
+
     const replayInputs: ReplayHoleInput[] = [];
     for (let h = 1; h <= completedHoles; h++) {
       const scores: Record<string, number> = {};
@@ -322,11 +389,17 @@ serve(async (req) => {
         scores[rp.id] = s;
       }
       if (!allPresent) continue;
-      replayInputs.push({ holeNumber: h, scores, hammerDepth: 0, folded: false });
+      const legacyEntry = existingByHole.get(h);
+      replayInputs.push({
+        holeNumber: h,
+        scores,
+        hammerDepth: legacyEntry?.hammerDepth ?? 0,
+        folded: legacyEntry?.folded ?? false,
+        foldWinnerTeamId: legacyEntry?.foldWinnerTeamId,
+      });
     }
 
     // Flip teams may be stored in game_state
-    const gameState = (courseDetails.game_state || {}) as Record<string, unknown>;
     const flipTeams = (gameState.flipTeams as TeamInfo | undefined) || null;
 
     const replayStart = Date.now();
@@ -354,11 +427,25 @@ serve(async (req) => {
     }
 
     // --- Update course_details.game_state ---
+    // Rebuild hammerHistory as the canonical legacy array from existingByHole.
+    const updatedHammerHistory: LegacyHammerEntry[] = [];
+    for (const [hole, entry] of existingByHole.entries()) {
+      updatedHammerHistory.push({
+        hole,
+        hammerDepth: entry.hammerDepth,
+        folded: entry.folded,
+        foldWinnerTeamId: entry.foldWinnerTeamId,
+      });
+    }
+    updatedHammerHistory.sort((a, b) => a.hole - b.hole);
+
     const newGameState = {
       ...gameState,
       currentHole: Math.min(completedHoles + 1, 18),
       totals: replay.totals,
       carryOver: replay.holeResults.length ? replay.holeResults[replay.holeResults.length - 1].carryOver : 0,
+      hammerHistory: updatedHammerHistory,
+      hammerStateByHole: mergedHammerStateByHole,
       nassauState: (round.game_type === "nassau")
         ? (() => {
             const ns = initNassauState(players);
@@ -443,6 +530,8 @@ serve(async (req) => {
         applied_at: new Date().toISOString(),
         share_to_feed: input.shareToFeed,
         feed_published_at: feedPublishedAt,
+        hammer_state: input.hammerState ?? null,
+        confirmed_hammer_state: input.hammerState ?? null,
       })
       .eq("id", input.captureId);
 

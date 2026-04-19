@@ -67,6 +67,25 @@ export interface CaptureFlowProps {
   /** Course handicap indexes (length 18) — same. */
   handicaps: number[];
   /**
+   * Round mechanics (from course_details.mechanics). Drives the hammer
+   * prompt step: the flow inserts HammerPromptFlow between Confirm and
+   * Apply iff this array includes "hammer". Omit or pass [] for rounds
+   * without hammer.
+   */
+  mechanics?: string[];
+  /**
+   * Team split for the hammer prompt. Required when `mechanics` includes
+   * "hammer". For 4-player DOC/Flip the caller derives this from
+   * gameEngines.getTeamsForHole at capture time. Omitted for non-hammer
+   * rounds.
+   */
+  hammerTeams?: { A: { name: string; players: Player[] }; B: { name: string; players: Player[] } };
+  /**
+   * Pre-populated hammer state from a prior capture — passed on back-edit
+   * so the user doesn't lose their answers.
+   */
+  initialHammerState?: import("@/lib/hammerMath").CaptureHammerState;
+  /**
    * Current DB-persisted scores. Used as priors for extraction AND
    * as the prior state for the dispute diff.
    */
@@ -89,6 +108,7 @@ export type CaptureStep =
   | "uploading"
   | "analyzing"
   | "confirm"
+  | "hammer_prompt"
   | "applying"
   | "done"
   | "error";

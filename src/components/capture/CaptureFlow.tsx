@@ -6,6 +6,7 @@ import CaptureShutter from "./CaptureShutter";
 import CaptureAnalyzing from "./CaptureAnalyzing";
 import CaptureConfirmGrid from "./CaptureConfirmGrid";
 import CaptureDisputeDialog from "./CaptureDisputeDialog";
+import HammerPromptFlow from "./hammer/HammerPromptFlow";
 import type {
   CaptureFlowProps,
   CaptureStep,
@@ -13,6 +14,7 @@ import type {
   ExtractionResponse,
   CaptureResult,
 } from "./types";
+import type { CaptureHammerState } from "@/lib/hammerMath";
 
 // ============================================================
 // CaptureFlow — modal container that sequences
@@ -60,7 +62,11 @@ function computeDiff(
 }
 
 export default function CaptureFlow(props: CaptureFlowProps): JSX.Element {
-  const { roundId, trigger, holeRange, players, pars, handicaps, currentScores, onComplete, onCancel, roundPrivacy } = props;
+  const {
+    roundId, trigger, holeRange, players, pars, handicaps, currentScores,
+    onComplete, onCancel, roundPrivacy,
+    mechanics, hammerTeams, initialHammerState,
+  } = props;
   const { toast } = useToast();
 
   const [step, setStep] = useState<CaptureStep>("shutter");
@@ -74,6 +80,10 @@ export default function CaptureFlow(props: CaptureFlowProps): JSX.Element {
   const [errorBanner, setErrorBanner] = useState<string | null>(null);
   const [uploadStatus, setUploadStatus] = useState<"idle" | "uploading" | "done" | "failed">("idle");
   const [imageData, setImageData] = useState<{ base64: string; mime: CaptureMime } | null>(null);
+  const [hammerState, setHammerState] = useState<CaptureHammerState | undefined>(initialHammerState);
+
+  // Insert a hammer_prompt step between confirm and applying iff this round has hammer.
+  const hasHammerMechanic = Boolean(mechanics?.includes("hammer")) && Boolean(hammerTeams);
 
   const abortRef = useRef<AbortController | null>(null);
 
@@ -219,6 +229,7 @@ export default function CaptureFlow(props: CaptureFlowProps): JSX.Element {
   const runApply = useCallback(async (
     confirmedScores: Record<string, Record<number, number>>,
     shareToFeed: boolean,
+    submittedHammerState?: CaptureHammerState,
   ) => {
     if (!captureId) return;
     setStep("applying");
@@ -230,8 +241,15 @@ export default function CaptureFlow(props: CaptureFlowProps): JSX.Element {
       supersededIds: string[];
       feedPublished: boolean;
       totals: Record<string, number>;
+      /** Optional: holes where a gross birdie was detected; used for the confirmation toast. */
+      birdies?: Array<{ hole: number; playerId: string; playerName: string; multiplier: number }>;
     }>("apply-capture", {
-      body: { captureId, confirmedScores, shareToFeed },
+      body: {
+        captureId,
+        confirmedScores,
+        shareToFeed,
+        hammerState: submittedHammerState,
+      },
     });
 
     if (error || !data) {
@@ -271,30 +289,77 @@ export default function CaptureFlow(props: CaptureFlowProps): JSX.Element {
       title: "Scores updated",
       description: data.feedPublished ? "Posted to the feed." : "Applied to the round.",
     });
+
+    // Phase 2.5 birdie confirmation toasts — one per detected birdie with
+    // a tap-to-correct affordance. The server returns birdies only when
+    // apply recomputes them. Auto-dismiss handled by the toast library.
+    if (data.birdies && data.birdies.length > 0) {
+      for (const b of data.birdies) {
+        toast({
+          title: `Birdie bonus on hole ${b.hole}`,
+          description: `${b.playerName} — ${b.multiplier}× multiplier. Tap "Fix birdies" on the round page to correct.`,
+        });
+      }
+    }
     onComplete(result);
   }, [captureId, trigger, toast, onComplete]);
+
+  /**
+   * Pending scores waiting on the hammer prompt. When the round has the
+   * hammer mechanic, confirming the score grid opens the hammer prompt
+   * instead of going straight to apply; the prompt's onComplete feeds
+   * the hammerState into runApply.
+   */
+  const [pendingHammerApply, setPendingHammerApply] = useState<{
+    scores: Record<string, Record<number, number>>;
+    shareToFeed: boolean;
+  } | null>(null);
 
   const handleConfirmApply = useCallback((
     confirmedScores: Record<string, Record<number, number>>,
     shareToFeed: boolean,
   ) => {
     const diffs = computeDiff(confirmedScores, currentScores, playerNames);
-    if (diffs.length === 0) {
-      // No diff — go straight to apply (server will also return noop, but
-      // we save a round-trip by not showing the dispute dialog).
-      void runApply(confirmedScores, shareToFeed);
+    if (diffs.length > 0) {
+      // Dispute dialog first — this hasn't changed from Phase 2.
+      setPendingApply({ scores: confirmedScores, shareToFeed, diffs });
       return;
     }
-    // Show dispute dialog first.
-    setPendingApply({ scores: confirmedScores, shareToFeed, diffs });
-  }, [currentScores, runApply, playerNames]);
+    // No diff — route through hammer prompt if this round has hammer,
+    // otherwise go straight to apply.
+    if (hasHammerMechanic) {
+      setPendingHammerApply({ scores: confirmedScores, shareToFeed });
+      setStep("hammer_prompt");
+      return;
+    }
+    void runApply(confirmedScores, shareToFeed);
+  }, [currentScores, runApply, playerNames, hasHammerMechanic]);
+
+  const handleHammerPromptComplete = useCallback((state: CaptureHammerState) => {
+    setHammerState(state);
+    if (!pendingHammerApply) return;
+    void runApply(pendingHammerApply.scores, pendingHammerApply.shareToFeed, state);
+    setPendingHammerApply(null);
+  }, [pendingHammerApply, runApply]);
+
+  const handleHammerPromptBack = useCallback(() => {
+    // Go back to confirm grid; scorekeeper can edit scores again.
+    setStep("confirm");
+  }, []);
 
   const handleDisputeOverwrite = useCallback(() => {
     if (!pendingApply) return;
     const { scores, shareToFeed } = pendingApply;
     setPendingApply(null);
+    // Same logic as handleConfirmApply no-diff path: hammer prompt first
+    // if this round has hammer, otherwise straight to apply.
+    if (hasHammerMechanic) {
+      setPendingHammerApply({ scores, shareToFeed });
+      setStep("hammer_prompt");
+      return;
+    }
     void runApply(scores, shareToFeed);
-  }, [pendingApply, runApply]);
+  }, [pendingApply, runApply, hasHammerMechanic]);
 
   const handleDisputeCancel = useCallback(() => {
     setPendingApply(null);
@@ -330,6 +395,17 @@ export default function CaptureFlow(props: CaptureFlowProps): JSX.Element {
               onCancel={onCancel}
             />
           )
+          : step === "hammer_prompt" && hammerTeams
+            ? (
+              <HammerPromptFlow
+                holeRange={holeRange}
+                teams={hammerTeams}
+                pars={pars}
+                initial={hammerState}
+                onComplete={handleHammerPromptComplete}
+                onBack={handleHammerPromptBack}
+              />
+            )
           : step === "applying"
             ? (
               <div data-testid="capture-applying" className="flex flex-col items-center gap-3 px-6 py-10 text-center" role="status" aria-live="polite">

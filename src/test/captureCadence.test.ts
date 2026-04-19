@@ -126,10 +126,11 @@ describe("cadenceReason — copy selection", () => {
     expect(cadenceReason(R("nassau"), 5)).toBeNull();
   });
 
-  it("hammer takes precedence over other mechanics", () => {
-    expect(
-      cadenceReason(R("drivers_others_carts", ["hammer", "crybaby", "birdie_bonus"]), 5),
-    ).toMatch(/Hammer/);
+  it("hammer takes precedence over other mechanics and mentions the prompt", () => {
+    const reason = cadenceReason(R("drivers_others_carts", ["hammer", "crybaby", "birdie_bonus"]), 5);
+    expect(reason).toMatch(/Hammer/);
+    // Phase 2.5 wording: copy must reference the hammer prompt flow.
+    expect(reason).toMatch(/hammer prompt/i);
   });
 
   it("nassau turn and finish use segment copy", () => {

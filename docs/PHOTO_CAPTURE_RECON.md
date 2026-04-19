@@ -988,3 +988,153 @@ release gate is green, and the manual test script above is the
 acceptance checklist. Deferred items are logged in TODOS.md and do
 not block the feature — they become visible at higher scale or
 specific game modes that are out of MVP scope.
+
+---
+
+## Phase 2.5 addendum — 2026-04-19 (branch `phase-2.5-hammer`, PR #4)
+
+Closes the hammer money-math correctness gap: the hole winner isn't
+always derivable from scores (a laid-down hammer overrides the
+stroke-play winner). Adds a sequenced tap-prompt after scores are
+confirmed so the scorekeeper logs each depth explicitly. Also hides
+Wolf from the setup picker (same correctness problem — partner picks
+not score-derivable).
+
+### Delta vs. Phase 2
+
+- **133 tests** (+47 over Phase 2's 86).
+- Build clean, 2.2s, 1.38 MB (+~30 kB for hammer UI and types).
+- Two Supabase migrations applied to the live project:
+  - `20260418100000_scorecards_bucket.sql` (already live from Phase 2)
+  - `20260418100100_round_captures.sql` (already live)
+  - `20260419000000_hammer_capture.sql` (NEW — `hammer_state` +
+    `confirmed_hammer_state` columns, broadened trigger CHECK)
+- `apply-capture` edge function redeployed with hammer-state wiring.
+
+### Commit summary
+
+- **2.5a** (`dab63c5`) — Wolf hidden from setup picker via `hidden: true`
+  flag on its `GAME_FORMATS` entry; legacy Wolf rounds still render via
+  `calculateWolfHoleResult`. TODOS.md entry documents the re-enable
+  path (extend hammer prompt pattern for partner picks).
+- **2.5b** (`1e1e7c6`) — New rich `HoleHammerState` type + pure
+  `hammerMath.ts` (`resolveHammerOutcome`, `validateHammerState`,
+  `translateToLegacy`). Schema migration. `apply-capture` gains
+  `hammerState` input; merges via translateToLegacy into
+  `course_details.game_state.hammerHistory` (the legacy shape the
+  engine already consumes). +27 hammer math tests + 9 release-gate
+  equivalence tests including the critical "lay-down overrides score"
+  case.
+- **2.5c** — Sequenced prompt UI: 7 new components under
+  `src/components/capture/hammer/` (TeamPicker, Response, HammerBack,
+  Breadcrumb primitives; HammerHoleStep state machine;
+  HammerHoleSummaryCard; HammerPromptFlow container). Inserted as
+  `hammer_prompt` step in CaptureFlow between `confirm` and
+  `applying`, only when `mechanics.includes("hammer")`. Birdie
+  confirmation toasts fire after apply for any detected birdies.
+  +6 component tests.
+- **2.5d** — `EditHammerModal` for retro hammer fixes: opens
+  `HammerPromptFlow` pre-populated with the round's current
+  `hammerStateByHole`, writes a `trigger='hammer_correction'` capture
+  row, and re-applies. Cadence copy updated to
+  `"Hammer active — photo and hammer prompt required each hole."`
+
+### Correctness rule — locked into the release gate
+
+Release-gate equivalence tests in `src/test/replayEquivalence.test.ts`
+prove (among others):
+
+- **Depth 2 laid down by Team A** (riders threw at 2, drivers laid
+  down): Team B wins at 2× **regardless of whether drivers outscored
+  riders**. Verified with drivers shooting 3s vs riders shooting 5s —
+  the fold still wins for riders.
+- Birdie bonus multiplies the post-hammer payout only when the
+  **winning** team had a gross birdie.
+- Losing (folding) team birdie is ignored — `calculateFoldResult`
+  doesn't route through `calculateTeamHoleResult` where the birdie
+  multiplier lives.
+
+All 9 hammer equivalence scenarios pass.
+
+### Manual test script — Phase 2.5 additions
+
+Run these AFTER the Phase 2 smoke tests pass.
+
+**Setup:** Create a 4-player round with the **DOC game mode** and the
+**hammer mechanic enabled** (and pops / crybaby off for clarity).
+Mark yourself scorekeeper.
+
+**Test 2.5-1 — No hammer on hole 1 (1 tap):**
+1. Enter hole 1 scores manually, submit, advance to hole 2.
+2. Enter hole 2 scores, submit, then tap the **camera FAB**.
+3. Take any photo, confirm the grid (scores may be inaccurate — tap
+   Apply anyway).
+4. **After the grid, you should see a new screen titled "Hammers"**
+   with hole 2 marked "Not answered yet".
+5. Tap **Start**. You should see "Any hammers on hole 2?" with
+   [No] [Yes] buttons.
+6. Tap **No**. You should see "Hole 2 — all set" with "No hammer.
+   Winner by score at 1× hole value."
+7. Tap **Continue**. The flow returns to summary; tap **Looks good**.
+8. "Scores updated" toast fires; money totals stay unchanged (1×
+   hole value).
+
+**Test 2.5-2 — Depth 1 scored out (4 taps):**
+1. On the next hole, repeat the capture flow.
+2. In the hammer prompt, tap **Yes**. Tap the **Team A** card ("Drivers"
+   or whatever your team is called).
+3. You should see "{Team B}'s response?". Tap **Accepted**.
+4. You should see "Did {Team A} hammer back?". Tap
+   **No — score it out** (the sub-label reads "at 2× the hole value").
+5. Terminal says "Scored out at depth 1. Winner by score at 2× hole
+   value."
+6. Continue → Looks good. Check running totals: the winning team's
+   money for that hole is 2× hole value each.
+
+**Test 2.5-3 — THE CRITICAL TEST: depth 2 lay-down overrides scores:**
+1. Arrange scores so Team A would normally win by score (e.g. A's
+   best is 3, B's best is 5).
+2. In the hammer prompt for that hole: **Yes** → **Team A threw first**
+   → **B accepted** → **Yes, hammer back** → **A laid down**.
+3. Terminal should say "{Team B} wins — {Team A} laid down at depth 2.
+   2× hole value."
+4. Apply. Check running totals: **Team B wins the hole at 2× even
+   though they scored higher**. This is the correctness rule in action.
+
+**Test 2.5-4 — Gross birdie by winning team:**
+1. On a par 4, enter scores with one player at 3 (birdie) on the
+   winning team. Run the capture + hammer prompt (depth 1 accepted,
+   scored out).
+2. After Apply, you should see a second toast: "Birdie bonus on
+   hole N → {Player} — 2× multiplier." (Assuming
+   `birdieMultiplier: 2` in your round config.)
+3. Totals reflect 2× (hammer) × 2× (birdie) = 4× multiplier.
+
+**Test 2.5-5 — Fix hammers retro:**
+1. After applying a round with hammers, tap the 🔨 **Fix hammers**
+   button (bottom-left of the active round page).
+2. You should see the hammer summary with all played holes and their
+   current states.
+3. Tap **Edit** on any hole. Walk through and change the state
+   (e.g. flip from "No hammer" to "D1 laid down by A").
+4. Continue → Looks good. "Hammers updated" toast fires.
+5. Running totals recompute — verify the edited hole's money changed.
+
+### Deferrals carried forward from Phase 2.5
+
+- **Wolf mode re-enable** — logged in TODOS.md; needs the same
+  sequenced-prompt treatment for partner picks.
+- **`override-birdie` dedicated edge function** — birdie correction
+  currently has to go through the same apply-capture path via a new
+  capture row. A dedicated route could reduce round-trips; deferred.
+- **Hammer state in `replayRound` for post-round score edits** — the
+  legacy `ReplayHoleInput` shape already carries `hammerDepth/folded/
+  foldWinnerTeamId`; apply-capture writes this from new hammer states.
+  Post-round edits via `RoundEditScores` don't yet use the new rich
+  shape, but they'll still produce correct money via the legacy fields.
+
+### Merge recommendation
+
+**Merge PR #4 after the Phase 2.5 manual test script passes.** The
+release gate is green; the money-math correctness hole is closed for
+hammer rounds. Wolf remains hidden until we extend the pattern.
