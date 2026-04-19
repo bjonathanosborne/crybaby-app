@@ -145,11 +145,15 @@ describe("HammerPromptFlow — walks range, auto-advances, commits full state", 
     // Hole 1: No hammer
     fireEvent.click(screen.getByTestId("hammer-initial-no"));
     fireEvent.click(screen.getByTestId("hammer-terminal-next"));
+    // "OK. Cool onto Cincinnati" overlay — tap through to advance.
+    fireEvent.click(screen.getByTestId("hole-transition"));
     // Auto-advances to hole 2
     expect(screen.getByTestId("hammer-hole-step")).toBeInTheDocument();
     // Hole 2: No hammer
     fireEvent.click(screen.getByTestId("hammer-initial-no"));
     fireEvent.click(screen.getByTestId("hammer-terminal-next"));
+    // Transition overlay again (city picked randomly from TRANSITION_CITIES)
+    fireEvent.click(screen.getByTestId("hole-transition"));
     // Back to summary; Looks good commits
     fireEvent.click(screen.getByTestId("hammer-prompt-commit"));
     expect(onComplete).toHaveBeenCalledWith({
