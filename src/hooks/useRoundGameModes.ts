@@ -1,4 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { HoleResult } from "@/lib/gameEngines";
+
+/**
+ * Config the user picks in the Crybaby setup modal at hole 16.
+ * - hammerDepth: starting hammer depth for the crybaby phase.
+ * - crybabyId: round_players.id of the player designated as crybaby.
+ */
+export interface CrybabConfig {
+  hammerDepth?: number;
+  crybabyId?: string | null;
+}
 
 /**
  * Owns the modal state and mode-specific event handlers for the active round.
@@ -14,14 +25,14 @@ export interface UseRoundGameModesReturn {
   setShowHammer: React.Dispatch<React.SetStateAction<boolean>>;
 
   // Hole-result preview (shown after score submit, before advance)
-  showResult: any;
-  setShowResult: React.Dispatch<React.SetStateAction<any>>;
+  showResult: HoleResult | null;
+  setShowResult: React.Dispatch<React.SetStateAction<HoleResult | null>>;
 
   // Crybaby setup (hole 16 onboarding)
   showCrybabSetup: boolean;
   setShowCrybabSetup: React.Dispatch<React.SetStateAction<boolean>>;
-  crybabConfig: any;
-  setCrybabConfig: React.Dispatch<React.SetStateAction<any>>;
+  crybabConfig: CrybabConfig | null;
+  setCrybabConfig: React.Dispatch<React.SetStateAction<CrybabConfig | null>>;
 
   // Flip team-shuffle modal
   showFlipModal: boolean;
@@ -65,7 +76,7 @@ export interface UseRoundGameModesReturn {
   confirmLoneWolf: () => void;
 
   // Crybaby config confirm
-  confirmCrybabConfig: (config: any) => void;
+  confirmCrybabConfig: (config: CrybabConfig) => void;
 
   /**
    * Open the wolf-partner modal if the current hole needs one (wolf game
@@ -82,9 +93,9 @@ export interface UseRoundGameModesReturn {
 
 export function useRoundGameModes(): UseRoundGameModesReturn {
   const [showHammer, setShowHammer] = useState(false);
-  const [showResult, setShowResult] = useState<any>(null);
+  const [showResult, setShowResult] = useState<HoleResult | null>(null);
   const [showCrybabSetup, setShowCrybabSetup] = useState(false);
-  const [crybabConfig, setCrybabConfig] = useState<any>(null);
+  const [crybabConfig, setCrybabConfig] = useState<CrybabConfig | null>(null);
   const [showFlipModal, setShowFlipModal] = useState(false);
   const [showWolfModal, setShowWolfModal] = useState(false);
   const [wolfModalShownForHole, setWolfModalShownForHole] = useState(0);
@@ -111,7 +122,7 @@ export function useRoundGameModes(): UseRoundGameModesReturn {
     setShowWolfModal(false);
   }, []);
 
-  const confirmCrybabConfig = useCallback((config: any) => {
+  const confirmCrybabConfig = useCallback((config: CrybabConfig) => {
     setCrybabConfig(config);
     setShowCrybabSetup(false);
   }, []);

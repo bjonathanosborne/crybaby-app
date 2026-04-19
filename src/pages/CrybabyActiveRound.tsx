@@ -5,6 +5,12 @@ import { loadRound, updatePlayerScores, completeRound, cancelRound, createPost, 
 import { useRoundState } from "@/hooks/useRoundState";
 import { useRoundPersistence } from "@/hooks/useRoundPersistence";
 import { useRoundGameModes } from "@/hooks/useRoundGameModes";
+import { useCapture } from "@/hooks/useCapture";
+import { useCaptureCadence } from "@/hooks/useCaptureCadence";
+import { useAuth } from "@/contexts/AuthContext";
+import CaptureButton from "@/components/capture/CaptureButton";
+import CapturePrompt from "@/components/capture/CapturePrompt";
+import CaptureFlow from "@/components/capture/CaptureFlow";
 import { supabase } from "@/integrations/supabase/client";
 import RoundLiveFeed from "@/components/RoundLiveFeed";
 import {
@@ -892,9 +898,67 @@ export default function CrybabActiveRound() {
   const [isBroadcast, setIsBroadcast] = useState(false);
   const [settlementsSaved, setSettlementsSaved] = useState(false);
   const [totalsInitialized, setTotalsInitialized] = useState(false);
+  // Phase 2 capture: tracks the hole number we most recently applied a
+  // capture for. Used to clear the CapturePrompt banner after apply and
+  // to re-gate advance on the next hole.
+  const [lastCapturedHole, setLastCapturedHole] = useState<number>(0);
 
   // Round is considered complete once all 18 holes have results saved, or explicitly canceled
   const roundIsComplete = settlementsSaved || isCanceled || (currentHole >= 18 && holeResults.length >= 18);
+
+  // --- Phase 2 capture wiring ---
+  // useAuth() gives us the current user; scorekeeper visibility + capture
+  // auth both key off auth.uid().
+  const { user: currentUser } = useAuth();
+  const isScorekeeper = Boolean(
+    currentUser && dbPlayers.some(p => p.user_id === currentUser.id && p.is_scorekeeper === true),
+  );
+  const roundIsActiveStatus = dbRound?.status === "active";
+  // Cadence input — ok if round is null, returns { type: "none" }.
+  const captureCadenceInput = dbRound ? {
+    gameType: dbRound.game_type,
+    mechanics: (dbRound.course_details?.mechanics || []) as string[],
+  } : null;
+  // Has a capture been applied covering the current hole already?
+  // (Gate the capture-required banner so it clears after a successful apply.)
+  const captureAppliedForCurrent = lastCapturedHole >= currentHole;
+  const cadenceResult = useCaptureCadence(captureCadenceInput, currentHole, captureAppliedForCurrent);
+
+  // Build the scoresMap shape that CaptureFlow needs: { playerId: { hole: gross } }
+  const currentScoresByPlayer: Record<string, Record<number, number>> = {};
+  dbPlayers.forEach(p => {
+    const raw = (p.hole_scores || {}) as Record<string, number>;
+    const converted: Record<number, number> = {};
+    for (const [h, v] of Object.entries(raw)) converted[Number(h)] = v;
+    currentScoresByPlayer[p.id] = converted;
+  });
+
+  const capture = useCapture({
+    base: {
+      roundId: roundId || "",
+      players: (dbRound ? dbPlayers.map(p => ({
+        id: p.id,
+        name: p.guest_name || (dbRound.course_details?.playerConfig?.[dbPlayers.indexOf(p)]?.name) || "Player",
+        handicap: 0,
+        color: "#3B82F6",
+        userId: p.user_id,
+      })) : []),
+      pars: dbRound?.course_details?.pars || Array(18).fill(4),
+      handicaps: dbRound?.course_details?.handicaps || Array.from({ length: 18 }, (_, i) => i + 1),
+      currentScores: currentScoresByPlayer,
+      roundPrivacy: (dbRound?.course_details?.privacy === "private") ? "private" : "public",
+    },
+    onApplied: (result) => {
+      setLastCapturedHole(currentHole);
+      // Re-fetch would be ideal; for now, the apply-capture server has already
+      // persisted changes. The 30s sync useEffect (saveGameState interval) +
+      // round_captures realtime subscription will bring the client back in line.
+      if (!result.noop) {
+        // Force a reload of the round so totals/hole_scores match the server.
+        setRetryNonce(n => n + 1);
+      }
+    },
+  });
 
   // Guard back-button navigation while round is active
   useEffect(() => {
@@ -1839,6 +1903,25 @@ export default function CrybabActiveRound() {
       background: "#F5EFE0", fontFamily: FONT,
       paddingBottom: 140,
     }}>
+
+      {/* Phase 2 capture prompt — shown when cadence requires a photo
+          and no capture has been applied for the current hole. The
+          prompt is non-dismissible until a capture lands. */}
+      {isScorekeeper && roundIsActiveStatus && cadenceResult.blockedOnPhoto && cadenceResult.reason && (
+        <CapturePrompt
+          reason={cadenceResult.reason}
+          onCapture={() => capture.openGameDriven([currentHole, currentHole])}
+          captureInFlight={capture.isOpen}
+        />
+      )}
+
+      {/* Phase 2 ad-hoc capture FAB — scorekeeper-only, active rounds only. */}
+      {isScorekeeper && roundIsActiveStatus && !capture.isOpen && (
+        <CaptureButton onOpen={capture.openAdHoc} />
+      )}
+
+      {/* Phase 2 capture flow modal — shared by ad-hoc + game-driven paths via useCapture. */}
+      {capture.activeCapture && <CaptureFlow {...capture.activeCapture} />}
 
       {/* Offline / unsaved warning banner */}
       {(!isOnline || lastSaveFailed) && (
