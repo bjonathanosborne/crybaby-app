@@ -22,7 +22,11 @@ export const AUSTIN_COURSES = [
   { id: "grey_rock", name: "Grey Rock Golf Club", nickname: "", city: "Austin", type: "municipal", pars: [4,4,3,5,4,4,3,4,5,4,5,4,3,4,4,5,3,4], handicaps: [7,3,13,1,11,9,17,5,15,8,2,10,18,6,12,4,16,14], tees: [{ name: "Blue", slope: 135, rating: 72.5, yardage: 6808 }, { name: "White", slope: 129, rating: 70.2, yardage: 6290 }] },
 
   // === PRIVATE CLUBS ===
-  { id: "westlake", name: "Westlake Country Club", nickname: "", city: "Austin", type: "private", pars: [5,4,4,3,4,4,4,3,4,3,5,4,4,4,4,5,4,3], handicaps: [3,7,11,15,5,9,13,17,1,16,18,8,6,12,14,2,4,10], tees: [{ name: "Blue", slope: 131, rating: 71.8, yardage: 6543 }, { name: "White", slope: 127, rating: 69.9, yardage: 6128 }] },
+  // Westlake tees corrected 2026-04-19 to match the actual club card
+  // (Black / Gold / Silver / Violet) and the new post-2025 handicap order.
+  // NOTE: CrybabySetupWizard.jsx has an inline copy of AUSTIN_COURSES that
+  // is kept in sync manually. See TODOS.md "Dedupe AUSTIN_COURSES".
+  { id: "westlake", name: "Westlake Country Club", nickname: "", city: "Austin", type: "private", pars: [5,4,4,3,4,4,4,3,4,3,5,4,4,4,4,5,4,3], handicaps: [1,9,7,17,13,5,11,15,3,18,14,12,6,4,10,8,2,16], tees: [{ name: "Black", slope: 141, rating: 74.9, yardage: 6935 }, { name: "Gold", slope: 138, rating: 70.9, yardage: 6224 }, { name: "Silver", slope: 124, rating: 66.8, yardage: 5589 }, { name: "Violet", slope: 113, rating: 63.8, yardage: 4937 }] },
   { id: "austin_cc", name: "Austin Country Club", nickname: "ACC", city: "Austin", type: "private", pars: [4,4,3,5,4,4,4,3,5,4,4,3,4,5,4,4,3,5], handicaps: [5,9,17,1,7,3,11,15,13,8,4,16,10,2,6,12,18,14], tees: [{ name: "Blue", slope: 138, rating: 73.5, yardage: 7104 }, { name: "White", slope: 132, rating: 71.2, yardage: 6625 }] },
   { id: "spanish_oaks", name: "Spanish Oaks Golf Club", nickname: "", city: "Bee Cave", type: "private", pars: [4,5,3,4,4,3,5,4,4,4,3,5,4,4,3,4,5,4], handicaps: [7,3,15,1,9,17,5,11,13,8,16,2,6,10,18,12,4,14], tees: [{ name: "Blue", slope: 142, rating: 74.6, yardage: 7234 }, { name: "White", slope: 135, rating: 72.0, yardage: 6680 }] },
   { id: "lost_creek", name: "Lost Creek Country Club", nickname: "", city: "Austin", type: "private", pars: [4,5,4,3,4,3,4,4,5,4,3,5,4,4,4,3,5,4], handicaps: [9,1,5,15,7,17,11,3,13,10,18,4,8,2,6,16,12,14], tees: [{ name: "Blue", slope: 130, rating: 71.2, yardage: 6640 }, { name: "White", slope: 125, rating: 69.1, yardage: 6152 }] },
