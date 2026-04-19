@@ -50,6 +50,9 @@ export const GAME_FORMATS: GameFormat[] = [
     defaultHoles: 18,
     teamStructure: "coin_flip",
     requiresCarts: false,
+    // Hidden for DOC-only testing surface. See TODOS.md "Testing phase:
+    // single-game surface". Legacy Flip rounds still load + replay.
+    hidden: true,
   },
   {
     id: "nassau",
@@ -60,6 +63,8 @@ export const GAME_FORMATS: GameFormat[] = [
     defaultHoles: 18,
     teamStructure: "fixed",
     requiresCarts: false,
+    // Hidden for DOC-only testing surface. See TODOS.md. Un-hide order: #1.
+    hidden: true,
   },
   {
     id: "skins",
@@ -70,6 +75,8 @@ export const GAME_FORMATS: GameFormat[] = [
     defaultHoles: 18,
     teamStructure: "individual",
     requiresCarts: false,
+    // Hidden for DOC-only testing surface. See TODOS.md. Un-hide order: #1 (with Nassau).
+    hidden: true,
   },
   {
     id: "wolf",
@@ -105,5 +112,7 @@ export const GAME_FORMATS: GameFormat[] = [
     defaultHoles: 18,
     teamStructure: "custom",
     requiresCarts: false,
+    // Hidden for DOC-only testing surface. See TODOS.md. Un-hide order: #3.
+    hidden: true,
   },
 ];

@@ -1,7 +1,38 @@
 # TODOS — crybaby-app
 
-Last updated: 2026-04-19 (phase 2.5a — Wolf hidden)
+Last updated: 2026-04-19 (testing surface narrowed to DOC + Solo)
 Branch: main
+
+---
+
+## Testing phase: single-game surface
+
+For on-course validation of the capture pipeline, the setup wizard
+shows only DOC and Solo. DOC exercises teams, hammer, crybaby phase,
+birdie bonus, and carry-over — validating it validates the
+architecture.
+
+**Hidden from setup; legacy rounds still load and replay:**
+- Nassau
+- Skins
+- Flip
+- Custom
+- Wolf (separately deferred; needs partner-pick capture)
+
+Mechanism: `hidden: true` flag on the entry in
+`src/lib/gameFormats.ts`. The setup wizard filters `!hidden` before
+rendering. Everything downstream (engine, apply-capture, replayRound,
+round-load, RoundLiveFeed) remains untouched so rounds created before
+the flip still work.
+
+**Un-hide order after DOC validates on-course:**
+1. Nassau + Skins — simpler money math, no team logic. Low risk.
+2. Flip — DOC variant with random teams; low marginal risk once DOC works.
+3. Custom — freeform, least-tested path.
+4. Wolf — needs partner-pick capture work (see section below).
+
+Each un-hide is a single-flag flip + a brief on-course test + ship.
+<1 day each.
 
 ---
 
@@ -12,11 +43,9 @@ Branch: main
 - Wolf requires per-hole partner selection (or lone-wolf declaration)
   BEFORE scores are known. Like hammers, partner picks can't be derived
   from scores — the round's money math is wrong without them captured.
-- Wolf was hidden from the setup picker in phase 2.5a by tagging the
-  `GAME_FORMATS` entry with `hidden: true` (see
-  `src/pages/CrybabySetupWizard.jsx`). The entry itself stays so legacy
-  Wolf rounds still render their name/icon/description correctly, and
-  `GameMode = 'wolf'` remains a valid type-system literal.
+- Wolf was first hidden in phase 2.5a; currently hidden alongside
+  Nassau/Skins/Flip/Custom during the DOC-focused testing surface
+  (see section above).
 - When re-enabling: extend the sequenced-prompt pattern from Phase 2.5's
   hammer flow — after scores, ask "Who was the wolf?" and "Partner or
   lone wolf?" per hole. The `HammerPromptFlow` component is a template.
