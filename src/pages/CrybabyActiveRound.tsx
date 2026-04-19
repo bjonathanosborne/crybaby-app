@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import crybabyLogo from "@/assets/crybaby-logo.png";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { loadRound, updatePlayerScores, completeRound, cancelRound, createPost, saveAICommentary, insertSettlements, createRoundEvent, toggleBroadcast, saveGameState, RoundLoadError } from "@/lib/db";
+import { toast } from "@/hooks/use-toast";
 import { useRoundState } from "@/hooks/useRoundState";
 import { useRoundPersistence } from "@/hooks/useRoundPersistence";
 import { useRoundGameModes } from "@/hooks/useRoundGameModes";
@@ -1194,31 +1195,48 @@ export default function CrybabActiveRound() {
     }
   }, [currentHole, round]);
 
-  // Auto-save settlements when round completes
+  // Auto-save settlements when round completes.
+  //
+  // Routes through persistRoundCompletion / persistSettlements (PersistResult
+  // envelopes) so failures surface as a toast instead of a silent console log.
+  // `settlementsSaved` only flips to true when BOTH writes succeed — leaving
+  // it false on failure lets a retry re-fire when the effect's deps change
+  // (or the component remounts).
   useEffect(() => {
     if (!round) return;
     const isComplete = currentHole >= 18 && holeResults.length >= 18;
-    if (!isComplete || settlementsSaved) return;
+    if (!isComplete || settlementsSaved || !roundId) return;
 
     const saveRoundSettlements = async () => {
-      try {
-        if (roundId) {
-          await completeRound(roundId);
-          const settlementData = round.players.map(p => ({
-            userId: p.userId || null,
-            guestName: p.userId ? null : p.name,
-            amount: totals[p.id] || 0,
-          }));
-          await insertSettlements(roundId, settlementData);
-        }
-        setSettlementsSaved(true);
-        console.log("✅ Settlements saved");
-      } catch (err) {
-        console.error("Failed to save settlements:", err);
+      const completionResult = await persist.persistRoundCompletion(roundId);
+      if (!completionResult.ok) {
+        toast({
+          title: "Couldn't finalize round",
+          description: "We'll retry automatically. Tap to retry now.",
+          variant: "destructive",
+        });
+        return;
       }
+
+      const settlementData = round.players.map(p => ({
+        userId: p.userId || null,
+        guestName: p.userId ? null : p.name,
+        amount: totals[p.id] || 0,
+      }));
+      const settlementResult = await persist.persistSettlements(roundId, settlementData);
+      if (!settlementResult.ok) {
+        toast({
+          title: "Couldn't save settlements",
+          description: "Scores saved. Tap to retry settlement save.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setSettlementsSaved(true);
     };
     saveRoundSettlements();
-  }, [currentHole, holeResults.length, settlementsSaved]);
+  }, [currentHole, holeResults.length, settlementsSaved, roundId, persist, round, totals]);
 
   // Online/offline wiring is owned by useRoundPersistence.
 
