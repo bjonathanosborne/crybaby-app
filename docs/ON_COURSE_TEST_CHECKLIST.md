@@ -307,6 +307,71 @@ Quick rhythm check. Runs during Section 3's hammer prompts automatically — thi
 
 ---
 
+## Section 6 — Round completion flow
+
+Verifies the three round-completion fixes (Bug 1 silent-failure + retry carry-over, Bug 2 pre-completion photo gate, Bug 3 post-completion "Fix scores / add photo").
+
+### P6.1 — Solo round completes (~2 minutes)
+
+**Do:** Go to Keep Score → pick a course → enter any 18 hole scores → tap **Finish Round ⛳**.
+**Expect:**
+- Button briefly shows "Saving…" then navigates to `/feed`.
+- Round appears in the feed with `status=completed`.
+- (If it fails) A destructive **toast** appears with the error message — no silent flicker-and-return.
+
+### P6.2 — DOC round hits the pre-completion photo gate
+
+**Do:** Play a DOC round to hole 18; enter the 18th hole's scores.
+**Expect:**
+- A modal titled **"One more thing ⛳"** appears with two buttons: **Take Photo** and **Skip photo (add later)**.
+- The modal is not dismissable via tap-outside or ESC — only the two CTAs close it.
+- Settlements DO NOT save until you choose.
+
+### P6.3 — Take Photo path clears the gate
+
+**Do:** In the gate, tap **Take Photo**.
+**Expect:**
+- Gate closes; capture flow opens covering holes 1–18.
+- Shoot the scorecard, confirm, Apply.
+- Apply succeeds → settlements save → completed-round view renders.
+- `rounds.needs_final_photo` stays `false` (default).
+
+### P6.4 — Skip photo path sets the flag
+
+**Do:** In the gate, tap **Skip photo (add later)**.
+**Expect:**
+- Button shows "Skipping…" briefly.
+- Gate closes; settlements save; completed-round view renders.
+- `rounds.needs_final_photo` is now `true` in the DB.
+- The completed view shows an **amber "Add scorecard photo"** button (prominent), not the subtle default.
+
+### P6.5 — Post-completion "Fix scores / add photo"
+
+**Do:** On a completed round with `needs_final_photo=false`, scroll to the bottom of the completion screen.
+**Expect:**
+- Subtle secondary button labeled **"Fix scores / add photo"** above "Go to Feed →".
+- Tapping it opens the capture flow covering holes 1–18 with trigger `post_round_correction`.
+- After a successful apply, settlements are **rewritten** (check for any changed amounts); if `needs_final_photo` was `true`, it flips to `false` and the button reverts to the subtle styling.
+
+### P6.6 — Completion failure shows Retry (no auto-loop)
+
+**Do:** This one's hard to trigger deliberately — simulate by going offline right as you enter hole 18's final score (airplane mode on).
+**Expect:**
+- Destructive toast: "Couldn't finalize round" with a **Retry** button.
+- Toast does NOT re-fire every second (no auto-retry loop).
+- Tap **Retry** with connection restored → exactly one retry attempt. On success, settlements save + completed view renders.
+
+### P6.7 — Retry works after settlement-only failure
+
+**Do:** Harder to reproduce; triggered if `completeRound` succeeds but `insertSettlements` fails.
+**Expect:**
+- Toast: "Couldn't save settlements — Round finalized. Tap Retry to save settlement amounts."
+- Tap Retry → second attempt runs. `completeRound` is called again (idempotent — already `status='completed'`) then settlements insert retries.
+
+**Non-scorekeeper:** The gate and the "Fix scores" CTA should both be **invisible** to non-scorekeeper participants.
+
+---
+
 ## Troubleshooting
 
 ### Common failure modes
@@ -414,6 +479,13 @@ Copy one of these and fill in. Paste into a chat / email / Slack. I'll triage fr
 - P3.5 debounce: ✅
 - P3.6 gap: skipped
 - P5 Cincinnati: ✅
+- P6.1 solo completes: ✅
+- P6.2 gate appears on hole 18: ✅
+- P6.3 Take Photo path: ✅
+- P6.4 Skip sets flag + amber CTA: ✅
+- P6.5 post-completion Fix CTA: ✅
+- P6.6 completion failure Retry (no auto-loop): ✅ / skipped
+- P6.7 settlement-only Retry: skipped (hard to repro)
 
 **Bugs to file:**
 - [Paste bug reports above]
@@ -424,4 +496,4 @@ Copy one of these and fill in. Paste into a chat / email / Slack. I'll triage fr
 
 ---
 
-**Checklist last updated:** 2026-04-19 after PR #7 merged. All tests reference functionality live on crybaby.golf as of bundle `index-IP2GHr9Y.js`.
+**Checklist last updated:** 2026-04-19 after PR #11 (round-completion flow fixes) merged. Section 6 added for the three round-completion fixes (Bug 1 silent-failure + retry, Bug 2 pre-completion photo gate, Bug 3 post-completion Fix CTA).

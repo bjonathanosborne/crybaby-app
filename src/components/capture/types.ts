@@ -56,8 +56,13 @@ export interface CaptureResult {
 export interface CaptureFlowProps {
   /** Round being captured. */
   roundId: string;
-  /** Game-driven captures are prompted and blocking; ad-hoc are opt-in. */
-  trigger: "game_driven" | "ad_hoc";
+  /**
+   * Game-driven captures are prompted and blocking; ad-hoc are opt-in.
+   * post_round_correction is launched from the completed-round view to
+   * fix scores / add a photo after the round is already marked complete;
+   * apply-capture rewrites non-manual settlements on apply.
+   */
+  trigger: "game_driven" | "ad_hoc" | "post_round_correction";
   /** Inclusive [start, end] holes to extract. */
   holeRange: [number, number];
   /** Players on the round, for extraction priors + confirm grid columns. */

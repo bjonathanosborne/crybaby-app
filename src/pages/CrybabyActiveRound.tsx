@@ -945,6 +945,11 @@ export default function CrybabActiveRound() {
     currentUser && dbPlayers.some(p => p.user_id === currentUser.id && p.is_scorekeeper === true),
   );
   const roundIsActiveStatus = dbRound?.status === "active";
+  // Bug 3: drives the "Add scorecard photo" prominence on the completed-round
+  // view. True only when the scorekeeper skipped the pre-completion gate
+  // (Bug 2). Cleared in onApplied after a successful post_round_correction
+  // capture.
+  const needsFinalPhoto = (dbRound as unknown as { needs_final_photo?: boolean } | null)?.needs_final_photo === true;
   // Cadence input — ok if round is null, returns { type: "none" }.
   const captureCadenceInput = dbRound ? {
     gameType: dbRound.game_type,
@@ -1020,7 +1025,7 @@ export default function CrybabActiveRound() {
       mechanics: mechanicsList,
       hammerTeams,
     },
-    onApplied: (result) => {
+    onApplied: (result, trigger) => {
       setLastCapturedHole(currentHole);
       // Re-fetch would be ideal; for now, the apply-capture server has already
       // persisted changes. The 30s sync useEffect (saveGameState interval) +
@@ -1031,13 +1036,17 @@ export default function CrybabActiveRound() {
       }
       // Bug 2: if this apply was launched from the final-photo gate, mark
       // the gate decision as "captured" so the settlements effect proceeds.
-      // A successful capture implicitly clears the needs_final_photo flag
-      // on the server (the apply-capture edge fn handles that on
-      // post_round_correction, and here we ensure a full-range ad-hoc on
-      // hole 18 counts as having a final photo).
       if (gateCaptureInFlightRef.current) {
         gateCaptureInFlightRef.current = false;
         setFinalPhotoDecision("captured");
+      }
+      // Bug 3: a post_round_correction capture by definition supplies a
+      // scorecard photo for the completed round, so clear the pending
+      // needs_final_photo flag. Fire-and-forget is fine — the flag is
+      // cosmetic (drives the "Add scorecard photo" CTA styling) and the
+      // next successful apply will clear it again if this write fails.
+      if (trigger === "post_round_correction" && roundId && result.applied && !result.noop) {
+        void persist.persistNeedsFinalPhoto(roundId, false);
       }
     },
   });
@@ -2060,6 +2069,44 @@ export default function CrybabActiveRound() {
             📸 Round photos and full results will post to your feed
           </div>
 
+          {/* Bug 3: post-completion capture CTA.
+              Scorekeeper-only. Always available on completed rounds.
+              Two visual states:
+                - needs_final_photo: amber, primary-prominence ("Add
+                  scorecard photo"). The user skipped the pre-completion
+                  gate and we're nudging them to add it.
+                - otherwise: subtle secondary button ("Fix scores / add
+                  photo"). Always available so the scorekeeper can
+                  correct later.
+              Launches the post_round_correction capture flow which
+              apply-capture handles by rewriting non-manual settlements. */}
+          {isScorekeeper && (
+            <button
+              onClick={capture.openPostRoundCorrection}
+              data-testid="post-round-correction-cta"
+              style={needsFinalPhoto
+                ? {
+                    width: "100%", padding: "14px", borderRadius: 14, border: "none",
+                    fontFamily: FONT, fontSize: 15, fontWeight: 700,
+                    background: "#D4AF37", color: "#1E130A", cursor: "pointer",
+                    marginTop: 4,
+                    boxShadow: "0 4px 16px rgba(212,175,55,0.35)",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  }
+                : {
+                    width: "100%", padding: "12px", borderRadius: 12,
+                    border: "1px solid #DDD0BB",
+                    fontFamily: FONT, fontSize: 13, fontWeight: 600,
+                    background: "#FAF5EC", color: "#8B7355", cursor: "pointer",
+                    marginTop: 4,
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                  }
+              }
+            >
+              📸 {needsFinalPhoto ? "Add scorecard photo" : "Fix scores / add photo"}
+            </button>
+          )}
+
           <button onClick={() => navigate("/feed")} style={{
             width: "100%", padding: "16px", borderRadius: 14, border: "none",
             fontFamily: FONT, fontSize: 16, fontWeight: 700,
@@ -2069,6 +2116,12 @@ export default function CrybabActiveRound() {
             Go to Feed →
           </button>
         </div>
+
+        {/* Phase 2 capture flow modal — shared by ad-hoc / game-driven /
+            post_round_correction via useCapture. Rendered here (not only
+            under the active-scoring return) so the Fix-scores CTA above
+            can actually show the flow. */}
+        {capture.activeCapture && <CaptureFlow {...capture.activeCapture} />}
       </div>
     );
   }
