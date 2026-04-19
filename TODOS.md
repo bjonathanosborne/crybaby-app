@@ -1,7 +1,29 @@
 # TODOS — crybaby-app
 
-Last updated: 2026-04-18 (phase 2 additions)
+Last updated: 2026-04-19 (phase 2.5a — Wolf hidden)
 Branch: main
+
+---
+
+## Deferred: Wolf mode
+
+### Wolf mode — hidden from setup; legacy rounds still supported
+
+- Wolf requires per-hole partner selection (or lone-wolf declaration)
+  BEFORE scores are known. Like hammers, partner picks can't be derived
+  from scores — the round's money math is wrong without them captured.
+- Wolf was hidden from the setup picker in phase 2.5a by tagging the
+  `GAME_FORMATS` entry with `hidden: true` (see
+  `src/pages/CrybabySetupWizard.jsx`). The entry itself stays so legacy
+  Wolf rounds still render their name/icon/description correctly, and
+  `GameMode = 'wolf'` remains a valid type-system literal.
+- When re-enabling: extend the sequenced-prompt pattern from Phase 2.5's
+  hammer flow — after scores, ask "Who was the wolf?" and "Partner or
+  lone wolf?" per hole. The `HammerPromptFlow` component is a template.
+- Existing Wolf rounds still load and replay via the legacy code paths
+  in `gameEngines.ts` (calculateWolfHoleResult, getWolfForHole).
+- Estimated effort: 3–5 days once we validate the hammer prompt pattern
+  in real use.
 
 ---
 
