@@ -1,9 +1,12 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { loadRoundEvents, loadEventReactions, toggleEventReaction } from "@/lib/db";
 import { formatDistanceToNow, parseISO } from "date-fns";
 import { CrybIcon } from "@/components/icons/CrybIcons";
+import CaptureAppliedCard from "@/components/round/events/CaptureAppliedCard";
+import LiveStandings from "@/components/round/LiveStandings";
+import { mergeCaptureEvents, type RoundEventRow, type MergedCaptureEvent } from "@/components/round/events/captureEventTypes";
 
 const REACTION_OPTIONS = ["🔥", "😂", "💀", "🍼", "👏"];
 
@@ -25,15 +28,64 @@ interface RoundLiveFeedProps {
   roundId: string;
   isOpen: boolean;
   onClose: () => void;
+  /**
+   * Optional: display-name map for the event renderers. Passed in by
+   * the page so we avoid duplicate profile lookups. Keyed by
+   * round_player_id (the primary key used in event_data.running_totals).
+   */
+  playerNames?: Record<string, string>;
+  /**
+   * Display name of the scorekeeper who captured (shown in the header
+   * of capture cards). Optional: if absent, cards just show the timestamp.
+   */
+  scorekeeperName?: string;
+  /**
+   * Per-capture hammer hole count, keyed by capture_id. Populated by the
+   * page from `rounds.course_details.game_state.hammerStateByHole` joined
+   * with the capture's hole range. Used for the small "2 hammers" badge.
+   */
+  hammerHoleCountByCaptureId?: Record<string, number>;
+  /** Course pars for the LiveStandings strokes-over-par derivation. */
+  pars?: number[];
+  /** Initial round_players.hole_scores map for the LiveStandings fallback. */
+  initialHoleScores?: Record<string, Record<number, number>>;
+  /** Initial totals per round_player_id for the LiveStandings fallback. */
+  initialTotals?: Record<string, number>;
+  /** Game mode label for the standings column header (e.g. "Nassau"). */
+  gameLabel?: string;
+  /** Hide the money column (solo rounds). */
+  hideMoney?: boolean;
+  /** Player ids currently holding an open hammer — drives the badge in standings. */
+  openHammerPlayerIds?: string[];
 }
 
-export default function RoundLiveFeed({ roundId, isOpen, onClose }: RoundLiveFeedProps) {
+export default function RoundLiveFeed({
+  roundId,
+  isOpen,
+  onClose,
+  playerNames = {},
+  scorekeeperName,
+  hammerHoleCountByCaptureId = {},
+  pars = [],
+  initialHoleScores = {},
+  initialTotals = {},
+  gameLabel = "Money",
+  hideMoney = false,
+  openHammerPlayerIds = [],
+}: RoundLiveFeedProps) {
   const { user } = useAuth();
   const [events, setEvents] = useState<any[]>([]);
   const [reactions, setReactions] = useState<Record<string, any[]>>({});
   const [loading, setLoading] = useState(true);
   const feedRef = useRef<HTMLDivElement>(null);
   const [activeReactionEvent, setActiveReactionEvent] = useState<string | null>(null);
+
+  // Phase 3: split the event stream into capture-merged events + everything else.
+  // Capture cards are rendered first (most eyeball-grabbing), then legacy event
+  // types keep their existing renderer for score/birdie/hammer/etc.
+  const { merged, nonCapture } = useMemo<{ merged: MergedCaptureEvent[]; nonCapture: RoundEventRow[] }>(() => {
+    return mergeCaptureEvents(events as RoundEventRow[]);
+  }, [events]);
 
   const refresh = async () => {
     try {
@@ -128,6 +180,24 @@ export default function RoundLiveFeed({ roundId, isOpen, onClose }: RoundLiveFee
         className="flex-1 overflow-y-auto px-4 py-3"
         style={{ paddingBottom: 20 }}
       >
+        {/* Phase 3b: LiveStandings panel at the top of the modal.
+            Renders even when no events yet so the scorekeeper sees
+            the round's state from the moment they open the feed. */}
+        {roundId && pars.length > 0 ? (
+          <div className="mb-3">
+            <LiveStandings
+              roundId={roundId}
+              playerNames={playerNames}
+              gameLabel={gameLabel}
+              pars={pars}
+              initialHoleScores={initialHoleScores}
+              initialTotals={initialTotals}
+              hideMoney={hideMoney}
+              openHammerPlayerIds={openHammerPlayerIds}
+            />
+          </div>
+        ) : null}
+
         {loading ? (
           <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
             Loading feed...
@@ -144,7 +214,17 @@ export default function RoundLiveFeed({ roundId, isOpen, onClose }: RoundLiveFee
           </div>
         ) : (
           <div className="flex flex-col gap-2">
-            {events.map((evt: any) => {
+            {/* Phase 3: capture cards (capture_applied merged with capture_money_shift) */}
+            {merged.map(m => (
+              <CaptureAppliedCard
+                key={m.applied.id}
+                merged={m}
+                playerNames={playerNames}
+                scorekeeperName={scorekeeperName}
+                hammerHoleCount={hammerHoleCountByCaptureId[m.captureId] ?? 0}
+              />
+            ))}
+            {nonCapture.map((evt: any) => {
               const color = EVENT_COLORS[evt.event_type] || "hsl(var(--foreground))";
               const eventReactions = reactions[evt.id] || [];
               const data = evt.event_data || {};
