@@ -1068,6 +1068,153 @@ export async function loadUserProfile(userId: string) {
   return data;
 }
 
+// ============================================================
+// Profile rounds-list loader.
+//
+// Returns completed rounds for the given targetUserId, joined with:
+//   - round_players(*) for hole_scores + totals + partner ids
+//   - round_settlements (scoped to the same round set) for P&L
+//   - profile display names for all participating users
+//
+// Visibility rules (mirrors rounds_visible_to_friends):
+//   - Own profile: all rounds.
+//   - Other user's profile + flag true (default): all target's rounds.
+//   - Other user's profile + flag false: returns []. The viewer can
+//     still see their shared rounds on their own profile, but not
+//     on the target's profile.
+//
+// Shape stays loose (Record<string, unknown> for nested JSONB) so
+// the UI layer narrows it at the component boundary. Callers should
+// treat the return as read-only — it's the bundle for a view, not
+// a row to persist.
+// ============================================================
+
+export interface UserRoundSummary {
+  id: string;
+  course: string;
+  game_type: string;
+  status: string;
+  created_at: string;
+  // Parsed shape of course_details; the fields we need at list-level.
+  course_details: {
+    pars?: number[];
+    handicaps?: number[];
+    playerConfig?: Array<{ name?: string; handicap?: number; color?: string }>;
+    [k: string]: unknown;
+  } | null;
+  round_players: Array<{
+    id: string;
+    user_id: string | null;
+    guest_name: string | null;
+    hole_scores: Record<string, number> | number[] | null;
+    total_score: number | null;
+    is_scorekeeper: boolean | null;
+  }>;
+  // Settlements for THIS round, keyed to round_players by user_id / guest_name.
+  round_settlements: Array<{
+    user_id: string | null;
+    guest_name: string | null;
+    amount: number;
+  }>;
+  // Map of user_id -> display name (first+last preferred, display_name fallback).
+  // Computed from a batched profile lookup, not a join — profile rows may not
+  // exist for historic rounds; callers should fall back to guest_name.
+  participant_names: Record<string, string>;
+}
+
+/**
+ * Load the completed-round summary list for a user's profile page.
+ * `viewerId` should be the current authenticated user id (for participation-
+ * based visibility). Pass the same id as `targetUserId` when loading the
+ * own profile.
+ */
+export async function loadUserRounds(
+  targetUserId: string,
+  viewerId: string,
+  opts?: { limit?: number },
+): Promise<UserRoundSummary[]> {
+  const limit = opts?.limit ?? 500;
+  const isOwnProfile = targetUserId === viewerId;
+
+  // --- Privacy gate: if the target hides rounds, return empty. ---
+  if (!isOwnProfile) {
+    const { data: targetProfile } = await supabase
+      .from("profiles")
+      .select("rounds_visible_to_friends")
+      .eq("user_id", targetUserId)
+      .maybeSingle();
+    if (targetProfile?.rounds_visible_to_friends === false) return [];
+  }
+
+  // --- Determine the visible round id set ---
+  // Rounds the target participated in (player rows).
+  const { data: targetPlayerRows, error: targetPlayerErr } = await supabase
+    .from("round_players")
+    .select("round_id")
+    .eq("user_id", targetUserId);
+  if (targetPlayerErr) throw targetPlayerErr;
+  const visibleRoundIds = Array.from(
+    new Set((targetPlayerRows || []).map(r => r.round_id)),
+  );
+
+  if (visibleRoundIds.length === 0) return [];
+
+  // --- Batch 1: rounds + players (completed only) ---
+  const { data: roundData, error: roundErr } = await supabase
+    .from("rounds")
+    .select("id, course, game_type, status, created_at, course_details, round_players(*)")
+    .in("id", visibleRoundIds)
+    .eq("status", "completed")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (roundErr) throw roundErr;
+  const rounds = (roundData || []) as unknown as Array<Omit<UserRoundSummary, "round_settlements" | "participant_names">>;
+  if (rounds.length === 0) return [];
+
+  // --- Batch 2: settlements for exactly this round set ---
+  const roundIdsWeKept = rounds.map(r => r.id);
+  const { data: settleData } = await supabase
+    .from("round_settlements")
+    .select("round_id, user_id, guest_name, amount")
+    .in("round_id", roundIdsWeKept);
+  const settlementsByRound = new Map<string, UserRoundSummary["round_settlements"]>();
+  for (const s of settleData || []) {
+    const bucket = settlementsByRound.get(s.round_id) || [];
+    bucket.push({
+      user_id: s.user_id,
+      guest_name: s.guest_name,
+      amount: Number(s.amount),
+    });
+    settlementsByRound.set(s.round_id, bucket);
+  }
+
+  // --- Batch 3: display names for participating user_ids ---
+  const participantIds = new Set<string>();
+  for (const r of rounds) {
+    for (const p of r.round_players || []) {
+      if (p.user_id) participantIds.add(p.user_id);
+    }
+  }
+  const participantNames: Record<string, string> = {};
+  if (participantIds.size > 0) {
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("user_id, display_name, first_name, last_name")
+      .in("user_id", Array.from(participantIds));
+    for (const p of profiles || []) {
+      const full = [p.first_name, p.last_name].filter(Boolean).join(" ").trim();
+      participantNames[p.user_id] = full || p.display_name || "Player";
+    }
+  }
+
+  // --- Stitch ---
+  return rounds.map(r => ({
+    ...r,
+    round_settlements: settlementsByRound.get(r.id) || [],
+    participant_names: participantNames,
+  }));
+}
+
 // Find existing users by email addresses
 export async function findUsersByEmails(emails: string[]) {
   const { data, error } = await supabase
