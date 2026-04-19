@@ -1,9 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { loadRoundEvents, loadEventReactions, toggleEventReaction } from "@/lib/db";
 import { formatDistanceToNow, parseISO } from "date-fns";
 import { CrybIcon } from "@/components/icons/CrybIcons";
+import CaptureAppliedCard from "@/components/round/events/CaptureAppliedCard";
+import { mergeCaptureEvents, type RoundEventRow, type MergedCaptureEvent } from "@/components/round/events/captureEventTypes";
 
 const REACTION_OPTIONS = ["🔥", "😂", "💀", "🍼", "👏"];
 
@@ -25,15 +27,46 @@ interface RoundLiveFeedProps {
   roundId: string;
   isOpen: boolean;
   onClose: () => void;
+  /**
+   * Optional: display-name map for the event renderers. Passed in by
+   * the page so we avoid duplicate profile lookups. Keyed by
+   * round_player_id (the primary key used in event_data.running_totals).
+   */
+  playerNames?: Record<string, string>;
+  /**
+   * Display name of the scorekeeper who captured (shown in the header
+   * of capture cards). Optional: if absent, cards just show the timestamp.
+   */
+  scorekeeperName?: string;
+  /**
+   * Per-capture hammer hole count, keyed by capture_id. Populated by the
+   * page from `rounds.course_details.game_state.hammerStateByHole` joined
+   * with the capture's hole range. Used for the small "2 hammers" badge.
+   */
+  hammerHoleCountByCaptureId?: Record<string, number>;
 }
 
-export default function RoundLiveFeed({ roundId, isOpen, onClose }: RoundLiveFeedProps) {
+export default function RoundLiveFeed({
+  roundId,
+  isOpen,
+  onClose,
+  playerNames = {},
+  scorekeeperName,
+  hammerHoleCountByCaptureId = {},
+}: RoundLiveFeedProps) {
   const { user } = useAuth();
   const [events, setEvents] = useState<any[]>([]);
   const [reactions, setReactions] = useState<Record<string, any[]>>({});
   const [loading, setLoading] = useState(true);
   const feedRef = useRef<HTMLDivElement>(null);
   const [activeReactionEvent, setActiveReactionEvent] = useState<string | null>(null);
+
+  // Phase 3: split the event stream into capture-merged events + everything else.
+  // Capture cards are rendered first (most eyeball-grabbing), then legacy event
+  // types keep their existing renderer for score/birdie/hammer/etc.
+  const { merged, nonCapture } = useMemo<{ merged: MergedCaptureEvent[]; nonCapture: RoundEventRow[] }>(() => {
+    return mergeCaptureEvents(events as RoundEventRow[]);
+  }, [events]);
 
   const refresh = async () => {
     try {
@@ -144,7 +177,17 @@ export default function RoundLiveFeed({ roundId, isOpen, onClose }: RoundLiveFee
           </div>
         ) : (
           <div className="flex flex-col gap-2">
-            {events.map((evt: any) => {
+            {/* Phase 3: capture cards (capture_applied merged with capture_money_shift) */}
+            {merged.map(m => (
+              <CaptureAppliedCard
+                key={m.applied.id}
+                merged={m}
+                playerNames={playerNames}
+                scorekeeperName={scorekeeperName}
+                hammerHoleCount={hammerHoleCountByCaptureId[m.captureId] ?? 0}
+              />
+            ))}
+            {nonCapture.map((evt: any) => {
               const color = EVENT_COLORS[evt.event_type] || "hsl(var(--foreground))";
               const eventReactions = reactions[evt.id] || [];
               const data = evt.event_data || {};
