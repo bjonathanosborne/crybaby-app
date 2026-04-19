@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 import CourseSearch from "@/components/CourseSearch";
 import { ChevronLeft } from "lucide-react";
 
@@ -60,7 +61,10 @@ export default function SoloRound() {
     if (!user || !course) return;
     setSaving(true);
     try {
-      // 1. Create the round
+      // 1. Create the round.
+      //    status MUST be "completed" — the DB CHECK constraint on rounds.status
+      //    rejects any other value and the failure was previously swallowed,
+      //    producing the "button flickers then returns to scoring" bug.
       const { data: round, error: roundError } = await supabase
         .from("rounds")
         .insert({
@@ -76,7 +80,7 @@ export default function SoloRound() {
             tees: course.tees,
           },
           stakes: null,
-          status: "complete",
+          status: "completed",
           scorekeeper_mode: false,
           is_broadcast: false,
         })
@@ -84,13 +88,16 @@ export default function SoloRound() {
         .single();
 
       if (roundError) throw roundError;
+      if (!round?.id) throw new Error("Round insert returned no id");
 
-      // 2. Create round_players entry with hole-by-hole scores
+      // 2. Create round_players entry with hole-by-hole scores.
       //    Format matches CrybabyActiveRound: { "1": 4, "2": 5, ... }
+      //    We MUST inspect the error here — an RLS rejection would otherwise
+      //    leave an orphan round with no players and no feedback to the user.
       const holeScores = {};
       scores.forEach((s, i) => { holeScores[String(i + 1)] = s; });
 
-      await supabase.from("round_players").insert({
+      const { error: playersError } = await supabase.from("round_players").insert({
         round_id: round.id,
         user_id: user.id,
         guest_name: null,
@@ -99,9 +106,16 @@ export default function SoloRound() {
         is_scorekeeper: true,
       });
 
+      if (playersError) throw playersError;
+
       navigate("/feed");
     } catch (err) {
       console.error("Failed to save solo round:", err);
+      toast({
+        title: "Couldn't save round",
+        description: err?.message || "Check your connection and try again.",
+        variant: "destructive",
+      });
       setSaving(false);
     }
   }

@@ -29,8 +29,12 @@ interface CaptureConfirmGridProps {
   extraction: ExtractionResponse;
   /** What's already persisted to the DB (used to seed un-extracted cells + show "unchanged"). */
   priorScores: Record<string, Record<number, number>>;
-  /** "game_driven" hides Share toggle (always true). "ad_hoc" shows it (default off). */
-  trigger: "game_driven" | "ad_hoc";
+  /**
+   * "game_driven" hides Share toggle (always true).
+   * "ad_hoc" shows it (default off).
+   * "post_round_correction" hides it (completed-round fixes publish by default).
+   */
+  trigger: "game_driven" | "ad_hoc" | "post_round_correction";
   /** Private rounds force Share off and disable the toggle. */
   roundPrivacy: "public" | "private";
   /** Current upload status — drives a small "Uploading photo…" spinner below the grid. */
@@ -117,7 +121,15 @@ export default function CaptureConfirmGrid(props: CaptureConfirmGridProps): JSX.
   const [cells, setCells] = useState<ConfirmCell[]>(() =>
     buildInitialCells(players, holeRange, extraction, priorScores),
   );
-  const [shareToFeed, setShareToFeed] = useState<boolean>(trigger === "game_driven" && roundPrivacy === "public");
+  // Share default:
+  //   - ad_hoc: toggle shown, default off
+  //   - game_driven / post_round_correction: toggle hidden, on for public
+  //     rounds, off for private (server-side debounce in
+  //     feedPublishDecision enforces the private rule as a belt).
+  const [shareToFeed, setShareToFeed] = useState<boolean>(
+    (trigger === "game_driven" || trigger === "post_round_correction") &&
+      roundPrivacy === "public",
+  );
 
   const holes: number[] = useMemo(() => {
     const out: number[] = [];

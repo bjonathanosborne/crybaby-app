@@ -15,10 +15,12 @@ import type { CaptureFlowProps, CaptureResult } from "@/components/capture/types
  * the page so it can bump `captureApplied` on useAdvanceHole.
  */
 
+export type CaptureTrigger = "game_driven" | "ad_hoc" | "post_round_correction";
+
 export interface UseCaptureArgs {
   /** Base props all flows share (roundId, players, pars, handicaps, etc.). */
   base: Omit<CaptureFlowProps, "trigger" | "holeRange" | "onComplete" | "onCancel">;
-  onApplied: (result: CaptureResult, trigger: "game_driven" | "ad_hoc") => void;
+  onApplied: (result: CaptureResult, trigger: CaptureTrigger) => void;
 }
 
 export interface UseCaptureReturn {
@@ -26,6 +28,13 @@ export interface UseCaptureReturn {
   openAdHoc: () => void;
   /** Open the flow in game-driven mode for a specific hole range. */
   openGameDriven: (holeRange: [number, number]) => void;
+  /**
+   * Open the flow in post-round-correction mode. Used from the
+   * completed-round view's "Fix scores / add photo" CTA. Always covers
+   * all 18 holes; apply-capture handles completed rounds by rewriting
+   * non-manual settlements after the replay.
+   */
+  openPostRoundCorrection: () => void;
   /** True while any capture flow is open. */
   isOpen: boolean;
   /** The active props to pass to <CaptureFlow>, or null when closed. */
@@ -37,7 +46,7 @@ export function useCapture(args: UseCaptureArgs): UseCaptureReturn {
 
   const close = useCallback(() => setActiveCapture(null), []);
 
-  const onComplete = useCallback((trigger: "game_driven" | "ad_hoc") => (result: CaptureResult) => {
+  const onComplete = useCallback((trigger: CaptureTrigger) => (result: CaptureResult) => {
     setActiveCapture(null);
     args.onApplied(result, trigger);
   }, [args]);
@@ -66,6 +75,16 @@ export function useCapture(args: UseCaptureArgs): UseCaptureReturn {
     });
   }, [args.base, onComplete, onCancel]);
 
+  const openPostRoundCorrection = useCallback(() => {
+    setActiveCapture({
+      ...args.base,
+      trigger: "post_round_correction",
+      holeRange: [1, 18],
+      onComplete: onComplete("post_round_correction"),
+      onCancel,
+    });
+  }, [args.base, onComplete, onCancel]);
+
   // close() is intentionally unused publicly — the modal closes via
   // onComplete or onCancel from the flow; external-force-close would be
   // a footgun. Keep the helper for potential future "cancel from parent".
@@ -74,6 +93,7 @@ export function useCapture(args: UseCaptureArgs): UseCaptureReturn {
   return {
     openAdHoc,
     openGameDriven,
+    openPostRoundCorrection,
     isOpen: activeCapture !== null,
     activeCapture,
   };

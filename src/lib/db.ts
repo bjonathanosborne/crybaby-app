@@ -237,6 +237,18 @@ export async function completeRound(roundId) {
   if (error) throw error;
 }
 
+// Set the needs_final_photo flag on a round.
+// Called by the pre-completion photo gate when the scorekeeper skips the
+// photo. Cleared (false) after a successful post_round_correction capture.
+export async function setNeedsFinalPhoto(roundId, value) {
+  const { error } = await supabase
+    .from("rounds")
+    .update({ needs_final_photo: !!value })
+    .eq("id", roundId);
+
+  if (error) throw error;
+}
+
 // Cancel a round — permanent, irreversible, preserves scores for record
 export async function cancelRound(roundId) {
   const { error } = await supabase

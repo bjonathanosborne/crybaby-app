@@ -587,6 +587,7 @@ export type Database = {
           group_id: string | null
           id: string
           is_broadcast: boolean
+          needs_final_photo: boolean
           scorekeeper_mode: boolean
           stakes: string | null
           status: string
@@ -601,6 +602,7 @@ export type Database = {
           group_id?: string | null
           id?: string
           is_broadcast?: boolean
+          needs_final_photo?: boolean
           scorekeeper_mode?: boolean
           stakes?: string | null
           status?: string
@@ -615,6 +617,7 @@ export type Database = {
           group_id?: string | null
           id?: string
           is_broadcast?: boolean
+          needs_final_photo?: boolean
           scorekeeper_mode?: boolean
           stakes?: string | null
           status?: string
