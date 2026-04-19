@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { loadFeed, createPost, addComment, toggleReaction, loadProfile, loadBroadcastRounds, followRound, declineRound, loadFollowedRoundEvents, loadActiveRound } from "@/lib/db";
+import CaptureTile from "@/components/feed/CaptureTile";
+import { mergeCaptureEvents } from "@/components/round/events/captureEventTypes";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { MessageCircle, ArrowUp, Radio, Eye, X, Trophy, Zap, Plus, User } from "lucide-react";
@@ -594,6 +596,28 @@ export default function CrybabyFeed() {
         {activeBroadcasts.map(round => {
           const events = eventsByRound[round.id] || [];
           if (!events.length) return null;
+
+          // Phase 3c: pull capture_applied + capture_money_shift out of the
+          // event stream and render them as dedicated tiles. Privacy
+          // double-check: skip any capture whose event_data.feed_published_at
+          // is null (server-side debounce suppressed it, or the round is
+          // private). Non-capture legacy events keep the LiveEventItem layout.
+          const isPrivateRound = round.course_details?.privacy === "private";
+          const { merged, nonCapture } = mergeCaptureEvents(events);
+          const visibleCaptures = isPrivateRound
+            ? []
+            : merged.filter(m => m.appliedData?.feed_published_at != null);
+
+          // Build a player-id → display name map for the merged tiles.
+          const playerNames = {};
+          (round.round_players || []).forEach(rp => {
+            playerNames[rp.id] = rp.guest_name
+              || round.course_details?.playerConfig?.[(round.round_players || []).indexOf(rp)]?.name
+              || "Player";
+          });
+
+          if (visibleCaptures.length === 0 && nonCapture.length === 0) return null;
+
           return (
             <div key={`live-${round.id}`} className="bg-card rounded-2xl overflow-hidden border border-primary/20">
               <div className="bg-primary/5 px-4 py-2.5 flex items-center gap-2 border-b border-primary/10">
@@ -603,15 +627,36 @@ export default function CrybabyFeed() {
                 </span>
                 <span className="text-[10px] text-muted-foreground">{round.course}</span>
               </div>
-              <div className="px-4 py-2 divide-y divide-border">
-                {events.slice(0, 5).map(event => (
-                  <LiveEventItem key={event.id} event={event} roundCourse={round.course} />
-                ))}
-              </div>
-              {events.length > 5 && (
-                <div className="px-4 py-2 text-center text-xs text-muted-foreground border-t border-border">
-                  +{events.length - 5} more events
+
+              {/* Phase 3c capture tiles — one per merged capture event */}
+              {visibleCaptures.length > 0 && (
+                <div className="flex flex-col gap-2 px-3 py-2 border-b border-border">
+                  {visibleCaptures.slice(-3).reverse().map(m => (
+                    <CaptureTile
+                      key={m.applied.id}
+                      merged={m}
+                      playerNames={playerNames}
+                      courseName={round.course}
+                      scorekeeperName={profileName(round.creatorProfile)}
+                      roundId={round.id}
+                    />
+                  ))}
                 </div>
+              )}
+
+              {nonCapture.length > 0 && (
+                <>
+                  <div className="px-4 py-2 divide-y divide-border">
+                    {nonCapture.slice(0, 5).map(event => (
+                      <LiveEventItem key={event.id} event={event} roundCourse={round.course} />
+                    ))}
+                  </div>
+                  {nonCapture.length > 5 && (
+                    <div className="px-4 py-2 text-center text-xs text-muted-foreground border-t border-border">
+                      +{nonCapture.length - 5} more events
+                    </div>
+                  )}
+                </>
               )}
             </div>
           );
