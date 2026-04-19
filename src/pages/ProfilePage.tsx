@@ -4,9 +4,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { loadProfile, updateProfile, loadMyRounds, loadSettlements, uploadUserAvatar, loadFriends, loadUserProfile } from "@/lib/db";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { format, startOfMonth, startOfYear, parseISO } from "date-fns";
+import { format, parseISO } from "date-fns";
 import CourseSearch from "@/components/CourseSearch";
-import { ChevronDown, Plus, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import ProfileRoundsList from "@/components/profile/ProfileRoundsList";
 
 const US_STATES = [
   "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD",
@@ -16,8 +17,6 @@ const US_STATES = [
 
 const MONO = "'JetBrains Mono', 'SF Mono', monospace";
 
-type LedgerPeriod = "monthly" | "annual" | "all";
-
 export default function ProfilePage() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -25,11 +24,11 @@ export default function ProfilePage() {
   const [rounds, setRounds] = useState<any[]>([]);
   const [settlements, setSettlements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [ledgerPeriod, setLedgerPeriod] = useState<LedgerPeriod>("monthly");
   const [editingProfile, setEditingProfile] = useState(false);
   const [editForm, setEditForm] = useState({
     display_name: "", handicap: "", home_course: "", first_name: "", last_name: "", state: "", ghin: "",
     handicap_visible_to_friends: true,
+    rounds_visible_to_friends: true,
   });
   const [showAddCourse, setShowAddCourse] = useState(false);
   const [newCourseName, setNewCourseName] = useState("");
@@ -83,6 +82,7 @@ export default function ProfilePage() {
         state: p.state || "",
         ghin: p.ghin || "",
         handicap_visible_to_friends: p.handicap_visible_to_friends !== false,
+        rounds_visible_to_friends: p.rounds_visible_to_friends !== false,
       });
     }).catch(() => {
       toast({ title: "Failed to load profile", description: "Please refresh and try again.", variant: "destructive" });
@@ -99,36 +99,12 @@ export default function ProfilePage() {
     }).catch(() => {/* silent */});
   }, [user]);
 
-  // Ledger calculations
-  const ledgerData = useMemo(() => {
-    if (!settlements.length) return { total: 0, periods: [] };
-    const total = settlements.reduce((sum, s) => sum + Number(s.amount), 0);
-
-    const grouped: Record<string, { label: string; amount: number; rounds: any[] }> = {};
-    settlements.forEach(s => {
-      const date = parseISO(s.created_at);
-      let key: string, label: string;
-      if (ledgerPeriod === "monthly") {
-        key = format(date, "yyyy-MM");
-        label = format(date, "MMMM yyyy");
-      } else if (ledgerPeriod === "annual") {
-        key = format(date, "yyyy");
-        label = format(date, "yyyy");
-      } else {
-        key = "all";
-        label = "All Time";
-      }
-      if (!grouped[key]) grouped[key] = { label, amount: 0, rounds: [] };
-      grouped[key].amount += Number(s.amount);
-      grouped[key].rounds.push(s);
-    });
-
-    const periods = Object.entries(grouped)
-      .sort(([a], [b]) => b.localeCompare(a))
-      .map(([, v]) => v);
-
-    return { total, periods };
-  }, [settlements, ledgerPeriod]);
+  // Quick total for the Stats card below; the new ProfileRoundsList owns
+  // the cumulative-with-filter display.
+  const totalWinnings = useMemo(
+    () => settlements.reduce((sum, s) => sum + Number(s.amount), 0),
+    [settlements],
+  );
 
   const handleSaveProfile = async () => {
     try {
@@ -142,6 +118,7 @@ export default function ProfilePage() {
         state: editForm.state || "",
         ghin: editForm.ghin || null,
         handicap_visible_to_friends: editForm.handicap_visible_to_friends,
+        rounds_visible_to_friends: editForm.rounds_visible_to_friends,
         profile_completed: isComplete,
       });
       setProfile((prev: any) => ({
@@ -186,7 +163,6 @@ export default function ProfilePage() {
   }
 
   const completedRounds = rounds.filter(r => r.status === "completed");
-  const totalWinnings = ledgerData.total;
 
   return (
     <div className="max-w-[420px] mx-auto min-h-screen bg-background pb-24">
@@ -274,6 +250,36 @@ export default function ProfilePage() {
                     style={{ display: "block", fontSize: 11, color: "#8B7355", marginTop: 2 }}
                   >
                     Players in your active rounds see it either way.
+                  </span>
+                </span>
+              </label>
+
+              {/* Rounds privacy toggle — mirrors handicap. Rounds you SHARED with
+                  a viewer are always visible to them regardless; this flag only
+                  hides rounds you played without the viewer. */}
+              <label
+                data-testid="rounds-visibility-toggle"
+                style={{
+                  display: "flex", alignItems: "flex-start", gap: 10,
+                  padding: "10px 12px", borderRadius: 10,
+                  border: "1px solid #DDD0BB", background: "#FAF5EC",
+                  cursor: "pointer",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={editForm.rounds_visible_to_friends}
+                  onChange={e => setEditForm(f => ({ ...f, rounds_visible_to_friends: e.target.checked }))}
+                  style={{ marginTop: 2, accentColor: "#2D5016" }}
+                  aria-describedby="rounds-visibility-help"
+                />
+                <span style={{ fontSize: 13, color: "#1E130A", lineHeight: 1.4 }}>
+                  Show my rounds to other users
+                  <span
+                    id="rounds-visibility-help"
+                    style={{ display: "block", fontSize: 11, color: "#8B7355", marginTop: 2 }}
+                  >
+                    Rounds you played with someone else are always visible to them.
                   </span>
                 </span>
               </label>
@@ -438,109 +444,14 @@ export default function ProfilePage() {
           </button>
         </div>
 
-        {/* Ledger */}
-        <div style={{
-          background: "hsl(var(--card))", borderRadius: 20, padding: "18px 20px",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-        }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-            <span style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016" }}>
-              Ledger
-            </span>
-            <div style={{ display: "flex", gap: 4 }}>
-              {(["monthly", "annual", "all"] as LedgerPeriod[]).map(p => (
-                <button key={p} onClick={() => setLedgerPeriod(p)} style={{
-                  padding: "4px 10px", borderRadius: 6, border: "none", cursor: "pointer",
-                  fontFamily: "inherit", fontSize: 11, fontWeight: 600,
-                  background: ledgerPeriod === p ? "#1E130A" : "#EDE7D9",
-                  color: ledgerPeriod === p ? "#fff" : "#A8957B",
-                }}>{p === "monthly" ? "Mo" : p === "annual" ? "Yr" : "All"}</button>
-              ))}
-            </div>
-          </div>
-
-          {ledgerData.periods.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "20px 0", fontSize: 13, color: "#A8957B" }}>
-              No settlement data yet. Complete a round to see your ledger.
-            </div>
-          ) : (
-            ledgerData.periods.map((period, i) => (
-              <div key={i} style={{ marginBottom: i < ledgerData.periods.length - 1 ? 16 : 0 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: "#1E130A" }}>{period.label}</span>
-                  <span style={{
-                    fontFamily: MONO, fontSize: 15, fontWeight: 800,
-                    color: period.amount >= 0 ? "#2D5016" : "#DC2626",
-                  }}>
-                    {period.amount >= 0 ? "+" : ""}${period.amount.toFixed(0)}
-                  </span>
-                </div>
-                {period.rounds.map((s: any, j: number) => (
-                  <div key={j} style={{
-                    display: "flex", justifyContent: "space-between", alignItems: "center",
-                    padding: "8px 12px", background: "hsl(var(--muted))", borderRadius: 8, marginBottom: 4,
-                    fontSize: 12,
-                  }}>
-                    <div>
-                      <span style={{ fontWeight: 600, color: "#1E130A" }}>
-                        {s.rounds?.course || "Round"}
-                      </span>
-                      {s.is_manual_adjustment && (
-                        <span style={{ marginLeft: 6, fontSize: 10, color: "#F59E0B", fontWeight: 700 }}>ADJUSTED</span>
-                      )}
-                      <div style={{ fontSize: 10, color: "#A8957B" }}>
-                        {format(parseISO(s.created_at), "MMM d, yyyy")}
-                        {s.notes ? ` · ${s.notes}` : ""}
-                      </div>
-                    </div>
-                    <span style={{
-                      fontFamily: MONO, fontWeight: 700, fontSize: 13,
-                      color: Number(s.amount) >= 0 ? "#2D5016" : "#DC2626",
-                    }}>
-                      {Number(s.amount) >= 0 ? "+" : ""}${Number(s.amount).toFixed(0)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* Round History */}
-        <div style={{
-          background: "hsl(var(--card))", borderRadius: 20, padding: "18px 20px",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-        }}>
-          <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginBottom: 14 }}>
-            Round History
-          </div>
-          {rounds.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "20px 0", fontFamily: "'Pacifico', cursive", fontSize: 16, fontWeight: 400, color: "#2D5016" }}>
-              No rounds yet
-            </div>
-          ) : (
-            rounds.slice(0, 20).map((r: any) => (
-              <div key={r.id} style={{
-                display: "flex", justifyContent: "space-between", alignItems: "center",
-                padding: "12px 0", borderBottom: "1px solid #F3F4F6",
-              }}>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: "#1E130A" }}>{r.course || "Unknown Course"}</div>
-                  <div style={{ fontSize: 11, color: "#A8957B" }}>
-                    {format(parseISO(r.created_at), "MMM d, yyyy")} · {r.game_type} · {r.round_players?.length || 0} players
-                  </div>
-                </div>
-                <span style={{
-                  fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 6,
-                  background: r.status === "completed" ? "#F0FDF4" : r.status === "active" ? "#FEF3C7" : "#EDE7D9",
-                  color: r.status === "completed" ? "#2D5016" : r.status === "active" ? "#92400E" : "#A8957B",
-                }}>
-                  {r.status === "completed" ? "✓ Done" : r.status === "active" ? "● Live" : r.status}
-                </span>
-              </div>
-            ))
-          )}
-        </div>
+        {/* Rounds list — cumulative P&L header + date filter + recent/month/year
+            hierarchy. Supersedes the old Ledger + Round History cards. */}
+        {user && (
+          <ProfileRoundsList
+            targetUserId={user.id}
+            viewerUserId={user.id}
+          />
+        )}
       </div>
     </div>
   );

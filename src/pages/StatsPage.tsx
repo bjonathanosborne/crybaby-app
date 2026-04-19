@@ -1,20 +1,24 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { loadProfile, loadMyRounds, loadSettlements, loadUserStats } from "@/lib/db";
+import { loadProfile, loadMyRounds, loadSettlements, loadUserStats, loadUserScoreDistribution, type UserScoreDistribution } from "@/lib/db";
 import { format, parseISO, subMonths } from "date-fns";
-import { Loader2, BarChart3 } from "lucide-react";
+import { ChevronLeft, Loader2, BarChart3 } from "lucide-react";
 import { EagleIcon, BirdieIcon, ParFlagIcon, BogeyIcon } from "@/components/icons/CrybIcons";
 import {
   ResponsiveContainer, LineChart, Line, BarChart, Bar,
   XAxis, YAxis, Tooltip, CartesianGrid, Area, AreaChart,
 } from "recharts";
+import ScoringDistributionChart from "@/components/stats/ScoringDistributionChart";
 
 export default function StatsPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
   const [rounds, setRounds] = useState<any[]>([]);
   const [settlements, setSettlements] = useState<any[]>([]);
   const [serverStats, setServerStats] = useState<any>(null);
+  const [scoreDist, setScoreDist] = useState<UserScoreDistribution | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -24,11 +28,13 @@ export default function StatsPage() {
       loadMyRounds(200),
       loadSettlements(),
       loadUserStats(),
-    ]).then(([p, r, s, ss]) => {
+      loadUserScoreDistribution().catch(() => null),
+    ]).then(([p, r, s, ss, sd]) => {
       setProfile(p);
       setRounds(r || []);
       setSettlements(s || []);
       setServerStats(ss);
+      setScoreDist(sd);
     }).finally(() => setLoading(false));
   }, [user]);
 
@@ -146,6 +152,15 @@ export default function StatsPage() {
   return (
     <div className="max-w-[420px] mx-auto min-h-screen bg-background pb-24 pt-6">
       <div className="px-4 pt-4 pb-2">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          aria-label="Back"
+          data-testid="stats-back"
+          className="flex items-center gap-1 text-xs font-semibold text-muted-foreground bg-transparent border-none p-1 mb-2 cursor-pointer hover:text-foreground"
+        >
+          <ChevronLeft size={16} /> Back
+        </button>
         <h1 className="text-2xl text-primary tracking-tight">Stats</h1>
         <p className="text-xs text-muted-foreground mt-0.5">
           {[profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || profile?.display_name || "Player"} · {stats.roundsPlayed} rounds
@@ -182,6 +197,16 @@ export default function StatsPage() {
               <BirdCard icon={ParFlagIcon} label="Pars" value={serverStats.pars ?? 0} />
               <BirdCard icon={BogeyIcon} label="Bogeys" value={serverStats.bogeys ?? 0} />
             </div>
+          </div>
+        )}
+
+        {/* ── Scoring Distribution ── */}
+        {scoreDist && (
+          <div className="bg-card rounded-2xl p-4 border border-border">
+            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-3">
+              Scoring Distribution
+            </div>
+            <ScoringDistributionChart distribution={scoreDist} />
           </div>
         )}
 

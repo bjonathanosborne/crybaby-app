@@ -274,10 +274,12 @@ export type Database = {
           ghin: string | null
           ghin_verified: boolean | null
           handicap: number | null
+          handicap_visible_to_friends: boolean
           home_course: string | null
           id: string
           last_name: string
           profile_completed: boolean
+          rounds_visible_to_friends: boolean
           state: string
           updated_at: string
           user_id: string
@@ -291,10 +293,12 @@ export type Database = {
           ghin?: string | null
           ghin_verified?: boolean | null
           handicap?: number | null
+          handicap_visible_to_friends?: boolean
           home_course?: string | null
           id?: string
           last_name?: string
           profile_completed?: boolean
+          rounds_visible_to_friends?: boolean
           state?: string
           updated_at?: string
           user_id: string
@@ -308,10 +312,12 @@ export type Database = {
           ghin?: string | null
           ghin_verified?: boolean | null
           handicap?: number | null
+          handicap_visible_to_friends?: boolean
           home_course?: string | null
           id?: string
           last_name?: string
           profile_completed?: boolean
+          rounds_visible_to_friends?: boolean
           state?: string
           updated_at?: string
           user_id?: string

@@ -7,6 +7,7 @@ import { toast } from "@/hooks/use-toast";
 import { UserPlus, Check, Clock, MessageCircle, ChevronRight } from "lucide-react";
 import { formatDistanceToNow, parseISO } from "date-fns";
 import { CrybIcon } from "@/components/icons/CrybIcons";
+import ProfileRoundsList from "@/components/profile/ProfileRoundsList";
 
 export default function UserProfilePage() {
   const { userId } = useParams<{ userId: string }>();
@@ -245,39 +246,17 @@ export default function UserProfilePage() {
           </div>
         )}
 
-        {/* ── Recent Rounds ── */}
-        {rounds.length > 0 && (
-          <div className="bg-card rounded-2xl p-4 border border-border shadow-sm">
-            <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">
-              Rounds ({rounds.length})
-            </div>
-            <div className="flex flex-col gap-0">
-              {rounds.map((r: any, i: number) => (
-                <div key={r.id}
-                  className={`flex items-center gap-3 py-3 ${i < rounds.length - 1 ? "border-b border-border" : ""}`}>
-                  <span className="text-base">⛳</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-foreground truncate">{r.course}</div>
-                    <div className="text-[10px] text-muted-foreground">
-                      {r.game_type?.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                      r.status === "completed" ? "bg-primary/10 text-primary" :
-                      r.status === "active" ? "bg-amber-100 text-amber-700" :
-                      "bg-muted text-muted-foreground"
-                    }`}>
-                      {r.status === "completed" ? "Done" : r.status === "active" ? "● Live" : r.status}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground">
-                      {new Date(r.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+        {/* ── Rounds list —
+              Respects the target's rounds_visible_to_friends flag: if false
+              AND viewer != target, renders a single "hidden" line and skips
+              the query entirely. Otherwise shows the full cumulative P&L
+              header + month/year hierarchy, all from the viewer's POV. */}
+        {user && userId && (
+          <ProfileRoundsList
+            targetUserId={userId}
+            viewerUserId={user.id}
+            hideAllRounds={profile.rounds_visible_to_friends === false && userId !== user.id}
+          />
         )}
       </div>
     </div>
