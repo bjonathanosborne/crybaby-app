@@ -1138,3 +1138,158 @@ Mark yourself scorekeeper.
 **Merge PR #4 after the Phase 2.5 manual test script passes.** The
 release gate is green; the money-math correctness hole is closed for
 hammer rounds. Wolf remains hidden until we extend the pattern.
+
+---
+
+## Phase 3 addendum — 2026-04-19 (branch `phase-3-social`, PR #5)
+
+The social layer that turns every live capture into a broadcast event.
+Zero backend changes: `apply-capture` was already emitting
+`capture_applied` + `capture_money_shift` events with
+`feed_published_at` baked in; Phase 3 is the UI that consumes those
+events and renders them as living tiles.
+
+### Delta vs. Phase 2.5
+
+- **171 tests** (+38 over Phase 2.5's 133).
+- Build clean, 2.3s, 1.39 MB (+~15 kB for capture renderers, tile,
+  standings panel).
+- **No schema migrations.**
+- **One edge function redeploy** (`apply-capture`) after refactoring
+  the debounce logic into a shared pure function so Vitest can verify
+  the decision rules without running Deno.
+
+### Commit summary
+
+- **3a** (`1863eaf`) — Capture event renderers in `RoundLiveFeed`.
+  `CapturePhotoThumbnail`, `CaptureAppliedCard`, event-merge helpers
+  in `captureEventTypes.ts`. `capture_applied` + `capture_money_shift`
+  events with the same `capture_id` render as a single card. Photo
+  thumbnails lazy-load via Supabase signed URLs (55-min cache);
+  expanded modal for full-size view.
+- **3b** (`a69a59d`) — `LiveStandings` panel at the top of
+  `RoundLiveFeed`. Realtime-subscribed to `round_events`. Stroke
+  indicator uses icon + color (▲/▼/•) for non-color-only
+  accessibility. Collapsible. Open-hammer badge per player.
+- **3c** (`60ea652`) — `CaptureTile` in the main `CrybabyFeed`. Small
+  tap-through tile in the live-rounds section. Belt-and-suspenders
+  privacy filter (client checks `course_details.privacy === 'private'`
+  in addition to the server's `feed_published_at` gate).
+- **3d** (`9e22c04`) — Debounce verification. Extracted the
+  feed-publish decision from `apply-capture` into a pure
+  `feedPublishDecision` function in `_shared/`. 12 tests covering
+  every rule (private rounds, ad-hoc opt-in, 30s recency, retro
+  triggers) + the 5-captures-in-30s simulation + private-round
+  client-filter.
+
+### Phase 3 manual test script
+
+Run AFTER Phase 2 + Phase 2.5 manual tests pass.
+
+**Setup:** Two browser sessions. One as you (scorekeeper of an active
+broadcast round at `https://crybaby.golf`); another as a friend who
+follows your round (or a second incognito window with a different
+account you've friended).
+
+**Test 3-1 — Live standings panel (participant view):**
+1. In your scorekeeper session, open the active round and tap "Live
+   feed" (or the broadcast icon, depending on where it's surfaced).
+2. Expect a sticky panel at the top titled "Standings · {game name}".
+3. Every player on the round appears in the panel with:
+   - Their name
+   - A stroke indicator (▲ red for over-par, ▼ green for under-par,
+     • muted for even/unscored)
+   - A money column (+$X in primary color for winners, −$X in
+     destructive color for losers)
+4. Tap the header to collapse; rows hide. Tap again to expand.
+5. Return to the round and capture a scorecard. Within ~2 seconds of
+   applying, the standings panel should update with the new running
+   totals — no manual refresh.
+
+**Test 3-2 — Capture cards in live feed (participant view):**
+1. After applying a capture, the live-feed modal should show the new
+   capture card at the top (above any existing birdie/team_win
+   events):
+   - Scorecard photo thumbnail (or a 📷 placeholder if upload failed)
+   - "📷 Capture · Hole N" badge + timestamp
+   - Your name as scorekeeper
+   - If money shifted, a headline like "Grant +$40 on hole 14" with
+     the mover's direction colored
+   - A "New strokes:" line listing per-player stroke deltas
+   - A "Money:" line with running totals sorted desc
+2. If the round has hammers active AND the capture covered a hole
+   where a hammer was logged, a "🔨 N hammers" badge appears next
+   to the hole chip.
+3. Tap the thumbnail — a full-screen modal opens with the large
+   photo. Tap outside the image to close.
+
+**Test 3-3 — Main feed tiles (follower view):**
+1. Switch to the follower browser session. Visit `/feed`.
+2. If you follow an active broadcast round with captures, the live
+   round section for that round should now include up to 3 recent
+   capture tiles at the top (before the legacy event list).
+3. Each tile: small photo thumb + "📷 Capture" badge + timestamp +
+   "{scorekeeper} · {course}" + "Hole N captured · {mover} +$N" summary.
+4. Tap a tile — navigates to `/watch?roundId=...` for live
+   spectating.
+
+**Test 3-4 — Private round does not leak (follower view):**
+1. Back in the scorekeeper session, mark a round as private
+   (round setup → privacy: private).
+2. Capture a scorecard.
+3. In the follower session at `/feed`, confirm the capture tile
+   does NOT appear under the private round. The live-round section
+   may not appear at all if the round isn't a broadcast.
+
+**Test 3-5 — 5 rapid captures produce 1 feed tile (participant view):**
+1. In the scorekeeper session, apply 5 captures back-to-back (within
+   30 seconds). Each one can have small or no score changes — the
+   scenario is about frequency, not content.
+2. In the follower session at `/feed`, the live-round section for
+   this round should show exactly ONE capture tile, not five.
+3. Verify in Supabase dashboard SQL editor (optional):
+   ```sql
+   SELECT COUNT(*) FILTER (WHERE event_data->>'feed_published_at' IS NOT NULL) AS published,
+          COUNT(*) AS total
+   FROM round_events
+   WHERE round_id = '<your-round-id>'
+     AND event_type = 'capture_applied';
+   ```
+   Expect `published = 1` and `total = 5`. The audit log has all
+   five; the feed surfaces one.
+
+**Test 3-6 — 31-second gap publishes both:**
+1. Apply a capture, wait >31 seconds, apply another.
+2. Feed shows BOTH tiles.
+
+### What Phase 3 does NOT include (non-goals)
+
+Per the spec, these remain deferred:
+- **Push notifications** when a follower's foursome captures
+  (infrastructure exists, wiring deferred).
+- **Group chat embeds** of captures.
+- **Trash talk / comments on captures.**
+- **Post-round highlight reel.**
+- **Season-long leaderboards / W-L records.**
+
+### Important caveat carried forward
+
+Phase 3 ships on top of **two unvalidated phases** (Phase 2 + Phase
+2.5) — neither has been manually tested end-to-end on a real round
+with a real scorecard. Before trusting the social layer with real
+money on the course:
+
+**Walk through Phase 2 + Phase 2.5 + Phase 3 manual test scripts in
+one session.** The tests run independently (2.5 doesn't depend on
+manual Phase 2 validation), but the full user journey is only verified
+when all three scripts pass end-to-end.
+
+### Merge recommendation
+
+**Merge PR #5 after the Phase 3 manual test script passes.** All 171
+tests green, release gate intact, zero `any` in new code,
+accessibility constraints met (non-color signals, aria labels, focus
+traps on the photo modal). Phase 3 is a pure UI layer on top of
+already-deployed backend contracts — merging it is low risk; the only
+behavior changes are: (a) richer cards in live feeds, (b) standings
+panel, (c) tap-through tiles in the main feed.
