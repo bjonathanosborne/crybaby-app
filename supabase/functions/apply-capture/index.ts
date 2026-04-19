@@ -33,6 +33,7 @@ import type {
   HoleHammerState,
   LegacyHammerEntry,
 } from "../_shared/hammerTypes.ts";
+import { feedPublishDecision } from "../_shared/feedPublishDecision.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -500,27 +501,28 @@ serve(async (req) => {
         .in("id", supersededIds);
     }
 
-    // --- Debounce feed emits: 30s window per (round, capturer) ---
-    let feedPublishedAt: string | null = new Date().toISOString();
-    const privacy = String((courseDetails.privacy ?? "public"));
-    const ad_hoc_without_share = capture.trigger === "ad_hoc" && !input.shareToFeed;
+    // --- Debounce feed emits: 30s window per round ---
+    // The DB query answers "has there been a published capture_applied
+    // for this round in the last 30s"; the decision itself is
+    // feedPublishDecision() so client + server test the same rules.
+    const thirtySecondsAgo = new Date(Date.now() - 30_000).toISOString();
+    const { data: recent } = await service
+      .from("round_events")
+      .select("id")
+      .eq("round_id", roundId)
+      .eq("event_type", "capture_applied")
+      .gte("created_at", thirtySecondsAgo)
+      .not("event_data->>feed_published_at", "is", null)
+      .limit(1);
+    const hasRecentlyPublished = Boolean(recent && recent.length > 0);
 
-    if (privacy === "private" || ad_hoc_without_share) {
-      feedPublishedAt = null;
-    } else {
-      const thirtySecondsAgo = new Date(Date.now() - 30_000).toISOString();
-      const { data: recent } = await service
-        .from("round_events")
-        .select("id")
-        .eq("round_id", roundId)
-        .eq("event_type", "capture_applied")
-        .gte("created_at", thirtySecondsAgo)
-        .not("event_data->>feed_published_at", "is", null)
-        .limit(1);
-      if (recent && recent.length > 0) {
-        feedPublishedAt = null; // debounced
-      }
-    }
+    const feedPublishedAt = feedPublishDecision({
+      privacy: String((courseDetails.privacy ?? "public")),
+      trigger: String(capture.trigger ?? "ad_hoc"),
+      shareToFeed: input.shareToFeed,
+      hasRecentlyPublished,
+      nowIso: new Date().toISOString(),
+    });
 
     // --- Mark capture applied ---
     await service
