@@ -168,6 +168,50 @@ describe("Bug 1 regression — round completion surfaces errors", () => {
       expect(src).toMatch(/Couldn't save settlements/);
     });
 
+    it("surfaces failures via a user-triggered Retry ToastAction (no auto-retry loop)", async () => {
+      const fs = await import("fs");
+      const path = await import("path");
+      const src = fs.readFileSync(
+        path.resolve(__dirname, "../../src/pages/CrybabyActiveRound.tsx"),
+        "utf-8",
+      );
+      // ToastAction must be imported and wired as the toast's action.
+      expect(src).toMatch(/import\s*\{\s*ToastAction\s*\}\s*from\s*["']@\/components\/ui\/toast["']/);
+      // Both failure toasts must use a ToastAction with onClick = retryCompletion.
+      const matches = src.match(/<ToastAction[\s\S]*?onClick=\{retryCompletion\}[\s\S]*?>\s*Retry\s*<\/ToastAction>/g);
+      expect(matches).toBeTruthy();
+      expect((matches || []).length).toBeGreaterThanOrEqual(2);
+    });
+
+    it("effect early-returns while completionError is set (prevents auto-retry loop)", async () => {
+      const fs = await import("fs");
+      const path = await import("path");
+      const src = fs.readFileSync(
+        path.resolve(__dirname, "../../src/pages/CrybabyActiveRound.tsx"),
+        "utf-8",
+      );
+      // The loop guard: effect must bail while an error is outstanding.
+      expect(src).toMatch(/if\s*\(\s*completionError\s*\)\s*return/);
+      // Concurrency guard: a ref must block parallel in-flight attempts.
+      expect(src).toMatch(/completionInFlightRef\.current[\s\S]*?=\s*true/);
+    });
+
+    it("retryCompletion clears completionError AND bumps the retry nonce", async () => {
+      const fs = await import("fs");
+      const path = await import("path");
+      const src = fs.readFileSync(
+        path.resolve(__dirname, "../../src/pages/CrybabyActiveRound.tsx"),
+        "utf-8",
+      );
+      // The retry handler must do both — clearing the error without the
+      // nonce bump wouldn't re-fire the effect (deps wouldn't change).
+      const retryMatch = src.match(/const\s+retryCompletion\s*=\s*useCallback\([\s\S]*?\[\s*\]\s*\)/);
+      expect(retryMatch).toBeTruthy();
+      const retry = retryMatch?.[0] ?? "";
+      expect(retry).toMatch(/setCompletionError\(null\)/);
+      expect(retry).toMatch(/setRetryCompletionNonce\(n\s*=>\s*n\s*\+\s*1\)/);
+    });
+
     it("does NOT flip settlementsSaved on failure (allows retry)", async () => {
       const fs = await import("fs");
       const path = await import("path");

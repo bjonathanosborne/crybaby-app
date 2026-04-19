@@ -3,6 +3,7 @@ import crybabyLogo from "@/assets/crybaby-logo.png";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { loadRound, updatePlayerScores, completeRound, cancelRound, createPost, saveAICommentary, insertSettlements, createRoundEvent, toggleBroadcast, saveGameState, RoundLoadError } from "@/lib/db";
 import { toast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { useRoundState } from "@/hooks/useRoundState";
 import { useRoundPersistence } from "@/hooks/useRoundPersistence";
 import { useRoundGameModes } from "@/hooks/useRoundGameModes";
@@ -913,6 +914,18 @@ export default function CrybabActiveRound() {
   const [finalPhotoDecision, setFinalPhotoDecision] = useState<"pending" | "captured" | "skipped">("pending");
   const [skipInFlight, setSkipInFlight] = useState(false);
   const gateCaptureInFlightRef = useRef<boolean>(false);
+
+  // Bug 1 carry-over: user-triggered retry for the completion/settlement
+  // write. Previously a failure left settlementsSaved=false with the effect
+  // auto-re-firing every render (persist + totals are fresh refs each pass),
+  // hammering the server. Now a failure sets completionError, which gates
+  // the effect until the user taps the toast's Retry action — retryCompletionNonce
+  // is bumped + completionError cleared, which re-fires the effect exactly once.
+  // completionInFlightRef prevents concurrent runs if the effect is triggered
+  // by multiple dep changes in the same render cycle.
+  const [completionError, setCompletionError] = useState<"completion" | "settlement" | null>(null);
+  const [retryCompletionNonce, setRetryCompletionNonce] = useState<number>(0);
+  const completionInFlightRef = useRef<boolean>(false);
   // Phase 2 capture: tracks the hole number we most recently applied a
   // capture for. Used to clear the CapturePrompt banner after apply and
   // to re-gate advance on the next hole.
@@ -1218,13 +1231,21 @@ export default function CrybabActiveRound() {
     }
   }, [currentHole, round]);
 
+  // User-triggered retry: clears the error flag + bumps the nonce, which is
+  // an explicit dep of the completion effect. Defined before the effect so
+  // it can be captured in the toast's ToastAction closure.
+  const retryCompletion = useCallback(() => {
+    setCompletionError(null);
+    setRetryCompletionNonce(n => n + 1);
+  }, []);
+
   // Auto-save settlements when round completes.
   //
   // Routes through persistRoundCompletion / persistSettlements (PersistResult
-  // envelopes) so failures surface as a toast instead of a silent console log.
-  // `settlementsSaved` only flips to true when BOTH writes succeed — leaving
-  // it false on failure lets a retry re-fire when the effect's deps change
-  // (or the component remounts).
+  // envelopes) so failures surface as a toast with a Retry action — no
+  // auto-retry loop. `settlementsSaved` only flips to true when BOTH writes
+  // succeed. On failure, completionError is set and the effect's guard
+  // early-returns until the user taps Retry (which bumps retryCompletionNonce).
   //
   // Bug 2 gate: blocked while finalPhotoDecision === "pending". The
   // FinalPhotoGate modal renders when hole 18 is done and the decision is
@@ -1235,37 +1256,61 @@ export default function CrybabActiveRound() {
     const isComplete = currentHole >= 18 && holeResults.length >= 18;
     if (!isComplete || settlementsSaved || !roundId) return;
     if (finalPhotoDecision === "pending") return;
+    // After a failure, wait for the user to tap Retry before trying again.
+    // This prevents a render-loop (persist + totals are fresh references on
+    // every render) from hammering the server.
+    if (completionError) return;
+    // Render-loop concurrency guard: a dep change that happens mid-flight
+    // should not start a second in-flight attempt.
+    if (completionInFlightRef.current) return;
+    completionInFlightRef.current = true;
 
     const saveRoundSettlements = async () => {
-      const completionResult = await persist.persistRoundCompletion(roundId);
-      if (!completionResult.ok) {
-        toast({
-          title: "Couldn't finalize round",
-          description: "We'll retry automatically. Tap to retry now.",
-          variant: "destructive",
-        });
-        return;
-      }
+      try {
+        const completionResult = await persist.persistRoundCompletion(roundId);
+        if (!completionResult.ok) {
+          setCompletionError("completion");
+          toast({
+            title: "Couldn't finalize round",
+            description: "We saved your scores. Tap Retry to finalize.",
+            variant: "destructive",
+            action: (
+              <ToastAction altText="Retry finalizing the round" onClick={retryCompletion}>
+                Retry
+              </ToastAction>
+            ),
+          });
+          return;
+        }
 
-      const settlementData = round.players.map(p => ({
-        userId: p.userId || null,
-        guestName: p.userId ? null : p.name,
-        amount: totals[p.id] || 0,
-      }));
-      const settlementResult = await persist.persistSettlements(roundId, settlementData);
-      if (!settlementResult.ok) {
-        toast({
-          title: "Couldn't save settlements",
-          description: "Scores saved. Tap to retry settlement save.",
-          variant: "destructive",
-        });
-        return;
-      }
+        const settlementData = round.players.map(p => ({
+          userId: p.userId || null,
+          guestName: p.userId ? null : p.name,
+          amount: totals[p.id] || 0,
+        }));
+        const settlementResult = await persist.persistSettlements(roundId, settlementData);
+        if (!settlementResult.ok) {
+          setCompletionError("settlement");
+          toast({
+            title: "Couldn't save settlements",
+            description: "Round finalized. Tap Retry to save settlement amounts.",
+            variant: "destructive",
+            action: (
+              <ToastAction altText="Retry saving settlements" onClick={retryCompletion}>
+                Retry
+              </ToastAction>
+            ),
+          });
+          return;
+        }
 
-      setSettlementsSaved(true);
+        setSettlementsSaved(true);
+      } finally {
+        completionInFlightRef.current = false;
+      }
     };
     saveRoundSettlements();
-  }, [currentHole, holeResults.length, settlementsSaved, roundId, persist, round, totals, finalPhotoDecision]);
+  }, [currentHole, holeResults.length, settlementsSaved, roundId, persist, round, totals, finalPhotoDecision, completionError, retryCompletionNonce, retryCompletion]);
 
   // Bug 2: final-photo gate handlers.
   //
