@@ -914,6 +914,46 @@ export async function loadUserStats(userId?: string) {
   return (data as any[])?.[0] || null;
 }
 
+// ============================================================
+// Career scoring distribution — fuels the Stats page pie chart.
+// Buckets every hole the user has scored into ace/eagle/birdie/
+// par/bogey/double/triple_plus counts. Server-aggregated so we
+// never fetch per-hole data over the wire.
+// ============================================================
+
+export interface UserScoreDistribution {
+  ace: number;
+  eagle: number;
+  birdie: number;
+  pars: number;
+  bogey: number;
+  double_bogey: number;
+  triple_plus: number;
+  total_holes: number;
+}
+
+export async function loadUserScoreDistribution(userId?: string): Promise<UserScoreDistribution | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const targetId = userId || user.id;
+
+  const { data, error } = await supabase.rpc("get_user_score_distribution", { p_user_id: targetId });
+  if (error) throw error;
+  const row = (data as unknown as Array<Record<string, string | number>> | null)?.[0];
+  if (!row) return null;
+  // RPC returns bigints as strings; coerce.
+  return {
+    ace: Number(row.ace) || 0,
+    eagle: Number(row.eagle) || 0,
+    birdie: Number(row.birdie) || 0,
+    pars: Number(row.pars) || 0,
+    bogey: Number(row.bogey) || 0,
+    double_bogey: Number(row.double_bogey) || 0,
+    triple_plus: Number(row.triple_plus) || 0,
+    total_holes: Number(row.total_holes) || 0,
+  };
+}
+
 // Insert settlements after a round completes
 export async function insertSettlements(roundId: string, settlements: { userId?: string; guestName?: string; amount: number }[]) {
   const { data: { user } } = await supabase.auth.getUser();

@@ -372,6 +372,110 @@ Verifies the three round-completion fixes (Bug 1 silent-failure + retry carry-ov
 
 ---
 
+## Section 7 — Profile rounds list + round detail + stats polish (PR #12)
+
+Verifies the three profile-dashboard improvements: rounds list with recent/month/year hierarchy, round detail drill-down, and stats page polish.
+
+### P7.1 — Profile cumulative P&L header
+
+**Do:** Open `/profile` with at least one money round in your history.
+**Expect:**
+- Section at top showing **"Cumulative P&L"**, big number (green if positive, red if negative, muted `—` if zero), round count below.
+- Filter dropdown on the right: All-time / Last 30 days / Last 90 days.
+- Changing the filter recalculates the number AND the round count.
+
+### P7.2 — Recent rounds always expanded
+
+**Do:** Scroll to the "Recent rounds" section.
+**Expect:**
+- Up to 5 round cards, most-recent-first.
+- Each card: date (`Apr 15`, or `Apr 15, 2025` if different year), course, game mode, score + ±par, per-round P&L (hidden if solo/non-money), "With: …" line, "View details →" link.
+- Card body is NOT tappable — only the "View details →" link navigates.
+
+### P7.3 — Current-year months collapsed; multi-expand
+
+**Do:** Play at least 6 rounds this year (so overflow into months). Scroll to "Earlier in {year}".
+**Expect:**
+- Month headers with P&L on the right (e.g. "April 2026 · +$65 ‣").
+- Tap a month → expands inline showing all rounds for that month as cards.
+- Tap a second month → that one also expands (first stays open).
+- Tap the open month again → collapses.
+
+### P7.4 — Prior-year hierarchy
+
+**Do:** Play at least one round in a prior year (data permitting).
+**Expect:**
+- Year header with cumulative P&L (e.g. "2025 · +$280 ‣").
+- Tap → expands showing month headers inside.
+- Each month header inside is independently expandable.
+
+### P7.5 — Rounds visibility toggle (own profile)
+
+**Do:** Edit your profile → toggle **off** "Show my rounds to other users" → Save.
+**Expect:**
+- Your own profile still shows all rounds (self always visible).
+- Have a friend open your profile via `/profile/:yourId` → they see a single line: "This user has hidden their rounds."
+
+**Do:** Turn it back on.
+**Expect:** Their view reloads with the full rounds list.
+
+### P7.6 — Round detail: back button + scorecard default
+
+**Do:** From any profile rounds list, tap "View details →" on any round.
+**Expect:**
+- URL is `/round/:id/summary`.
+- Top-left **Back** button returns to the previous page.
+- Header shows: course, date, game mode, your total score + ±par, P&L badge (hidden for non-money).
+- Default view: **Scorecard** — traditional layout with holes 1-9 / OUT / 10-18 / IN / TOT.
+- All players in the round appear as rows; your row is subtly highlighted (gold tint).
+
+### P7.7 — Scorecard decorations
+
+**Do:** On the round detail, look at individual score cells.
+**Expect:**
+- Birdies: small green circle outline.
+- Eagles: double-ring green circle.
+- Hole-in-one (score=1 on par 3+): **filled gold cell**, ringed.
+- Par: plain.
+- Bogeys: red square outline.
+- Doubles+: filled red square, white text.
+
+### P7.8 — Grid view toggle
+
+**Do:** Tap the **Grid** button in the segmented toggle.
+**Expect:**
+- Compact horizontal-scroll grid: scores row on top, `±par` row below.
+- ±par color-coded: green under, muted at par, red over.
+- Tap Scorecard → switches back.
+- First tab `aria-pressed="true"`, other `false`.
+
+### P7.9 — Settlement + events
+
+**Do:** On a completed money round's detail page.
+**Expect:**
+- **Settlement** card below the scorecard with per-player P&L.
+- Below that, a **View all events (N)** expandable — tapping shows all round_events in order.
+
+### P7.10 — Stats back button
+
+**Do:** Navigate to `/stats` from the Profile → "View Full Stats Dashboard" button.
+**Expect:**
+- Top of page has a **Back** button with `ChevronLeft` icon.
+- Tapping it returns to the profile (history-back).
+
+### P7.11 — Stats scoring distribution
+
+**Do:** With at least a few completed rounds, scroll to the new **Scoring Distribution** card on `/stats`.
+**Expect:**
+- If you've ever made a hole-in-one: prominent **🎉 Career holes-in-one: N** badge above the pie.
+- Pie chart with 6 colored slices: Eagle / Birdie / Par / Bogey / Double / Triple+.
+- Legend table to the right (below on narrow phones) with raw counts + percent of total.
+- Total row: "Total {count} holes".
+- Percentages sum to ~100%.
+- If you have no scored holes yet, a friendly "No scored holes yet" message instead of a broken chart.
+
+---
+
 ## Troubleshooting
 
 ### Common failure modes
@@ -486,6 +590,17 @@ Copy one of these and fill in. Paste into a chat / email / Slack. I'll triage fr
 - P6.5 post-completion Fix CTA: ✅
 - P6.6 completion failure Retry (no auto-loop): ✅ / skipped
 - P6.7 settlement-only Retry: skipped (hard to repro)
+- P7.1 cumulative P&L header: ✅
+- P7.2 recent rounds always expanded: ✅
+- P7.3 current-year months collapse/expand: ✅
+- P7.4 prior-year two-level hierarchy: ✅ / skipped
+- P7.5 rounds_visible_to_friends toggle: ✅
+- P7.6 round detail back + scorecard default: ✅
+- P7.7 scorecard decorations (birdie/eagle/ace/bogey/double): ✅
+- P7.8 grid view toggle: ✅
+- P7.9 settlement + events disclosure: ✅
+- P7.10 stats back button: ✅
+- P7.11 stats scoring distribution pie: ✅
 
 **Bugs to file:**
 - [Paste bug reports above]
@@ -496,4 +611,4 @@ Copy one of these and fill in. Paste into a chat / email / Slack. I'll triage fr
 
 ---
 
-**Checklist last updated:** 2026-04-19 after PR #11 (round-completion flow fixes) merged. Section 6 added for the three round-completion fixes (Bug 1 silent-failure + retry, Bug 2 pre-completion photo gate, Bug 3 post-completion Fix CTA).
+**Checklist last updated:** 2026-04-19 after PR #12 (profile + round detail + stats polish). Section 7 added for the three profile-dashboard improvements (rounds list hierarchy, round detail drill-down, stats back button + pie chart).
