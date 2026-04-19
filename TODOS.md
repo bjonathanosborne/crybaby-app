@@ -1,7 +1,28 @@
 # TODOS — crybaby-app
 
-Last updated: 2026-04-19 (testing surface narrowed to DOC + Solo)
+Last updated: 2026-04-19 (Westlake tees corrected; dedupe AUSTIN_COURSES noted)
 Branch: main
+
+---
+
+## Dedupe AUSTIN_COURSES — two sources of truth
+
+`AUSTIN_COURSES` is defined in TWO places:
+1. `src/data/constants.js` — imported by `CourseSearch.tsx` (Solo mode course
+   picker).
+2. `src/pages/CrybabySetupWizard.jsx` (inline, starting around line 30) —
+   used by the DOC setup wizard's course picker.
+
+The two copies drifted: Westlake had Blue/White tees + old handicaps in
+constants.js, and Black/Gold/Silver/Violet + new handicaps in the wizard.
+Discovered 2026-04-19 during on-course testing (user saw Blue/White in
+Solo). Constants has since been synced to the wizard's version, but the
+underlying smell remains.
+
+**Fix:** delete the inline list in the wizard, import from constants.
+Also consider moving course data to a DB table so the app stops shipping
+a hardcoded list entirely — but that's a larger lift. Smaller first move
+is the import change. Estimated: 30 min.
 
 ---
 
