@@ -5,6 +5,7 @@ import { loadRoundEvents, loadEventReactions, toggleEventReaction } from "@/lib/
 import { formatDistanceToNow, parseISO } from "date-fns";
 import { CrybIcon } from "@/components/icons/CrybIcons";
 import CaptureAppliedCard from "@/components/round/events/CaptureAppliedCard";
+import LiveStandings from "@/components/round/LiveStandings";
 import { mergeCaptureEvents, type RoundEventRow, type MergedCaptureEvent } from "@/components/round/events/captureEventTypes";
 
 const REACTION_OPTIONS = ["🔥", "😂", "💀", "🍼", "👏"];
@@ -44,6 +45,18 @@ interface RoundLiveFeedProps {
    * with the capture's hole range. Used for the small "2 hammers" badge.
    */
   hammerHoleCountByCaptureId?: Record<string, number>;
+  /** Course pars for the LiveStandings strokes-over-par derivation. */
+  pars?: number[];
+  /** Initial round_players.hole_scores map for the LiveStandings fallback. */
+  initialHoleScores?: Record<string, Record<number, number>>;
+  /** Initial totals per round_player_id for the LiveStandings fallback. */
+  initialTotals?: Record<string, number>;
+  /** Game mode label for the standings column header (e.g. "Nassau"). */
+  gameLabel?: string;
+  /** Hide the money column (solo rounds). */
+  hideMoney?: boolean;
+  /** Player ids currently holding an open hammer — drives the badge in standings. */
+  openHammerPlayerIds?: string[];
 }
 
 export default function RoundLiveFeed({
@@ -53,6 +66,12 @@ export default function RoundLiveFeed({
   playerNames = {},
   scorekeeperName,
   hammerHoleCountByCaptureId = {},
+  pars = [],
+  initialHoleScores = {},
+  initialTotals = {},
+  gameLabel = "Money",
+  hideMoney = false,
+  openHammerPlayerIds = [],
 }: RoundLiveFeedProps) {
   const { user } = useAuth();
   const [events, setEvents] = useState<any[]>([]);
@@ -161,6 +180,24 @@ export default function RoundLiveFeed({
         className="flex-1 overflow-y-auto px-4 py-3"
         style={{ paddingBottom: 20 }}
       >
+        {/* Phase 3b: LiveStandings panel at the top of the modal.
+            Renders even when no events yet so the scorekeeper sees
+            the round's state from the moment they open the feed. */}
+        {roundId && pars.length > 0 ? (
+          <div className="mb-3">
+            <LiveStandings
+              roundId={roundId}
+              playerNames={playerNames}
+              gameLabel={gameLabel}
+              pars={pars}
+              initialHoleScores={initialHoleScores}
+              initialTotals={initialTotals}
+              hideMoney={hideMoney}
+              openHammerPlayerIds={openHammerPlayerIds}
+            />
+          </div>
+        ) : null}
+
         {loading ? (
           <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
             Loading feed...
