@@ -1,0 +1,144 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <!-- Background gradient: deep Augusta green -->
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F2208"/>
+      <stop offset="50%" stop-color="#1A3A0F"/>
+      <stop offset="100%" stop-color="#112609"/>
+    </linearGradient>
+
+    <!-- Gold shimmer for title -->
+    <linearGradient id="gold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#F5E070"/>
+      <stop offset="40%"  stop-color="#D4AF37"/>
+      <stop offset="100%" stop-color="#A07820"/>
+    </linearGradient>
+
+    <!-- Soft white glow behind logo -->
+    <radialGradient id="logoBg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#FFFFFF" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Subtle vignette overlay -->
+    <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
+      <stop offset="0%"   stop-color="#000000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.45"/>
+    </radialGradient>
+
+    <!-- Fairway texture pattern -->
+    <pattern id="fairway" width="60" height="60" patternUnits="userSpaceOnUse">
+      <rect width="30" height="60" fill="#1A3A0F" opacity="0.3"/>
+      <rect x="30" width="30" height="60" fill="#163208" opacity="0.3"/>
+    </pattern>
+  </defs>
+
+  <!-- Base background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Fairway stripe texture (subtle) -->
+  <rect width="1200" height="630" fill="url(#fairway)" opacity="0.18"/>
+
+  <!-- Vignette -->
+  <rect width="1200" height="630" fill="url(#vignette)"/>
+
+  <!-- Gold top bar -->
+  <rect width="1200" height="9" fill="url(#gold)" rx="0"/>
+
+  <!-- Gold bottom bar -->
+  <rect y="621" width="1200" height="9" fill="url(#gold)" rx="0"/>
+
+  <!-- Soft glow circle behind logo -->
+  <ellipse cx="600" cy="245" rx="160" ry="185" fill="url(#logoBg)"/>
+
+  <!-- Crybaby logo (crying baby image) -->
+  <image href="/images/crybaby-logo-transparent.png"
+         x="484" y="58"
+         width="232" height="287"
+         preserveAspectRatio="xMidYMid meet"
+         opacity="0.97"/>
+
+  <!-- "CRYBABY GOLF" title -->
+  <text
+    x="600" y="413"
+    font-family="'Arial Black', 'Helvetica Neue', Arial, sans-serif"
+    font-size="96"
+    font-weight="900"
+    fill="url(#gold)"
+    text-anchor="middle"
+    letter-spacing="6"
+    style="text-shadow: 0 4px 24px rgba(212,175,55,0.4);"
+  >CRYBABY GOLF</text>
+
+  <!-- Gold divider line -->
+  <line x1="340" y1="436" x2="860" y2="436" stroke="url(#gold)" stroke-width="2" opacity="0.7"/>
+
+  <!-- Tagline -->
+  <text
+    x="600" y="480"
+    font-family="'Arial', 'Helvetica Neue', sans-serif"
+    font-size="28"
+    font-weight="400"
+    fill="#D4AF37"
+    text-anchor="middle"
+    letter-spacing="5"
+    opacity="0.9"
+  >GOLF'S SOCIAL SCORING APP</text>
+
+  <!-- Sub-tagline -->
+  <text
+    x="600" y="550"
+    font-family="'Arial', 'Helvetica Neue', sans-serif"
+    font-size="18"
+    font-weight="400"
+    fill="#FFFFFF"
+    text-anchor="middle"
+    letter-spacing="3"
+    opacity="0.45"
+  >TRACK ROUNDS  ·  BET FRIENDS  ·  SETTLE THE SCORE</text>
+
+  <!-- Golf flag left decoration -->
+  <g transform="translate(80, 160)" opacity="0.25">
+    <!-- Flag pole -->
+    <line x1="0" y1="0" x2="0" y2="220" stroke="#D4AF37" stroke-width="3"/>
+    <!-- Flag -->
+    <polygon points="0,0 52,22 0,44" fill="#D4AF37"/>
+    <!-- Ground circle -->
+    <ellipse cx="0" cy="220" rx="18" ry="6" fill="#D4AF37"/>
+  </g>
+
+  <!-- Golf flag right decoration -->
+  <g transform="translate(1120, 160) scale(-1,1)" opacity="0.25">
+    <line x1="0" y1="0" x2="0" y2="220" stroke="#D4AF37" stroke-width="3"/>
+    <polygon points="0,0 52,22 0,44" fill="#D4AF37"/>
+    <ellipse cx="0" cy="220" rx="18" ry="6" fill="#D4AF37"/>
+  </g>
+
+  <!-- Corner golf ball left (favicon-style) -->
+  <g transform="translate(46, 580)">
+    <circle cx="0" cy="0" r="18" fill="#D4AF37" opacity="0.3"/>
+    <circle cx="0" cy="-7" r="2.2" fill="none" stroke="#A07820" stroke-width="0.9" opacity="0.4"/>
+    <circle cx="6" cy="-4" r="2.2" fill="none" stroke="#A07820" stroke-width="0.9" opacity="0.4"/>
+    <circle cx="-6" cy="-4" r="2.2" fill="none" stroke="#A07820" stroke-width="0.9" opacity="0.4"/>
+  </g>
+
+  <!-- Corner golf ball right -->
+  <g transform="translate(1154, 580)">
+    <circle cx="0" cy="0" r="18" fill="#D4AF37" opacity="0.3"/>
+    <circle cx="0" cy="-7" r="2.2" fill="none" stroke="#A07820" stroke-width="0.9" opacity="0.4"/>
+    <circle cx="6" cy="-4" r="2.2" fill="none" stroke="#A07820" stroke-width="0.9" opacity="0.4"/>
+    <circle cx="-6" cy="-4" r="2.2" fill="none" stroke="#A07820" stroke-width="0.9" opacity="0.4"/>
+  </g>
+
+  <!-- golfcourseapi.com watermark / domain hint (tiny) -->
+  <text
+    x="600" y="612"
+    font-family="'Arial', sans-serif"
+    font-size="13"
+    fill="#FFFFFF"
+    text-anchor="middle"
+    letter-spacing="2"
+    opacity="0.22"
+  >crybabygolf.app</text>
+
+</svg>

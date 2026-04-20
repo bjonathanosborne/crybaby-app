@@ -1,11 +1,15 @@
 import { useState, useCallback } from "react";
 import {
   calculateNassauSettlement,
+  initFlipState,
   type HoleResult,
   type Player,
   type NassauState,
   type WolfState,
   type TeamInfo,
+  type FlipState,
+  type FlipConfig,
+  type RollingCarryWindow,
 } from "@/lib/gameEngines";
 
 /**
@@ -44,7 +48,23 @@ export interface RoundStateSnapshot {
   hammerPending: boolean;
   lastHammerBy: string | null;
   carryOver: number;
+  /**
+   * Legacy flipTeams (static per-round). Kept for backward compat with
+   * tests + any callers reading the single shape. New code should read
+   * `flipState.teamsByHole[currentHole]` instead — that's the per-hole
+   * shape the engine + persistence path actually use.
+   */
   flipTeams: TeamInfo | null;
+  /**
+   * Flip base game state. `teamsByHole[N]` is the locked team assignment
+   * for hole N (1..15). Mutated by FlipReel confirm handlers + by
+   * `advanceFlipState` on a push-carry.
+   */
+  flipState: FlipState;
+  /** Scorekeeper's Flip setup choices (base bet + carry-over window). */
+  flipConfig: FlipConfig | null;
+  /** Flip base-game rolling carry-over window (FIFO push pot queue). */
+  rollingCarryWindow: RollingCarryWindow | null;
   wolfState: WolfState;
   nassauState: NassauState;
   nassauPresses: { startHole: number; match: Record<string, number> }[];
@@ -196,6 +216,12 @@ export interface UseRoundStateReturn {
   // Team / mode state
   flipTeams: TeamInfo | null;
   setFlipTeams: React.Dispatch<React.SetStateAction<TeamInfo | null>>;
+  flipState: FlipState;
+  setFlipState: React.Dispatch<React.SetStateAction<FlipState>>;
+  flipConfig: FlipConfig | null;
+  setFlipConfig: React.Dispatch<React.SetStateAction<FlipConfig | null>>;
+  rollingCarryWindow: RollingCarryWindow | null;
+  setRollingCarryWindow: React.Dispatch<React.SetStateAction<RollingCarryWindow | null>>;
   wolfState: WolfState;
   setWolfState: React.Dispatch<React.SetStateAction<WolfState>>;
   nassauState: NassauState;
@@ -229,6 +255,9 @@ export function useRoundState(): UseRoundStateReturn {
   const [lastHammerBy, setLastHammerBy] = useState<string | null>(null);
   const [carryOver, setCarryOver] = useState(0);
   const [flipTeams, setFlipTeams] = useState<TeamInfo | null>(null);
+  const [flipState, setFlipState] = useState<FlipState>(() => initFlipState());
+  const [flipConfig, setFlipConfig] = useState<FlipConfig | null>(null);
+  const [rollingCarryWindow, setRollingCarryWindow] = useState<RollingCarryWindow | null>(null);
   const [wolfState, setWolfState] = useState<WolfState>({
     wolfOrder: [],
     currentWolfIndex: 0,
@@ -261,13 +290,16 @@ export function useRoundState(): UseRoundStateReturn {
     lastHammerBy,
     carryOver,
     flipTeams,
+    flipState,
+    flipConfig,
+    rollingCarryWindow,
     wolfState,
     nassauState,
     nassauPresses,
   }), [
     currentHole, scores, totals, holeResults, hammerDepth, hammerHistory,
-    hammerPending, lastHammerBy, carryOver, flipTeams, wolfState, nassauState,
-    nassauPresses,
+    hammerPending, lastHammerBy, carryOver, flipTeams, flipState, flipConfig,
+    rollingCarryWindow, wolfState, nassauState, nassauPresses,
   ]);
 
   return {
@@ -281,6 +313,9 @@ export function useRoundState(): UseRoundStateReturn {
     lastHammerBy, setLastHammerBy,
     carryOver, setCarryOver,
     flipTeams, setFlipTeams,
+    flipState, setFlipState,
+    flipConfig, setFlipConfig,
+    rollingCarryWindow, setRollingCarryWindow,
     wolfState, setWolfState,
     nassauState, setNassauState,
     nassauPresses, setNassauPresses,

@@ -77,7 +77,7 @@ export async function removePushSubscription(endpoint: string) {
 }
 
 // Create a round in the database and return its ID
-export async function createRound({ gameType, course, courseDetails, stakes, holeValue, players, mechanics, mechanicSettings, privacy, scorekeeperMode }) {
+export async function createRound({ gameType, course, courseDetails, stakes, holeValue, players, mechanics, mechanicSettings, privacy, scorekeeperMode, flipConfig }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
@@ -110,6 +110,17 @@ export async function createRound({ gameType, course, courseDetails, stakes, hol
         mechanicSettings,
         privacy,
         playerConfig,
+        // Flip mode: pre-seed game_state with the scorekeeper's setup
+        // choice so CrybabyActiveRound can read flipConfig.baseBet +
+        // carryOverWindow on first render. flipState is initialised
+        // empty; teams are populated by the round-start FlipReel modal
+        // + per-hole Flip button taps.
+        ...(flipConfig && {
+          game_state: {
+            flipConfig,
+            flipState: { teamsByHole: {}, currentHole: 0 },
+          },
+        }),
       },
       stakes: `$${holeValue}/hole`,
       status: "active",

@@ -15,6 +15,9 @@ import CapturePrompt from "@/components/capture/CapturePrompt";
 import CaptureFlow from "@/components/capture/CaptureFlow";
 import EditHammerModal from "@/components/capture/hammer/EditHammerModal";
 import FinalPhotoGate from "@/components/FinalPhotoGate";
+import FlipReel from "@/components/flip/FlipReel";
+import FlipTeamsBadge from "@/components/flip/FlipTeamsBadge";
+import { commitFlipTeams, type TeamInfo as FlipTeamInfo, type FlipConfig as FlipConfigType } from "@/lib/gameEngines";
 import { supabase } from "@/integrations/supabase/client";
 import RoundLiveFeed from "@/components/RoundLiveFeed";
 import {
@@ -872,6 +875,11 @@ export default function CrybabActiveRound() {
   const { lastHammerBy, setLastHammerBy } = rs;
   const { carryOver, setCarryOver } = rs;
   const { flipTeams, setFlipTeams } = rs;
+  // C4B: Flip base-game per-hole state + scorekeeper setup config.
+  // flipTeams (legacy static) stays in place during the C4/C5 transition
+  // so other call sites (lines ~1476, ~1598) read the current hole's teams
+  // without a structural change. New code should read flipState directly.
+  const { flipState, setFlipState, flipConfig, setFlipConfig } = rs;
   const { wolfState, setWolfState } = rs;
   const { nassauState, setNassauState } = rs;
   const { nassauPresses, setNassauPresses } = rs;
@@ -926,6 +934,11 @@ export default function CrybabActiveRound() {
   const [completionError, setCompletionError] = useState<"completion" | "settlement" | null>(null);
   const [retryCompletionNonce, setRetryCompletionNonce] = useState<number>(0);
   const completionInFlightRef = useRef<boolean>(false);
+
+  // C4B: per-hole Flip reel visibility. Separate from the round-start
+  // `showFlipModal` so the two can coexist cleanly (and the scorekeeper
+  // can't accidentally end up with BOTH modals open on hole 1).
+  const [showPerHoleFlipReel, setShowPerHoleFlipReel] = useState<boolean>(false);
   // Phase 2 capture: tracks the hole number we most recently applied a
   // capture for. Used to clear the CapturePrompt banner after apply and
   // to re-gate advance on the next hole.
@@ -1194,6 +1207,11 @@ export default function CrybabActiveRound() {
         if (saved.carryOver) setCarryOver(saved.carryOver);
         if (saved.totals) setTotals(saved.totals);
         if (saved.hammerHistory) setHammerHistory(saved.hammerHistory);
+        // C4B: hydrate Flip base-game state. flipConfig lands from the setup
+        // wizard at round creation; flipState accumulates via FlipReel
+        // confirmations. Absent on non-Flip rounds.
+        if (saved.flipConfig) setFlipConfig(saved.flipConfig as FlipConfigType);
+        if (saved.flipState) setFlipState(saved.flipState as import('@/lib/gameEngines').FlipState);
 
         // Restore per-hole stroke scores from round_players.hole_scores
         const restoredScores = {};
@@ -1860,9 +1878,42 @@ export default function CrybabActiveRound() {
     setShowCrybabSetup(false);
   };
 
-  const handleFlipConfirm = (teams) => {
+  // C4B: handle a flip confirm — used by both the initial round-start reel
+  // (locks hole 1 teams) and the per-hole flip button (locks hole N teams
+  // for hole N >= 2). Writes the current-hole teams into:
+  //   - flipState.teamsByHole[N]       (new per-hole shape, source of truth)
+  //   - flipTeams (legacy single-team)  (backward compat for existing reads)
+  // Then persists game_state via the PersistResult wrapper.
+  const handleFlipConfirm = (teams: FlipTeamInfo, forHole?: number) => {
+    const targetHole = forHole ?? Math.max(1, currentHole);
+    const nextFlipState = commitFlipTeams(flipState, targetHole, teams);
     setFlipTeams(teams);
+    setFlipState(nextFlipState);
     setShowFlipModal(false);
+    setShowPerHoleFlipReel(false);
+    if (roundId) {
+      // Persist through useRoundPersistence (PersistResult wrapper) so a
+      // network failure surfaces as a toast instead of a silent swallow.
+      void persist.persistGameState(roundId, {
+        currentHole, carryOver, totals, hammerHistory,
+        flipState: nextFlipState,
+        flipConfig: flipConfig ?? undefined,
+        rollingCarryWindow: rs.rollingCarryWindow ?? undefined,
+      }).then(result => {
+        if (!result.ok) {
+          toast({
+            title: "Couldn't save flip teams",
+            description: result.error.message,
+            variant: "destructive",
+            action: (
+              <ToastAction altText="Retry saving flip teams" onClick={() => handleFlipConfirm(teams, targetHole)}>
+                Retry
+              </ToastAction>
+            ),
+          });
+        }
+      });
+    }
   };
 
   const handleWolfPartner = (partnerId) => {
@@ -2136,6 +2187,61 @@ export default function CrybabActiveRound() {
       background: "#F5EFE0", fontFamily: FONT,
       paddingBottom: 140,
     }}>
+
+      {/* C4B: Flip base-game persistent teams badge + per-hole Flip button.
+          Rendered only when gameMode is flip and we're in the base game
+          (holes 1-15). Crybaby phase (16-18) is C5-C7 scope. */}
+      {round.gameMode === 'flip' && currentHole <= 15 && (
+        <>
+          <FlipTeamsBadge
+            holeNumber={currentHole}
+            teams={flipState.teamsByHole[currentHole] ?? flipTeams ?? null}
+          />
+          {isScorekeeper && currentHole >= 2 && (() => {
+            // Teams-stay-after-push rule: if the prior hole was a push
+            // AND teams are already committed for the current hole (by
+            // advanceFlipState's auto-carry), the flip button is disabled
+            // with an explanatory tooltip. Decided-hole follow-up: button
+            // is enabled; tapping opens the per-hole FlipReel.
+            const prevResult = holeResults.find(hr => hr.hole === currentHole - 1);
+            const prevHoleWasPush = !!prevResult?.push;
+            const teamsAlreadyLocked = !!flipState.teamsByHole[currentHole];
+            const disabled = prevHoleWasPush && teamsAlreadyLocked;
+            const tooltip = disabled ? "Teams stay after a push" : "Flip 3v2 for this hole";
+            return (
+              <button
+                type="button"
+                data-testid="flip-per-hole-button"
+                aria-label={`Flip teams for hole ${currentHole}`}
+                aria-disabled={disabled}
+                title={tooltip}
+                onClick={() => { if (!disabled) setShowPerHoleFlipReel(true); }}
+                disabled={disabled}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  margin: "8px 16px 0",
+                  padding: "10px 14px",
+                  borderRadius: 12,
+                  border: "none",
+                  cursor: disabled ? "not-allowed" : "pointer",
+                  background: disabled ? "#EDE7D9" : "#EC4899",
+                  color: disabled ? "#A8957B" : "#fff",
+                  fontFamily: FONT,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  opacity: disabled ? 0.6 : 1,
+                }}
+              >
+                🪙 {teamsAlreadyLocked
+                  ? (disabled ? "Teams stay after a push" : `Re-flip hole ${currentHole}`)
+                  : `Flip teams for hole ${currentHole}`}
+              </button>
+            );
+          })()}
+        </>
+      )}
 
       {/* Phase 2 capture prompt — shown when cadence requires a photo
           and no capture has been applied for the current hole. The
@@ -2607,9 +2713,21 @@ export default function CrybabActiveRound() {
         />
       )}
       {showFlipModal && (
-        <FlipTeamModal
+        <FlipReel
+          mode="initial"
           players={players}
-          onConfirm={handleFlipConfirm}
+          onConfirm={(teams) => handleFlipConfirm(teams, 1)}
+          testIdPrefix="initial-flip-reel"
+        />
+      )}
+      {showPerHoleFlipReel && (
+        <FlipReel
+          mode="per-hole"
+          players={players}
+          holeNumber={currentHole}
+          onConfirm={(teams) => handleFlipConfirm(teams, currentHole)}
+          onCancel={() => setShowPerHoleFlipReel(false)}
+          testIdPrefix="per-hole-flip-reel"
         />
       )}
       {showWolfModal && wolfPlayer && (
