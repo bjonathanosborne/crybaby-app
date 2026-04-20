@@ -161,3 +161,64 @@ export function identifyCrybaby(
     balances,
   };
 }
+
+// ============================================================
+// Crybaby hammer-initiator gate (C6.1).
+//
+// Rule: during crybaby phase (Flip holes 16-18 when a crybaby is
+// designated), only the 2-man team (crybaby + partner) can THROW
+// a depth-0 hammer. Hammer-BACKs at depth >= 1 stay unchanged —
+// the engine's alternation rule handles those naturally.
+//
+// This is a UI-only gate. The hammer engine still accepts any
+// initiator; we just prevent the app from presenting the
+// option to the wrong team.
+//
+// `currentUserPlayerId` is the scorekeeper's `round_players.id`
+// (NOT their auth user_id). Callers resolve this via
+// `dbPlayers.find(p => p.user_id === currentUser?.id)?.id`.
+//
+// Returns `true` (allow) in every non-crybaby scenario so the
+// base-game hammer button works exactly as it did pre-C6.1.
+// ============================================================
+
+export interface HammerInitiatorGateArgs {
+  gameMode: string;
+  currentHole: number;
+  crybabyState: {
+    crybaby: string;
+    byHole: Record<number, { partner: string }>;
+  } | null;
+  /** round_players.id of the current user (scorekeeper), or null if not a player. */
+  currentUserPlayerId: string | null;
+}
+
+export function canInitiateCrybabyHammer(args: HammerInitiatorGateArgs): boolean {
+  const { gameMode, currentHole, crybabyState, currentUserPlayerId } = args;
+
+  // Outside crybaby phase: no gate, button always available.
+  const inCrybabyHoleRange = currentHole >= 16 && currentHole <= 18;
+  const inFlipCrybaby = gameMode === "flip"
+    && inCrybabyHoleRange
+    && crybabyState !== null
+    && crybabyState.crybaby !== "";
+
+  if (!inFlipCrybaby) return true;
+
+  // Crybaby phase but the scorekeeper hasn't confirmed the per-hole
+  // setup yet. Hammer isn't in play until after setup + scoring begins,
+  // so returning true here is safe — the button's own gating on
+  // `!allScored && settings.hammer && teams` keeps it hidden anyway.
+  const hole = crybabyState!.byHole[currentHole];
+  if (!hole) return true;
+
+  // No resolved player id means the current user isn't on the round
+  // (spectator, admin, etc.). Gate closes — only the 2-man team
+  // initiates, and non-players aren't on any team.
+  if (!currentUserPlayerId) return false;
+
+  // Allow only when the scorekeeper IS the crybaby OR the chosen
+  // partner for this hole.
+  return currentUserPlayerId === crybabyState!.crybaby
+    || currentUserPlayerId === hole.partner;
+}

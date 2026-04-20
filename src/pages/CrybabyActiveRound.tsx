@@ -20,7 +20,7 @@ import FlipTeamsBadge from "@/components/flip/FlipTeamsBadge";
 import CrybabyTransition from "@/components/flip/CrybabyTransition";
 import CrybabyHoleSetup from "@/components/flip/CrybabyHoleSetup";
 import { commitFlipTeams, calculateCrybabyHoleResult, type TeamInfo as FlipTeamInfo, type FlipConfig as FlipConfigType, type CrybabyState as CrybabyStateType, type CrybabyHoleChoice } from "@/lib/gameEngines";
-import { computeBaseGameBalances, type CrybabyIdentification } from "@/lib/flipCrybaby";
+import { computeBaseGameBalances, canInitiateCrybabyHammer, type CrybabyIdentification } from "@/lib/flipCrybaby";
 import { supabase } from "@/integrations/supabase/client";
 import RoundLiveFeed from "@/components/RoundLiveFeed";
 import {
@@ -963,6 +963,10 @@ export default function CrybabActiveRound() {
   const isScorekeeper = Boolean(
     currentUser && dbPlayers.some(p => p.user_id === currentUser.id && p.is_scorekeeper === true),
   );
+  // C6.1: the scorekeeper's round_players.id (NOT their auth user_id) for
+  // the crybaby-hammer initiator gate. null when the current user isn't
+  // a player on this round (spectator / admin viewing someone else's round).
+  const currentUserPlayerId = dbPlayers.find(p => p.user_id === currentUser?.id)?.id ?? null;
   const roundIsActiveStatus = dbRound?.status === "active";
   // Bug 3: drives the "Add scorecard photo" prominence on the completed-round
   // view. True only when the scorekeeper skipped the pre-completion gate
@@ -2805,17 +2809,46 @@ export default function CrybabActiveRound() {
 
       {/* Action Buttons Row */}
       <div style={{ padding: "12px 20px", display: "flex", gap: 8 }}>
-        {/* Hammer Button — for team games with hammer enabled */}
-        {settings.hammer && teams && !allScored && (
-          hammerDepth === 0 ? (
-            <button onClick={handleHammer} style={{
-              flex: 1, padding: "14px", borderRadius: 14, border: "none", cursor: "pointer",
-              fontFamily: FONT, fontSize: 14, fontWeight: 700,
-              background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)",
-              color: "#fff", boxShadow: "0 4px 12px rgba(245,158,11,0.3)",
-            }}>
-              🔨 Throw Hammer
-            </button>
+        {/* Hammer Button — for team games with hammer enabled.
+            C6.1: during Flip crybaby phase (holes 16-18 with a designated
+            crybaby + per-hole setup confirmed), depth-0 initiation is gated
+            to the 2-man team (crybaby + partner). Hammer-BACKs at depth >= 1
+            are unchanged — alternation rules handle them at the engine level. */}
+        {settings.hammer && teams && !allScored && (() => {
+          const canInitiate = canInitiateCrybabyHammer({
+            gameMode: round.gameMode,
+            currentHole,
+            crybabyState,
+            currentUserPlayerId,
+          });
+          return hammerDepth === 0 ? (
+            canInitiate ? (
+              <button onClick={handleHammer} style={{
+                flex: 1, padding: "14px", borderRadius: 14, border: "none", cursor: "pointer",
+                fontFamily: FONT, fontSize: 14, fontWeight: 700,
+                background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)",
+                color: "#fff", boxShadow: "0 4px 12px rgba(245,158,11,0.3)",
+              }}>
+                🔨 Throw Hammer
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled
+                data-testid="hammer-initiate-gated"
+                aria-disabled="true"
+                title="Only the crybaby's team can initiate a hammer in crybaby phase."
+                style={{
+                  flex: 1, padding: "14px", borderRadius: 14, border: "none",
+                  cursor: "not-allowed",
+                  fontFamily: FONT, fontSize: 14, fontWeight: 700,
+                  background: "#DDD0BB", color: "#8B7355",
+                  opacity: 0.7,
+                }}
+              >
+                🔨 Only crybaby's team can hammer
+              </button>
+            )
           ) : (
             <button onClick={handleHammerBack} style={{
               flex: 1, padding: "14px", borderRadius: 14, border: "none", cursor: "pointer",
@@ -2830,8 +2863,8 @@ export default function CrybabActiveRound() {
             }}>
               {"🔨".repeat(Math.min(hammerDepth + 1, 5))} Hammer Back — ${round.holeValue * Math.pow(2, hammerDepth) + carryOver} → ${round.holeValue * Math.pow(2, hammerDepth + 1) + carryOver}
             </button>
-          )
-        )}
+          );
+        })()}
 
         {/* Nassau Press Button */}
         {round.gameMode === 'nassau' && settings.presses && !allScored && (
