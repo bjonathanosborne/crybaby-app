@@ -202,28 +202,40 @@ describe("claimRollingCarryWindow", () => {
 // calculateFlipHoleResult — 3v2 payout math
 // ============================================================
 
-describe("calculateFlipHoleResult — 3-man team wins", () => {
-  it("losers pay B each; 3 winners split the 2B pot → 2B/3 each (B=$3 → $2 each)", () => {
+describe("calculateFlipHoleResult — 3-man team wins (Model C)", () => {
+  it("2-man losers pay 1.5B each; 3 winners split the 3B pot → B each (B=$2 → $2/winner, -$3/loser)", () => {
     const teams = mkTeams3v2([P[0], P[1], P[2]], [P[3], P[4]]);
     const r = calculateFlipHoleResult({
       teams, teamABest: 4, teamBBest: 5, // A (3-man) wins
-      effectiveBet: 3, window: initRollingCarryWindow(3), holeNumber: 1,
+      effectiveBet: 2, window: initRollingCarryWindow(3), holeNumber: 1,
     });
     expect(r.push).toBe(false);
     expect(r.winningSide).toBe("A");
-    // Losers (p4, p5) each pay $3 → pot $6 → winners get $2 each
+    // 2-man losers (p4, p5) each pay 1.5 * $2 = $3. Pot $6. 3 winners split → $2 each.
     expect(r.perPlayer.find(p => p.id === "p1")!.amount).toBe(2);
     expect(r.perPlayer.find(p => p.id === "p2")!.amount).toBe(2);
     expect(r.perPlayer.find(p => p.id === "p3")!.amount).toBe(2);
     expect(r.perPlayer.find(p => p.id === "p4")!.amount).toBe(-3);
     expect(r.perPlayer.find(p => p.id === "p5")!.amount).toBe(-3);
-    // Sum of all per-player amounts is 0 (closed system, no carry)
+    // Sum = 0 on a pure decided hole with no prior window.
     expect(r.perPlayer.reduce((a, b) => a + b.amount, 0)).toBe(0);
+    // potFromBet = losers' collective contribution = 3B = $6.
+    expect(r.potFromBet).toBe(6);
+  });
+
+  it("even-bet invariant: B=$4 → 2-man losers pay $6 each, winners get $4 each", () => {
+    const teams = mkTeams3v2([P[0], P[1], P[2]], [P[3], P[4]]);
+    const r = calculateFlipHoleResult({
+      teams, teamABest: 4, teamBBest: 5,
+      effectiveBet: 4, window: initRollingCarryWindow(3), holeNumber: 1,
+    });
+    expect(r.perPlayer.find(p => p.id === "p4")!.amount).toBe(-6); // 1.5 * $4
+    expect(r.perPlayer.find(p => p.id === "p1")!.amount).toBe(4);  // $12 / 3
   });
 });
 
-describe("calculateFlipHoleResult — 2-man team wins", () => {
-  it("losers pay B each; 2 winners split the 3B pot → 3B/2 each (B=$2 → $3 each)", () => {
+describe("calculateFlipHoleResult — 2-man team wins (Model C)", () => {
+  it("3-man losers pay B each; 2 winners split the 3B pot → 1.5B each (B=$2 → $3/winner, -$2/loser)", () => {
     const teams = mkTeams3v2([P[0], P[1], P[2]], [P[3], P[4]]);
     const r = calculateFlipHoleResult({
       teams, teamABest: 6, teamBBest: 4, // B (2-man) wins
@@ -239,59 +251,68 @@ describe("calculateFlipHoleResult — 2-man team wins", () => {
   });
 });
 
-describe("calculateFlipHoleResult — push", () => {
-  it("zero-sum results, appends hole's bet into window", () => {
+describe("calculateFlipHoleResult — push (Model C)", () => {
+  it("every player antes B; window entry = N*B; per-player amount = -B", () => {
     const teams = mkTeams3v2([P[0], P[1], P[2]], [P[3], P[4]]);
     const r = calculateFlipHoleResult({
       teams, teamABest: 5, teamBBest: 5,
       effectiveBet: 2, window: initRollingCarryWindow(3), holeNumber: 1,
     });
     expect(r.push).toBe(true);
-    expect(r.perPlayer.every(p => p.amount === 0)).toBe(true);
-    expect(r.newWindow.entries).toEqual([{ holeNumber: 1, amount: 2 }]);
+    // All 5 players each debit $2 (flat ante).
+    expect(r.perPlayer.every(p => p.amount === -2)).toBe(true);
+    // Window entry = 5 * $2 = $10 (full hole pot).
+    expect(r.newWindow.entries).toEqual([{ holeNumber: 1, amount: 10 }]);
+    // Sum of deltas = -N*B = -$10 (real money out of wallets).
+    expect(r.perPlayer.reduce((a, b) => a + b.amount, 0)).toBe(-10);
+    expect(r.potFromBet).toBe(10); // total ante pot
   });
 });
 
-describe("calculateFlipHoleResult — decided hole claims the rolling carry", () => {
-  it("winners take baseBet * losers + full window", () => {
+describe("calculateFlipHoleResult — decided hole claims the rolling carry (Model C)", () => {
+  it("winners take 3B from fresh losers + full window", () => {
+    // Seed window with two prior pushes ($10 each from a 5-player round).
     let window = initRollingCarryWindow(3);
-    window = appendPushToWindow(window, 1, 2); // $2
-    window = appendPushToWindow(window, 2, 2); // $2  (window sum = $4)
+    window = appendPushToWindow(window, 1, 10);
+    window = appendPushToWindow(window, 2, 10); // window sum = $20
 
     const teams = mkTeams3v2([P[0], P[1], P[2]], [P[3], P[4]]);
     const r = calculateFlipHoleResult({
-      teams, teamABest: 4, teamBBest: 5,
+      teams, teamABest: 4, teamBBest: 5, // A (3-man) wins
       effectiveBet: 2, window, holeNumber: 3,
     });
-    // Base pot: 2 losers * $2 = $4. Carry: $4. Total pot: $8. 3 winners → $8/3 each.
-    // Cash flow: losers still pay only $2 each (not $8/2) — carry comes from the window, not the losers.
-    expect(r.potFromBet).toBe(4);
-    expect(r.potFromCarry).toBe(4);
-    expect(r.perPlayer.find(p => p.id === "p1")!.amount).toBeCloseTo(8 / 3, 5);
-    expect(r.perPlayer.find(p => p.id === "p4")!.amount).toBe(-2);
-    expect(r.newWindow.entries).toHaveLength(0); // window cleared
+    // Fresh pot = 2 * 1.5B = 2 * $3 = $6. Carry = $20. Total pot = $26.
+    // 3 winners split → $26/3 each ≈ $8.667. 2-man losers each pay $3.
+    expect(r.potFromBet).toBe(6);
+    expect(r.potFromCarry).toBe(20);
+    expect(r.perPlayer.find(p => p.id === "p1")!.amount).toBeCloseTo(26 / 3, 5);
+    expect(r.perPlayer.find(p => p.id === "p4")!.amount).toBe(-3);
+    expect(r.newWindow.entries).toHaveLength(0); // cleared
   });
 });
 
-describe("calculateFlipHoleResult — forfeit accounting on push that evicts", () => {
-  it("push after window full reports the forfeit amount on this hole", () => {
+describe("calculateFlipHoleResult — forfeit accounting on push that evicts (Model C)", () => {
+  it("push after full window reports forfeit = evicted hole's N*B", () => {
+    // Window size 2, seed with two $10 push entries (5 players × $2 each).
     let window = initRollingCarryWindow(2);
-    window = appendPushToWindow(window, 1, 2);
-    window = appendPushToWindow(window, 2, 2);
-    // Window is full [1:$2, 2:$2]; the next push will evict hole 1's $2.
+    window = appendPushToWindow(window, 1, 10);
+    window = appendPushToWindow(window, 2, 10);
+    // Next push evicts hole 1 ($10 forfeited).
 
     const teams = mkTeams3v2([P[0], P[1], P[2]], [P[3], P[4]]);
     const r = calculateFlipHoleResult({
       teams, teamABest: 5, teamBBest: 5,
-      effectiveBet: 4, window, holeNumber: 3,
+      effectiveBet: 2, window, holeNumber: 3,
     });
     expect(r.push).toBe(true);
-    expect(r.forfeitedThisHole).toBe(2);
+    expect(r.forfeitedThisHole).toBe(10);
     expect(r.newWindow.entries).toEqual([
-      { holeNumber: 2, amount: 2 },
-      { holeNumber: 3, amount: 4 },
+      { holeNumber: 2, amount: 10 },
+      { holeNumber: 3, amount: 10 },
     ]);
-    expect(r.newWindow.forfeited).toBe(2); // cumulative
+    expect(r.newWindow.forfeited).toBe(10); // cumulative real money lost
+    // All 5 players still debit the new hole's ante.
+    expect(r.perPlayer.every(p => p.amount === -2)).toBe(true);
   });
 });
 
@@ -340,7 +361,7 @@ describe("getTeamsForHole (widened for FlipState)", () => {
 // replayRound equivalence — per-hole FlipState + rolling window
 // ============================================================
 
-describe("replayRound equivalence — Flip per-hole teams + rolling window", () => {
+describe("replayRound equivalence — Flip per-hole teams + rolling window (Model C)", () => {
   it("totals match whether played hole-by-hole or replayed in one pass", async () => {
     const { replayRound } = await import("@/lib/gameEngines");
     const BET = 2;
@@ -353,7 +374,6 @@ describe("replayRound equivalence — Flip per-hole teams + rolling window", () 
       currentHole: 3,
     };
 
-    // Replay in one pass via replayRound with FlipState + FlipConfig.
     const replayed = replayRound(
       "flip",
       P,
@@ -369,98 +389,182 @@ describe("replayRound equivalence — Flip per-hole teams + rolling window", () 
       },
       [
         { holeNumber: 1, scores: { p1: 4, p2: 4, p3: 4, p4: 4, p5: 4 }, hammerDepth: 0, folded: false }, // push
-        { holeNumber: 2, scores: { p1: 5, p2: 4, p3: 4, p4: 5, p5: 5 }, hammerDepth: 0, folded: false }, // B wins (p2,p3)
-        { holeNumber: 3, scores: { p1: 4, p2: 5, p3: 5, p4: 4, p5: 4 }, hammerDepth: 0, folded: false }, // A wins (p1,p2,p4) wait teams3 has teamA=[p2,p3,p5]
+        { holeNumber: 2, scores: { p1: 5, p2: 4, p3: 4, p4: 5, p5: 5 }, hammerDepth: 0, folded: false }, // teamA=[p1,p4,p5] vs teamB=[p2,p3]. B wins.
+        { holeNumber: 3, scores: { p1: 4, p2: 5, p3: 5, p4: 4, p5: 4 }, hammerDepth: 0, folded: false }, // teamA=[p2,p3,p5] best=4 (p5), teamB=[p0,p3]-> teamA=[p2,p3,p5] teamB=[p1,p4]. teamA best=4, teamB best=4 → push
       ],
       flipState,
       { baseBet: BET, carryOverWindow: 3 },
     );
 
-    // Hole 1 push: carry [1:$2]
-    // Hole 2: teamA=[p1,p4,p5] vs teamB=[p2,p3]. B wins. Pot = 3*$2 + $2 carry = $8. Winners p2,p3 get $4 each.
-    // Hole 3: teamA=[p2,p3,p5] vs teamB=[p1,p4]. A wins (p2 shot 5, p5 shot 4, teamA best = 4; teamB best = 4 — tie at 4!).
-    // Wait let me recompute. h3 scores: p1=4, p2=5, p3=5, p4=4, p5=4. teamA=[p2,p3,p5] best=4 (p5). teamB=[p1,p4] best=4. Tie → push.
-    // Then window: [3:$2].
-    // Final totals:
-    //   p1: 0 (h1) - 2 (h2 loss) + 0 (h3 push) = -2
-    //   p2: 0 + 4 + 0 = 4
-    //   p3: 0 + 4 + 0 = 4
-    //   p4: 0 - 2 + 0 = -2
-    //   p5: 0 - 2 + 0 = -2
-    // Sum = -2 + 4 + 4 - 2 - 2 = 2 — NOT zero because $2 stayed in window unclaimed (hole 3 push).
-    // That's correct: $2 is still "in the pot" at replay end. Not forfeited (window=3, size 1/3).
-
-    expect(replayed.totals.p1).toBeCloseTo(-2, 5);
+    // Hand-computed expectations under Model C:
+    //   Hole 1 push: each player -$2. Window: [h1:$10].
+    //     Running: p1=-2, p2=-2, p3=-2, p4=-2, p5=-2.
+    //   Hole 2 decided, teamA=[p1,p4,p5] vs teamB=[p2,p3]. B (2-man) wins.
+    //     3-man losers (p1,p4,p5) each pay $2. Pot = $6 + $10 carry = $16. 2 winners split $8 each.
+    //     Running: p1=-4, p2=+6, p3=+6, p4=-4, p5=-4.
+    //   Hole 3 push: each player -$2. Window: [h3:$10].
+    //     Running: p1=-6, p2=+4, p3=+4, p4=-6, p5=-6.
+    expect(replayed.totals.p1).toBeCloseTo(-6, 5);
     expect(replayed.totals.p2).toBeCloseTo(4, 5);
     expect(replayed.totals.p3).toBeCloseTo(4, 5);
-    expect(replayed.totals.p4).toBeCloseTo(-2, 5);
-    expect(replayed.totals.p5).toBeCloseTo(-2, 5);
-    // Sum = sum of claimed money, which equals $6 claimed - $4 pushed pots = $2 left on board.
+    expect(replayed.totals.p4).toBeCloseTo(-6, 5);
+    expect(replayed.totals.p5).toBeCloseTo(-6, 5);
+    // Sum = -10. Window holds $10 (unclaimed), forfeit $0 (no evictions, window=3).
+    // Invariant: sum = -(forfeit + unclaimed) = -(0 + 10) = -10 ✓
     const sum = Object.values(replayed.totals).reduce((a, b) => a + b, 0);
-    expect(sum).toBeCloseTo(2, 5);
+    expect(sum).toBeCloseTo(-10, 5);
   });
 });
 
-describe("Flip scenario integration — rolling window over a 5-hole sequence", () => {
+describe("Flip scenario integration — rolling window over a 5-hole sequence (Model C)", () => {
   it("hole 1 push, hole 2 decided, hole 3 push, hole 4 push (window=2), hole 5 decided", () => {
     const teams1 = mkTeams3v2([P[0], P[1], P[2]], [P[3], P[4]]);
     const teams2 = mkTeams3v2([P[0], P[3], P[4]], [P[1], P[2]]);
     const BET = 2;
     let window = initRollingCarryWindow(2);
 
-    // Hole 1: push → window: [1:$2]
+    // Hole 1: push → window: [1:$10] (5 × $2). All 5 players ante -$2.
     const h1 = calculateFlipHoleResult({
       teams: teams1, teamABest: 4, teamBBest: 4,
       effectiveBet: BET, window, holeNumber: 1,
     });
     window = h1.newWindow;
-    expect(window.entries).toEqual([{ holeNumber: 1, amount: 2 }]);
+    expect(window.entries).toEqual([{ holeNumber: 1, amount: 10 }]);
+    expect(h1.perPlayer.every(p => p.amount === -2)).toBe(true);
 
     // Hole 2: teams2 has teamA = [p1, p4, p5] (3-man), teamB = [p2, p3] (2-man). B wins.
+    // Losers (3-man p1,p4,p5) each pay $2 = $6 pot. Carry $10. Total $16. 2 winners → $8 each.
     const h2 = calculateFlipHoleResult({
       teams: teams2, teamABest: 5, teamBBest: 4,
       effectiveBet: BET, window, holeNumber: 2,
     });
-    // Pot = 3 losers * $2 + $2 carry = $8; 2 winners (p2, p3) get $4 each.
     expect(h2.winningSide).toBe("B");
-    expect(h2.potFromBet).toBe(6);
-    expect(h2.potFromCarry).toBe(2);
-    expect(h2.perPlayer.find(p => p.id === "p2")!.amount).toBe(4);
-    expect(h2.perPlayer.find(p => p.id === "p3")!.amount).toBe(4);
+    expect(h2.potFromBet).toBe(6);   // 3 losers * $2
+    expect(h2.potFromCarry).toBe(10); // hole 1 ante pot
+    expect(h2.perPlayer.find(p => p.id === "p2")!.amount).toBe(8);
+    expect(h2.perPlayer.find(p => p.id === "p3")!.amount).toBe(8);
     expect(h2.perPlayer.find(p => p.id === "p1")!.amount).toBe(-2);
     expect(h2.perPlayer.find(p => p.id === "p4")!.amount).toBe(-2);
     expect(h2.perPlayer.find(p => p.id === "p5")!.amount).toBe(-2);
     window = h2.newWindow;
     expect(window.entries).toHaveLength(0); // cleared on claim
 
-    // Hole 3: push → window: [3:$2]
+    // Hole 3: push → window: [3:$10]. Each player -$2 ante.
     const h3 = calculateFlipHoleResult({
       teams: teams1, teamABest: 4, teamBBest: 4,
       effectiveBet: BET, window, holeNumber: 3,
     });
     window = h3.newWindow;
-    expect(window.entries).toEqual([{ holeNumber: 3, amount: 2 }]);
+    expect(window.entries).toEqual([{ holeNumber: 3, amount: 10 }]);
 
-    // Hole 4: push → window: [3:$2, 4:$2]  (at capacity)
+    // Hole 4: push at capacity → window: [3:$10, 4:$10]. Still no forfeit.
     const h4 = calculateFlipHoleResult({
       teams: teams1, teamABest: 5, teamBBest: 5,
       effectiveBet: BET, window, holeNumber: 4,
     });
     window = h4.newWindow;
     expect(window.entries).toEqual([
-      { holeNumber: 3, amount: 2 },
-      { holeNumber: 4, amount: 2 },
+      { holeNumber: 3, amount: 10 },
+      { holeNumber: 4, amount: 10 },
     ]);
     expect(window.forfeited).toBe(0);
 
-    // Hole 5: decided → winners take $2/loser + $4 carry
+    // Hole 5: decided with teams1 (teamA 3-man wins). 2-man losers each pay $3. Pot $6. Carry $20.
+    // Total pot $26. 3 winners split → $26/3 each.
     const h5 = calculateFlipHoleResult({
       teams: teams1, teamABest: 4, teamBBest: 5,
       effectiveBet: BET, window, holeNumber: 5,
     });
-    expect(h5.potFromBet).toBe(4);
-    expect(h5.potFromCarry).toBe(4);
-    // 3 winners split $8 → 8/3 each
-    expect(h5.perPlayer.find(p => p.id === "p1")!.amount).toBeCloseTo(8 / 3, 5);
+    expect(h5.potFromBet).toBe(6);
+    expect(h5.potFromCarry).toBe(20);
+    expect(h5.perPlayer.find(p => p.id === "p1")!.amount).toBeCloseTo(26 / 3, 5);
+    expect(h5.perPlayer.find(p => p.id === "p4")!.amount).toBe(-3);
+  });
+});
+
+// ============================================================
+// INVARIANT: sum(balances) = -(forfeited + unclaimed_window) at all times
+// ============================================================
+
+describe("Flip invariant — Model C accounting ledger", () => {
+  it("3 pushes with window=2, B=$2: forfeit $10, every player -$6, window still holds $20", () => {
+    const teams = mkTeams3v2([P[0], P[1], P[2]], [P[3], P[4]]);
+    const BET = 2;
+    let window = initRollingCarryWindow(2);
+    const balances: Record<string, number> = { p1: 0, p2: 0, p3: 0, p4: 0, p5: 0 };
+
+    // Play three consecutive pushes.
+    for (const holeNumber of [1, 2, 3]) {
+      const r = calculateFlipHoleResult({
+        teams, teamABest: 4, teamBBest: 4,
+        effectiveBet: BET, window, holeNumber,
+      });
+      expect(r.push).toBe(true);
+      window = r.newWindow;
+      r.perPlayer.forEach(pp => { balances[pp.id] += pp.amount; });
+    }
+
+    // Per-player state after 3 pushes: -$2 ante × 3 = -$6 each.
+    expect(balances.p1).toBe(-6);
+    expect(balances.p2).toBe(-6);
+    expect(balances.p3).toBe(-6);
+    expect(balances.p4).toBe(-6);
+    expect(balances.p5).toBe(-6);
+
+    // Forfeit = hole 1's $10 pot (evicted on hole 3 push arrival).
+    expect(window.forfeited).toBe(10);
+
+    // Unclaimed window = hole 2 + hole 3 = $10 + $10 = $20.
+    const unclaimedWindow = window.entries.reduce((a, e) => a + e.amount, 0);
+    expect(unclaimedWindow).toBe(20);
+
+    // INVARIANT: sum(balances) = -(forfeit + unclaimed)
+    const sumBalances = Object.values(balances).reduce((a, b) => a + b, 0);
+    expect(sumBalances).toBe(-30);
+    expect(sumBalances).toBe(-(window.forfeited + unclaimedWindow));
+  });
+
+  it("3 pushes then decided hole collapses unclaimed window; sum(balances) = -forfeited", () => {
+    const teams = mkTeams3v2([P[0], P[1], P[2]], [P[3], P[4]]);
+    const BET = 2;
+    let window = initRollingCarryWindow(2);
+    const balances: Record<string, number> = { p1: 0, p2: 0, p3: 0, p4: 0, p5: 0 };
+
+    // Three pushes to set up the forfeit + window state.
+    for (const holeNumber of [1, 2, 3]) {
+      const r = calculateFlipHoleResult({
+        teams, teamABest: 4, teamBBest: 4,
+        effectiveBet: BET, window, holeNumber,
+      });
+      window = r.newWindow;
+      r.perPlayer.forEach(pp => { balances[pp.id] += pp.amount; });
+    }
+
+    // Hole 4 decided: teamB (2-man p4,p5) wins. 3-man losers each pay $2. Pot = $6 + $20 = $26. 2 winners split $13 each.
+    const h4 = calculateFlipHoleResult({
+      teams, teamABest: 6, teamBBest: 4,
+      effectiveBet: BET, window, holeNumber: 4,
+    });
+    window = h4.newWindow;
+    h4.perPlayer.forEach(pp => { balances[pp.id] += pp.amount; });
+
+    // Post hole 4 balances:
+    //   p1,p2,p3 (3-man losers): -6 + -2 = -$8 each
+    //   p4,p5 (2-man winners): -6 + $13 = +$7 each
+    expect(balances.p1).toBe(-8);
+    expect(balances.p2).toBe(-8);
+    expect(balances.p3).toBe(-8);
+    expect(balances.p4).toBe(7);
+    expect(balances.p5).toBe(7);
+
+    // Window cleared by the decided-hole claim.
+    expect(window.entries).toHaveLength(0);
+    // Forfeit unchanged by a non-evicting hole.
+    expect(window.forfeited).toBe(10);
+
+    // INVARIANT collapses to: sum(balances) = -forfeited
+    const sumBalances = Object.values(balances).reduce((a, b) => a + b, 0);
+    expect(sumBalances).toBe(-10);
+    expect(sumBalances).toBe(-window.forfeited);
   });
 });

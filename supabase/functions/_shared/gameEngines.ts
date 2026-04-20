@@ -457,36 +457,49 @@ export function claimRollingCarryWindow(
 }
 
 // ============================================================
-// FLIP PAYOUT MATH — 3v2 per-player money on a decided hole
+// FLIP PAYOUT MATH — Model C
+//
+// Each push is a flat-ante into the rolling window. Every player
+// debits `effectiveBet` ($B) on a push; the hole's pot entry on
+// the window is `N * B` (5 players × bet for standard Flip).
+//
+// On a decided hole there is NO separate ante. Losers pay
+// asymmetrically per spec's "risk" scaling:
+//    - 3-man side losing: each pays B.
+//    - 2-man side losing: each pays 1.5B.
+// Either framing yields a losers' pot of 3B. Winners split
+// `3B + window` evenly among the winning side's players.
+//
+// The 1.5B factor depends on B being even — that invariant is
+// enforced at setup + in FlipConfig typing. For B=$2: 2-man
+// losers each pay $3. For B=$4: $6. For B=$6: $9. etc. All
+// integer dollars when B is even.
+//
+// Closed-system invariants:
+//    - On a pure push: sum(balance deltas) = -N*B (real money
+//      leaves wallets into the window).
+//    - On a decided hole after claims: sum(balance deltas) =
+//      winnerPayout - losersCollected = +windowSum (winners
+//      receive more than losers pay because the window had
+//      prior-push money).
+//    - Across the full round: sum(all player balances) =
+//      -(forfeited + any unclaimed window entries).
+//
+// The `forfeited` counter on RollingCarryWindow accrues real
+// money that left the closed system permanently (evicted push
+// entries). Never repaid.
 // ============================================================
 
-/**
- * Compute per-player payouts for a decided Flip hole.
- *
- * Split logic (for baseBet = B):
- *   - Losers each pay B.
- *   - Pot = (# losers) * B.
- *   - Winners split the pot evenly: each winner gets Pot / (# winners).
- *
- * With 5 players in 3v2:
- *   - 3-man wins: 2 losers * B = 2B pot, 3 winners split → 2B/3 each.
- *     Example B=$3: losers pay $3 each (pot $6), winners get $2 each. ✓
- *   - 2-man wins: 3 losers * B = 3B pot, 2 winners split → 3B/2 each.
- *     Example B=$2: losers pay $2 each (pot $6), winners get $3 each. ✓
- *
- * The spec's stated "2-man team each risks (3/2)*base" is equivalent:
- * a 2-man winner receives 3B/2 = 1.5B, same as risking 1.5B and doubling
- * on a win. Either framing produces identical cash flow.
- *
- * On a push, returns zero-sum results and adds the hole's baseBet to
- * the rolling carry window. Caller is responsible for applying any
- * hammer multiplier BEFORE calling this function — `effectiveBet` is
- * post-hammer.
- */
 export interface FlipPayoutResult {
   push: boolean;
   winningSide: "A" | "B" | null;
+  /**
+   * Total dollars the losing side collectively contributes on a
+   * decided hole (3B), OR the total ante pot on a push (N*B).
+   * Zero on any result where no player-to-pot transfer happened.
+   */
   potFromBet: number;
+  /** Dollars pulled from the rolling window and paid to winners. */
   potFromCarry: number;
   perPlayer: Array<{ id: string; name: string; amount: number }>;
   forfeitedThisHole: number;
@@ -503,17 +516,23 @@ export function calculateFlipHoleResult(args: {
 }): FlipPayoutResult {
   const { teams, teamABest, teamBBest, effectiveBet, window, holeNumber } = args;
   const allPlayers = [...teams.teamA.players, ...teams.teamB.players];
+  const playerCount = allPlayers.length;
 
   if (teamABest === teamBBest) {
-    // Push — carry the hole's bet into the rolling window.
-    const newWindow = appendPushToWindow(window, holeNumber, effectiveBet);
+    // PUSH: every player antes the flat base bet. The full N*B lands
+    // in the rolling window as a single entry. If this push evicts
+    // an older entry, its amount is added to `forfeited` (real money
+    // out of the closed system permanently).
+    const perPlayerAnte = effectiveBet;
+    const totalAntePot = perPlayerAnte * playerCount;
+    const newWindow = appendPushToWindow(window, holeNumber, totalAntePot);
     const forfeitedThisHole = newWindow.forfeited - window.forfeited;
     return {
       push: true,
       winningSide: null,
-      potFromBet: 0,
+      potFromBet: totalAntePot,
       potFromCarry: 0,
-      perPlayer: allPlayers.map(p => ({ id: p.id, name: p.name, amount: 0 })),
+      perPlayer: allPlayers.map(p => ({ id: p.id, name: p.name, amount: -perPlayerAnte })),
       forfeitedThisHole,
       newWindow,
     };
@@ -522,23 +541,37 @@ export function calculateFlipHoleResult(args: {
   const winningSide: "A" | "B" = teamABest < teamBBest ? "A" : "B";
   const winTeam = winningSide === "A" ? teams.teamA : teams.teamB;
   const loseTeam = winningSide === "A" ? teams.teamB : teams.teamA;
-  const { total: carryTotal, cleared: newWindow } = claimRollingCarryWindow(window);
 
-  // Losers each pay effectiveBet. Winners split (losers_count * effectiveBet + carry).
-  const potFromBet = loseTeam.players.length * effectiveBet;
-  const pot = potFromBet + carryTotal;
-  const winnerShare = pot / winTeam.players.length;
-  const loserShare = effectiveBet; // each loser pays the flat bet
+  // DECIDED: losers pay asymmetrically. No flat ante — the losers'
+  // contribution IS the hole's money-out-of-pocket. 3-man loser pays
+  // B; 2-man loser pays 1.5B. Either side's collective loss = 3B.
+  //
+  // Fallback: for any non-3-and-non-2 team split (legacy flip rounds
+  // that were 2v2 / 3v3 from before the 5-player-only lock), we keep
+  // the symmetric flat-B path so historical replay stays sane.
+  let loserPerPlayer: number;
+  if (loseTeam.players.length === 3) {
+    loserPerPlayer = effectiveBet;
+  } else if (loseTeam.players.length === 2) {
+    loserPerPlayer = (effectiveBet * 3) / 2;
+  } else {
+    loserPerPlayer = effectiveBet; // legacy fallback
+  }
+  const totalFromLosers = loserPerPlayer * loseTeam.players.length;
+
+  const { total: carryTotal, cleared: newWindow } = claimRollingCarryWindow(window);
+  const potTotal = totalFromLosers + carryTotal;
+  const winnerShare = potTotal / winTeam.players.length;
 
   const perPlayer = allPlayers.map(p => {
     const onWinTeam = winTeam.players.some(w => w.id === p.id);
-    return { id: p.id, name: p.name, amount: onWinTeam ? winnerShare : -loserShare };
+    return { id: p.id, name: p.name, amount: onWinTeam ? winnerShare : -loserPerPlayer };
   });
 
   return {
     push: false,
     winningSide,
-    potFromBet,
+    potFromBet: totalFromLosers,
     potFromCarry: carryTotal,
     perPlayer,
     forfeitedThisHole: 0,
