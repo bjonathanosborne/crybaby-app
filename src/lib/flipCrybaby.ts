@@ -21,7 +21,7 @@
 //     crybaby concept doesn't apply. Caller handles the fallback.
 // ============================================================
 
-import type { HoleResult, Player } from "@/lib/gameEngines";
+import type { GameMode, HoleResult, Player } from "@/lib/gameEngines";
 
 export interface CrybabyIdentification {
   /** Player id of the crybaby, or null if no one is in the hole. */
@@ -221,4 +221,84 @@ export function canInitiateCrybabyHammer(args: HammerInitiatorGateArgs): boolean
   // partner for this hole.
   return currentUserPlayerId === crybabyState!.crybaby
     || currentUserPlayerId === hole.partner;
+}
+
+// ============================================================
+// Two-component settlement split (C7).
+//
+// For Flip rounds, `round_settlements.amount` stores the combined
+// hole-1-to-18 total, but we also persist the base-game half
+// (holes 1-15) and the crybaby half (holes 16-18) separately so
+// audit + round-summary UI can show the breakdown.
+//
+// Invariant: for any Flip round + player,
+//   amount = baseAmount + crybabyAmount
+//
+// All-square rounds (crybabyState.crybaby === "") never run a
+// crybaby sub-game — holes 16-18 play as base-game continuation.
+// Callers pass those rounds with `crybabyWasPlayed: false` so all
+// 18 holes sum into `baseAmount` and `crybabyAmount` is 0
+// (NOT null) — making the UI branch "round has no crybaby leg"
+// visible as a genuine $0 rather than missing data.
+//
+// Non-Flip rounds (DOC / Solo / Nassau / Skins / Custom / Wolf) do
+// NOT call this function — their settlements go through the
+// existing single-amount path, and the two new DB columns stay NULL.
+// ============================================================
+
+export interface FlipSettlementSplit {
+  /** Sum of per-player amounts over holes 1-15 (base Flip game). */
+  baseAmount: number;
+  /**
+   * Sum of per-player amounts over holes 16-18.
+   * - Crybaby played: money from calculateCrybabyHoleResult.
+   * - Crybaby skipped (all-square): money from continued base-game
+   *   holes 16-18 (3v2 payouts + rolling carry).
+   */
+  crybabyAmount: number;
+}
+
+export function computeFlipSettlementSplit(
+  holeResults: (HoleResult & { hole: number })[],
+  playerId: string,
+  /**
+   * Whether a crybaby sub-game was actually played. Drives a purely
+   * cosmetic choice — the math is identical either way (sum by hole
+   * range). When false AND round played 16-18, those holes still go
+   * into `crybabyAmount`… no wait — spec says all-square's 16-18
+   * money rolls into `baseAmount`. See crybabyWasPlayed=false branch.
+   */
+  crybabyWasPlayed: boolean,
+): FlipSettlementSplit {
+  if (!crybabyWasPlayed) {
+    // All-square sentinel: every played hole is base-game. Crybaby
+    // column explicitly $0 so consumers can render "no crybaby leg
+    // this round" rather than treat the field as missing.
+    let base = 0;
+    for (const hr of holeResults) {
+      const pr = hr.playerResults.find(p => p.id === playerId);
+      if (pr) base += pr.amount;
+    }
+    return { baseAmount: base, crybabyAmount: 0 };
+  }
+
+  let base = 0;
+  let crybaby = 0;
+  for (const hr of holeResults) {
+    const pr = hr.playerResults.find(p => p.id === playerId);
+    if (!pr) continue;
+    if (hr.hole <= 15) base += pr.amount;
+    else crybaby += pr.amount;
+  }
+  return { baseAmount: base, crybabyAmount: crybaby };
+}
+
+/**
+ * Does this round type populate the two-component split at settlement
+ * time? Callers read this to decide whether to attach `baseAmount` +
+ * `crybabyAmount` to each SettlementRow or leave them undefined
+ * (which lands as NULL in the DB).
+ */
+export function roundHasFlipSettlementSplit(gameMode: GameMode): boolean {
+  return gameMode === "flip";
 }

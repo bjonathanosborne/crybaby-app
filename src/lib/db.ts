@@ -966,7 +966,22 @@ export async function loadUserScoreDistribution(userId?: string): Promise<UserSc
 }
 
 // Insert settlements after a round completes
-export async function insertSettlements(roundId: string, settlements: { userId?: string; guestName?: string; amount: number }[]) {
+export async function insertSettlements(
+  roundId: string,
+  settlements: {
+    userId?: string | null;
+    guestName?: string | null;
+    amount: number;
+    /**
+     * Flip-only: per-player net from holes 1-15. Optional so non-Flip
+     * callers (DOC / Solo / etc.) can omit — undefined lands as NULL
+     * in the DB via the column's default.
+     */
+    baseAmount?: number;
+    /** Flip-only: per-player net from holes 16-18. Same NULL-on-omit semantics. */
+    crybabyAmount?: number;
+  }[],
+) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
@@ -984,6 +999,10 @@ export async function insertSettlements(roundId: string, settlements: { userId?:
     user_id: s.userId || null,
     guest_name: s.guestName || null,
     amount: s.amount,
+    // Only set the split columns when callers provide them — Flip
+    // populates both; other modes leave them NULL via the column default.
+    ...(s.baseAmount !== undefined ? { base_amount: s.baseAmount } : {}),
+    ...(s.crybabyAmount !== undefined ? { crybaby_amount: s.crybabyAmount } : {}),
   }));
 
   const { error } = await supabase.from("round_settlements").insert(inserts);
@@ -1175,6 +1194,10 @@ export interface RoundDetailBundle {
     user_id: string | null;
     guest_name: string | null;
     amount: number;
+    /** Flip-only: holes 1-15 per-player net. NULL on non-Flip settlements. */
+    base_amount?: number | null;
+    /** Flip-only: holes 16-18 per-player net. NULL on non-Flip settlements. */
+    crybaby_amount?: number | null;
     is_manual_adjustment?: boolean | null;
     notes?: string | null;
   }>;
@@ -1192,7 +1215,7 @@ export async function loadRoundDetail(roundId: string): Promise<RoundDetailBundl
   const [roundRes, playersRes, settleRes, eventRes] = await Promise.all([
     supabase.from("rounds").select("*").eq("id", roundId).maybeSingle(),
     supabase.from("round_players").select("*").eq("round_id", roundId).order("created_at"),
-    supabase.from("round_settlements").select("user_id, guest_name, amount, is_manual_adjustment, notes").eq("round_id", roundId),
+    supabase.from("round_settlements").select("user_id, guest_name, amount, base_amount, crybaby_amount, is_manual_adjustment, notes").eq("round_id", roundId),
     supabase.from("round_events").select("id, hole_number, event_type, event_data, created_at").eq("round_id", roundId).order("created_at"),
   ]);
   if (roundRes.error) throw roundRes.error;
@@ -1222,6 +1245,12 @@ export async function loadRoundDetail(roundId: string): Promise<RoundDetailBundl
       user_id: s.user_id,
       guest_name: s.guest_name,
       amount: Number(s.amount),
+      base_amount: s.base_amount === null || s.base_amount === undefined
+        ? null
+        : Number(s.base_amount),
+      crybaby_amount: s.crybaby_amount === null || s.crybaby_amount === undefined
+        ? null
+        : Number(s.crybaby_amount),
       is_manual_adjustment: s.is_manual_adjustment ?? null,
       notes: s.notes ?? null,
     })),

@@ -19,8 +19,8 @@ import FlipReel from "@/components/flip/FlipReel";
 import FlipTeamsBadge from "@/components/flip/FlipTeamsBadge";
 import CrybabyTransition from "@/components/flip/CrybabyTransition";
 import CrybabyHoleSetup from "@/components/flip/CrybabyHoleSetup";
-import { commitFlipTeams, calculateCrybabyHoleResult, type TeamInfo as FlipTeamInfo, type FlipConfig as FlipConfigType, type CrybabyState as CrybabyStateType, type CrybabyHoleChoice } from "@/lib/gameEngines";
-import { computeBaseGameBalances, canInitiateCrybabyHammer, type CrybabyIdentification } from "@/lib/flipCrybaby";
+import { commitFlipTeams, calculateCrybabyHoleResult, type TeamInfo as FlipTeamInfo, type FlipConfig as FlipConfigType, type CrybabyState as CrybabyStateType, type CrybabyHoleChoice, type GameMode, type HoleResult } from "@/lib/gameEngines";
+import { computeBaseGameBalances, canInitiateCrybabyHammer, computeFlipSettlementSplit, roundHasFlipSettlementSplit, type CrybabyIdentification } from "@/lib/flipCrybaby";
 import { supabase } from "@/integrations/supabase/client";
 import RoundLiveFeed from "@/components/RoundLiveFeed";
 import {
@@ -1322,11 +1322,43 @@ export default function CrybabActiveRound() {
           return;
         }
 
-        const settlementData = round.players.map(p => ({
-          userId: p.userId || null,
-          guestName: p.userId ? null : p.name,
-          amount: totals[p.id] || 0,
-        }));
+        // C7: Flip rounds persist both the combined `amount` AND the
+        // two-component split (base_amount / crybaby_amount) so audit
+        // + round-summary can show "how much of your total came from
+        // the base game vs. the crybaby comeback". Non-Flip rounds
+        // leave the split fields undefined → NULL in the DB.
+        //
+        // All-square sentinel (crybabyState.crybaby === ""): pass
+        // `crybabyWasPlayed: false` so holes 16-18 money rolls into
+        // baseAmount and crybabyAmount is an explicit $0 rather than
+        // NULL. See computeFlipSettlementSplit for the branching.
+        const splitThisRound = roundHasFlipSettlementSplit(round.gameMode as GameMode);
+        const crybabyWasPlayed = Boolean(
+          crybabyState && crybabyState.crybaby && crybabyState.crybaby !== "",
+        );
+        const settlementData = round.players.map(p => {
+          const base: {
+            userId: string | null;
+            guestName: string | null;
+            amount: number;
+            baseAmount?: number;
+            crybabyAmount?: number;
+          } = {
+            userId: p.userId || null,
+            guestName: p.userId ? null : p.name,
+            amount: totals[p.id] || 0,
+          };
+          if (splitThisRound) {
+            const split = computeFlipSettlementSplit(
+              holeResults as (HoleResult & { hole: number })[],
+              p.id,
+              crybabyWasPlayed,
+            );
+            base.baseAmount = split.baseAmount;
+            base.crybabyAmount = split.crybabyAmount;
+          }
+          return base;
+        });
         const settlementResult = await persist.persistSettlements(roundId, settlementData);
         if (!settlementResult.ok) {
           setCompletionError("settlement");

@@ -98,6 +98,18 @@ export interface SettlementRow {
   userId?: string | null;
   guestName?: string | null;
   amount: number;
+  /**
+   * Flip-only: per-player net from holes 1-15 (base game). Undefined
+   * (→ NULL in DB) for non-Flip rounds. Invariant on Flip:
+   *   amount = baseAmount + crybabyAmount.
+   */
+  baseAmount?: number;
+  /**
+   * Flip-only: per-player net from holes 16-18 (crybaby sub-game
+   * OR base-game continuation in the all-square case). Undefined
+   * (→ NULL in DB) for non-Flip rounds.
+   */
+  crybabyAmount?: number;
 }
 
 // ============================================================================

@@ -31,6 +31,10 @@ import {
   translateToLegacy,
   validateHammerState,
 } from "../_shared/hammerMath.ts";
+import {
+  computeFlipSettlementSplit,
+  roundHasFlipSettlementSplit,
+} from "../_shared/flipCrybaby.ts";
 import type {
   CaptureHammerState,
   HoleHammerState,
@@ -490,14 +494,53 @@ serve(async (req) => {
     // --- If round complete, rewrite settlements ---
     if (completedHoles >= 18) {
       await service.from("round_settlements").delete().eq("round_id", roundId).eq("is_manual_adjustment", false);
-      const settlements = rps.map(rp => ({
-        round_id: roundId,
-        user_id: rp.user_id,
-        guest_name: rp.user_id ? null : rp.guest_name,
-        amount: replay.totals[rp.id] ?? 0,
-        is_manual_adjustment: false,
-        notes: "",
-      }));
+
+      // C7: Flip rounds persist a two-component split (base 1-15 +
+      // crybaby 16-18) alongside the combined `amount`. Non-Flip rounds
+      // leave both columns NULL. All-square Flip rounds
+      // (crybabyState.crybaby === "") roll all 18 holes into
+      // `base_amount` and set `crybaby_amount = 0` explicitly so the
+      // UI can distinguish "no crybaby leg this round" from "data missing".
+      const gameMode = round.game_type as GameMode;
+      const splitThisRound = roundHasFlipSettlementSplit(gameMode);
+      const crybabyStateFromRound = (newGameState.crybabyState || null) as
+        | { crybaby?: string }
+        | null;
+      const crybabyWasPlayed = Boolean(
+        crybabyStateFromRound
+          && typeof crybabyStateFromRound.crybaby === "string"
+          && crybabyStateFromRound.crybaby !== "",
+      );
+
+      const settlements = rps.map(rp => {
+        const base: {
+          round_id: string;
+          user_id: string | null;
+          guest_name: string | null;
+          amount: number;
+          is_manual_adjustment: boolean;
+          notes: string;
+          base_amount?: number;
+          crybaby_amount?: number;
+        } = {
+          round_id: roundId,
+          user_id: rp.user_id,
+          guest_name: rp.user_id ? null : rp.guest_name,
+          amount: replay.totals[rp.id] ?? 0,
+          is_manual_adjustment: false,
+          notes: "",
+        };
+        if (splitThisRound) {
+          const split = computeFlipSettlementSplit(
+            replay.holeResults,
+            rp.id,
+            crybabyWasPlayed,
+          );
+          base.base_amount = split.baseAmount;
+          base.crybaby_amount = split.crybabyAmount;
+        }
+        return base;
+      });
       await service.from("round_settlements").insert(settlements);
     }
 

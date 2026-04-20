@@ -80,9 +80,21 @@ export default function RoundDetailPage(): JSX.Element {
         ? bundle.participant_names[s.user_id] || s.guest_name || "Player"
         : s.guest_name || "Guest",
       amount: s.amount,
+      baseAmount: s.base_amount,
+      crybabyAmount: s.crybaby_amount,
       manual: s.is_manual_adjustment === true,
     }));
   }, [bundle]);
+
+  // C7: Flip rounds get a three-line breakdown per player. A settlement
+  // row has the split iff EITHER base_amount or crybaby_amount is non-null
+  // — the DB schema allows null for legacy/non-Flip rounds so we defensively
+  // check both before switching UI shape.
+  const hasFlipSplit = bundle?.round.game_type === "flip"
+    && bundle?.settlements.some(
+      s => (s.base_amount !== null && s.base_amount !== undefined)
+        || (s.crybaby_amount !== null && s.crybaby_amount !== undefined),
+    );
 
   // --- Render ---
   if (query.isLoading) {
@@ -252,21 +264,71 @@ export default function RoundDetailPage(): JSX.Element {
           <div style={{ fontSize: 11, fontWeight: 700, color: BRAND_BROWN, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
             Settlement
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {settlementRows.map((s, i) => (
-              <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 14, color: "#1E130A" }}>
-                  {s.name}
-                  {s.manual && <span style={{ marginLeft: 6, fontSize: 10, color: "#F59E0B", fontWeight: 700 }}>ADJUSTED</span>}
-                </span>
-                <span style={{
-                  fontFamily: MONO, fontSize: 14, fontWeight: 800,
-                  color: s.amount > 0 ? BRAND_GREEN : s.amount < 0 ? BRAND_RED : BRAND_BROWN,
-                }}>
-                  {s.amount > 0 ? `+$${s.amount}` : s.amount < 0 ? `−$${Math.abs(s.amount)}` : "$0"}
-                </span>
-              </div>
-            ))}
+          <div style={{ display: "flex", flexDirection: "column", gap: hasFlipSplit ? 12 : 6 }}>
+            {settlementRows.map((s, i) => {
+              // C7: Flip rounds show a three-line breakdown per player —
+              // base (holes 1-15), crybaby (holes 16-18), combined total.
+              // Non-Flip rounds use the original single-line layout.
+              if (hasFlipSplit) {
+                const base = typeof s.baseAmount === "number" ? s.baseAmount : null;
+                const crybaby = typeof s.crybabyAmount === "number" ? s.crybabyAmount : null;
+                return (
+                  <div
+                    key={i}
+                    data-testid={`round-detail-settlement-row-${i}`}
+                    data-split="flip"
+                    style={{
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      background: BRAND_SAND_2,
+                      border: `1px solid ${BRAND_BORDER}`,
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: "#1E130A" }}>
+                        {s.name}
+                        {s.manual && <span style={{ marginLeft: 6, fontSize: 10, color: "#F59E0B", fontWeight: 700 }}>ADJUSTED</span>}
+                      </span>
+                      <span
+                        data-testid={`round-detail-settlement-combined-${i}`}
+                        style={{
+                          fontFamily: MONO, fontSize: 16, fontWeight: 800,
+                          color: s.amount > 0 ? BRAND_GREEN : s.amount < 0 ? BRAND_RED : BRAND_BROWN,
+                        }}
+                      >
+                        {s.amount > 0 ? `+$${s.amount}` : s.amount < 0 ? `−$${Math.abs(s.amount)}` : "$0"}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                      <SettlementSplitLine
+                        label="Base game (1-15)"
+                        amount={base}
+                        testId={`round-detail-settlement-base-${i}`}
+                      />
+                      <SettlementSplitLine
+                        label="Crybaby (16-18)"
+                        amount={crybaby}
+                        testId={`round-detail-settlement-crybaby-${i}`}
+                      />
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 14, color: "#1E130A" }}>
+                    {s.name}
+                    {s.manual && <span style={{ marginLeft: 6, fontSize: 10, color: "#F59E0B", fontWeight: 700 }}>ADJUSTED</span>}
+                  </span>
+                  <span style={{
+                    fontFamily: MONO, fontSize: 14, fontWeight: 800,
+                    color: s.amount > 0 ? BRAND_GREEN : s.amount < 0 ? BRAND_RED : BRAND_BROWN,
+                  }}>
+                    {s.amount > 0 ? `+$${s.amount}` : s.amount < 0 ? `−$${Math.abs(s.amount)}` : "$0"}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -347,6 +409,54 @@ function HeaderWithBack({ onBack }: { onBack: () => void }): JSX.Element {
       >
         <ChevronLeft size={18} /> Back
       </button>
+    </div>
+  );
+}
+
+/**
+ * C7: Single line of the Flip settlement split (base 1-15 or crybaby 16-18).
+ * Label on the left in muted brown; signed amount on the right in mono,
+ * green for positive, red for negative, muted "—" when null (legacy rows
+ * that never got the two-component split written).
+ */
+function SettlementSplitLine({
+  label,
+  amount,
+  testId,
+}: {
+  label: string;
+  amount: number | null;
+  testId: string;
+}): JSX.Element {
+  const color =
+    amount === null
+      ? BRAND_BROWN
+      : amount > 0
+        ? BRAND_GREEN
+        : amount < 0
+          ? BRAND_RED
+          : BRAND_BROWN;
+  const display =
+    amount === null
+      ? "—"
+      : amount > 0
+        ? `+$${amount}`
+        : amount < 0
+          ? `−$${Math.abs(amount)}`
+          : "$0";
+  return (
+    <div
+      data-testid={testId}
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "baseline",
+      }}
+    >
+      <span style={{ fontSize: 12, color: BRAND_BROWN }}>{label}</span>
+      <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700, color }}>
+        {display}
+      </span>
     </div>
   );
 }
