@@ -23,6 +23,9 @@ import {
   type Player,
   type ReplayHoleInput,
   type TeamInfo,
+  type FlipState,
+  type FlipConfig,
+  type FlipTeamsInput,
 } from "../_shared/gameEngines.ts";
 import {
   translateToLegacy,
@@ -400,8 +403,24 @@ serve(async (req) => {
       });
     }
 
-    // Flip teams may be stored in game_state
-    const flipTeams = (gameState.flipTeams as TeamInfo | undefined) || null;
+    // Flip-round state lookup.
+    //
+    // Historical bug: prior to 2026-04-20 this read `gameState.flipTeams`,
+    // a field the client never wrote. The client now persists the full
+    // per-hole `flipState` (FlipState shape) + `flipConfig` (FlipConfig
+    // shape) into game_state on every save. Fall back to the old
+    // `flipTeams` field for any legacy rows still carrying it (there are
+    // no Flip rounds in prod as of the fix date, but the fallback keeps
+    // the replay safe under any future historical surprise).
+    let flipTeamsInput: FlipTeamsInput = null;
+    let flipConfigInput: FlipConfig | undefined;
+    if ((round.game_type as GameMode) === 'flip') {
+      const rawFlipState = gameState.flipState as FlipState | undefined;
+      const rawFlipConfig = gameState.flipConfig as FlipConfig | undefined;
+      const rawLegacyFlipTeams = gameState.flipTeams as TeamInfo | undefined;
+      flipTeamsInput = rawFlipState ?? rawLegacyFlipTeams ?? null;
+      flipConfigInput = rawFlipConfig;
+    }
 
     const replayStart = Date.now();
     const replay = replayRound(
@@ -412,7 +431,8 @@ serve(async (req) => {
       holeValue,
       settings,
       replayInputs,
-      flipTeams,
+      flipTeamsInput,
+      flipConfigInput,
     );
     const replayLatencyMs = Date.now() - replayStart;
 

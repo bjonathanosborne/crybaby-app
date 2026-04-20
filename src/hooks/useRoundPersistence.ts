@@ -72,6 +72,16 @@ export interface GameStateSnapshot {
   carryOver: number;
   totals: Record<string, number>;
   hammerHistory?: unknown[];
+  /**
+   * Flip-mode state. Populated only on `flip` rounds. Serialised to
+   * `rounds.course_details.game_state.flipState` JSONB; read back on
+   * reload + by apply-capture on post-round score corrections.
+   */
+  flipState?: unknown;
+  flipConfig?: unknown;
+  crybabyState?: unknown;
+  /** CrybabyActiveRound hammer correction state keyed by hole number. */
+  hammerStateByHole?: Record<number, unknown>;
 }
 
 export interface RoundEventInput {

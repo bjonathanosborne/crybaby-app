@@ -981,7 +981,36 @@ export async function insertSettlements(roundId: string, settlements: { userId?:
 
 // Save round game state (current hole, carry-over, running totals) to course_details JSONB.
 // Called after every hole so a killed/backgrounded app can resume from the right position.
-export async function saveGameState(roundId: string, state: { currentHole: number; carryOver: number; totals: Record<string, number> }): Promise<void> {
+/**
+ * Persisted game-state shape on `rounds.course_details.game_state`.
+ *
+ * Required fields are the scoring essentials that every game mode needs.
+ * Optional fields carry mode-specific state so reload + apply-capture
+ * replay both see the same data the client had in memory:
+ *
+ *   - `hammerHistory`     — DOC / Flip: per-hole hammer depth + fold state.
+ *   - `flipState`         — Flip: per-hole team assignments (replaces
+ *                            the previously-broken `flipTeams` field —
+ *                            apply-capture falls back to that name for
+ *                            any legacy row, but new writes use `flipState`).
+ *   - `flipConfig`        — Flip: setup-time choices (baseBet + carry window).
+ *   - `crybabyState`      — Flip: crybaby sub-game state (holes 16-18).
+ *   - `hammerStateByHole` — CrybabyActiveRound: hammer state by hole number
+ *                            for post-round hammer correction.
+ */
+export interface GameStatePersisted {
+  currentHole: number;
+  carryOver: number;
+  totals: Record<string, number>;
+  hammerHistory?: unknown[];
+  flipState?: unknown;
+  flipConfig?: unknown;
+  crybabyState?: unknown;
+  hammerStateByHole?: Record<number, unknown>;
+  [key: string]: unknown;
+}
+
+export async function saveGameState(roundId: string, state: GameStatePersisted): Promise<void> {
   const { data: round, error: readError } = await supabase
     .from("rounds")
     .select("course_details")
