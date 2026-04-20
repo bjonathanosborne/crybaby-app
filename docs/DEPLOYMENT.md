@@ -84,6 +84,19 @@ console.log(r.status, await r.text());
 
 ---
 
+## Live-apply log
+
+Migrations applied out-of-band to production (not recorded in `supabase_migrations.schema_migrations` at the time of apply). Newest-first.
+
+| Date (UTC) | Migration | How | Notes |
+|---|---|---|---|
+| 2026-04-20 | `20260409000000_add_user_stats_function.sql` | Management API (dashboard session token) | Function was missing from prod — never previously applied. Caused `StatsPage` to hit PGRST202 404 on `get_user_stats` RPC, which crashed the whole `Promise.all`, rendering "0 rounds / no pie chart / no wins-losses" empty state. Applied via `POST /v1/projects/<ref>/database/query`. Verified: `curl /rest/v1/rpc/get_user_stats` returns `rounds_played=1, avg_score=71.0, best_score=71` for Jonathan. |
+| 2026-04-19 | `20260419050000_fix_get_user_score_distribution.sql` | Management API (dashboard session token) | `CREATE OR REPLACE` errored `42P13` against the pre-existing `20260419040000` function; used `DROP FUNCTION IF EXISTS` + `CREATE`. Migration file in repo has since been updated to this pattern. |
+
+Older out-of-band applies (`20260415+` through `20260419040000`) pre-date this log and were applied by Jonathan via the Supabase SQL editor. The `schema_migrations` reconciliation migration (`20260420000000_*` in this PR) back-fills all of them.
+
+---
+
 ## Edge functions
 
 Deployed separately from frontend + migrations. Check current deployed versions with:
