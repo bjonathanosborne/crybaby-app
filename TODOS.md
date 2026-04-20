@@ -36,7 +36,7 @@ architecture.
 **Hidden from setup; legacy rounds still load and replay:**
 - Nassau
 - Skins
-- Flip
+- ~~Flip~~ — un-hidden 2026-04-20 via PR #16 with full per-hole re-flip + crybaby sub-game + Model C accounting. See `supabase/functions/_shared/gameEngines.ts` Flip section.
 - Custom
 - Wolf (separately deferred; needs partner-pick capture)
 
@@ -48,7 +48,7 @@ the flip still work.
 
 **Un-hide order after DOC validates on-course:**
 1. Nassau + Skins — simpler money math, no team logic. Low risk.
-2. Flip — DOC variant with random teams; low marginal risk once DOC works.
+2. ~~Flip — DOC variant with random teams; low marginal risk once DOC works.~~ — Done 2026-04-20, PR #16. Flip ended up being a much bigger build than "DOC variant": per-hole reshuffle, rolling-window carry-over with forfeit accounting, separate crybaby sub-game on holes 16-18.
 3. Custom — freeform, least-tested path.
 4. Wolf — needs partner-pick capture work (see section below).
 

@@ -15,15 +15,15 @@ import type { GameMode } from "@/lib/gameEngines";
  * visibility flags.
  */
 
-describe("GAME_FORMATS — visible set (DOC-focused testing surface)", () => {
-  it("only DOC and Solo are visible in the setup picker", () => {
+describe("GAME_FORMATS — visible set (DOC-focused testing surface, Flip un-hidden 2026-04-20)", () => {
+  it("DOC, Flip, and Solo are visible in the setup picker", () => {
     const visible = GAME_FORMATS.filter(g => !g.hidden).map(g => g.id).sort();
-    expect(visible).toEqual(["drivers_others_carts", "solo"]);
+    expect(visible).toEqual(["drivers_others_carts", "flip", "solo"]);
   });
 
-  it("every other mode exists in the list with hidden: true", () => {
+  it("every other mode (Nassau, Skins, Wolf, Custom) exists with hidden: true", () => {
     const hidden = GAME_FORMATS.filter(g => g.hidden === true).map(g => g.id).sort();
-    expect(hidden).toEqual(["custom", "flip", "nassau", "skins", "wolf"]);
+    expect(hidden).toEqual(["custom", "nassau", "skins", "wolf"]);
   });
 
   it("GAME_FORMATS is the single source of truth — no duplicate ids", () => {
