@@ -55,6 +55,137 @@ export interface GameSettings {
   pressType: string;
 }
 
+// ============================================================
+// FLIP MODE — full type system
+//
+// Flip is a per-hole team game exclusive to 5-player rounds.
+// Holes 1-15 are the base game (random 3v2 reshuffled per decided
+// hole, teams stay on a push, rolling-window carry-over). Holes
+// 16-18 are the crybaby sub-game (worst-balance player picks a
+// partner + bet each hole, 2v3 with custom payout math).
+//
+// All Flip state is serialised to
+// `rounds.course_details.game_state.flipState` JSONB. There is no
+// schema migration for the state itself — it's a typed JSON blob.
+// A separate tiny migration adds nullable `base_amount` and
+// `crybaby_amount` columns to `round_settlements` so the two
+// settlement components are queryable at audit time.
+// ============================================================
+
+/**
+ * Scorekeeper's setup-wizard choices for a Flip round.
+ *
+ * `baseBet`: per-hole stake in the base game (holes 1-15). Enforced
+ *            to be an even integer in dollars by the setup wizard
+ *            AND by the engine (both validate — UI is the fast path,
+ *            engine is the guarantee).
+ *
+ * `carryOverWindow`: size of the rolling push-carry queue. When the
+ *                    window fills, the oldest push-hole's money is
+ *                    forfeited (goes to no one) on the next push.
+ *                    `"all"` disables the eviction (infinite window).
+ */
+export interface FlipConfig {
+  baseBet: number;
+  carryOverWindow: number | "all";
+}
+
+/**
+ * Per-hole Flip team assignments for the base game (holes 1-15).
+ * Crybaby-phase teams are stored on `CrybabyState.byHole`, NOT here.
+ *
+ * `teamsByHole` is keyed by hole number (1..15). Missing keys mean
+ * the scorekeeper hasn't tapped the Flip button for that hole yet.
+ */
+export interface FlipState {
+  teamsByHole: Record<number, TeamInfo>;
+  /**
+   * The last hole for which teams have been committed. Used as a
+   * guard so the UI can't render a hole whose teams aren't locked
+   * in (would be a race condition on the flip button tap).
+   */
+  currentHole: number;
+}
+
+/**
+ * Crybaby sub-game state (holes 16-18).
+ *
+ * Determined between hole 15 and hole 16 from the base-game balance.
+ * The crybaby = the player with the most-negative hole-15 balance.
+ * If two or more players are tied for most-negative, a deterministic
+ * tiebreaker runs (seeded by `round.id` so an audit replay of the
+ * same round always picks the same crybaby).
+ *
+ * `losingBalance` is the crybaby's negative dollar amount after 15
+ * holes, stored as a POSITIVE number for cap math clarity. The 50%
+ * cap on per-hole bets is `floor(losingBalance / 2)` rounded DOWN
+ * to the nearest even dollar — AND computed ONCE at hole 15, never
+ * updated during crybaby play even if the crybaby's running balance
+ * swings positive.
+ *
+ * `byHole` holds the crybaby's choices per crybaby hole (16/17/18):
+ * their bet, their partner, and the resulting 2v3 team assignment.
+ */
+export interface CrybabyState {
+  /** Player id of the crybaby. Set once between hole 15 and hole 16. */
+  crybaby: string;
+  /** Crybaby's base-game losing balance (positive dollars). */
+  losingBalance: number;
+  /** 50% cap, pre-computed at hole 15. floor(losingBalance / 2) rounded DOWN to even dollars. */
+  maxBetPerHole: number;
+
+  /** Per-hole crybaby choices. Keys are hole numbers 16, 17, 18. */
+  byHole: Record<number, CrybabyHoleChoice>;
+
+  /**
+   * Audit record if a tiebreaker ran at hole 15. Undefined when the
+   * crybaby was unambiguous (single most-negative player).
+   *
+   * The `seed` field lets a future session replay the tiebreaker
+   * deterministically. We store the seed SOURCE (e.g., the round id)
+   * rather than the derived number so humans can verify the choice
+   * was made by rule rather than by accident.
+   */
+  tiebreakOutcome?: {
+    tied: string[];
+    winner: string;
+    seedSource: string;
+  };
+}
+
+export interface CrybabyHoleChoice {
+  /** Even-dollar bet the crybaby chose for this hole. <= maxBetPerHole. */
+  bet: number;
+  /** Player id of the crybaby's chosen partner. One of the 4 non-crybaby players. */
+  partner: string;
+  /**
+   * Team split for this crybaby hole:
+   *   teamA = [crybaby, partner]       (the 2-man team)
+   *   teamB = [other 3]                (the 3-man team)
+   * Recorded here rather than recomputed so it survives any post-round
+   * player-order changes and any partner-name edits.
+   */
+  teams: TeamInfo;
+}
+
+/**
+ * Rolling-window carry-over queue for the Flip base game.
+ *
+ * Unlike DOC/Nassau's scalar carry-over (a single accumulator that
+ * zeroes on a decided hole), Flip's carry is a FIFO queue of push
+ * entries. When the queue grows beyond `windowSize`, the oldest
+ * entry is evicted and its money is FORFEITED (goes to no one).
+ *
+ * `forfeited` is a running total of money that has fallen off the
+ * window over the course of the round — strictly for audit display
+ * ("$14 fell into the ether on hole 12"), never paid out.
+ */
+export interface RollingCarryWindow {
+  entries: Array<{ holeNumber: number; amount: number }>;
+  forfeited: number;
+  windowSize: number | "all";
+}
+
 // --- HANDICAP STROKES ---
 export function getStrokesOnHole(playerHandicap: number, lowestHandicap: number, holeHandicapRank: number, handicapPercent = 100): number {
   const adjustedHandicap = Math.round(playerHandicap * handicapPercent / 100);
