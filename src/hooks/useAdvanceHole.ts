@@ -7,7 +7,15 @@ import type {
   GameStateSnapshot,
 } from "@/hooks/useRoundPersistence";
 import type { CaptureCadence } from "@/lib/captureCadence";
-import type { HoleResult, Player, TeamInfo } from "@/lib/gameEngines";
+import {
+  advanceFlipState,
+  appendPushToWindow,
+  claimRollingCarryWindow,
+  initRollingCarryWindow,
+  type HoleResult,
+  type Player,
+  type TeamInfo,
+} from "@/lib/gameEngines";
 
 // ============================================================================
 // useAdvanceHole — composite hook that sequences
@@ -161,6 +169,24 @@ export function useAdvanceHole(args: UseAdvanceHoleArgs): UseAdvanceHoleReturn {
       nassauTeams,
     });
 
+    // Flip: compute next FlipState + RollingCarryWindow transitions here
+    // (outside the `if (roundId)` block) so they can be committed to React
+    // state even on non-persistent (guest / no-round-id) flows.
+    let nextFlipState = prev.flipState;
+    let nextRollingCarryWindow = prev.rollingCarryWindow;
+    if (gameMode === 'flip' && state.currentHole <= 15) {
+      nextFlipState = advanceFlipState(prev.flipState, state.currentHole, !!result.push, players);
+      const existingWindow = prev.rollingCarryWindow
+        ?? initRollingCarryWindow(prev.flipConfig?.carryOverWindow ?? 'all');
+      if (result.push) {
+        const baseBet = prev.flipConfig?.baseBet ?? holeValue;
+        const potThisHole = baseBet * players.length;
+        nextRollingCarryWindow = appendPushToWindow(existingWindow, state.currentHole, potThisHole);
+      } else {
+        nextRollingCarryWindow = claimRollingCarryWindow(existingWindow).cleared;
+      }
+    }
+
     // 3. Persist: player scores (per player) + round game-state snapshot,
     //    in parallel. Each player's scores are written separately to match
     //    the existing db.ts signature.
@@ -190,6 +216,9 @@ export function useAdvanceHole(args: UseAdvanceHoleArgs): UseAdvanceHoleReturn {
         carryOver: nextSnapshot.carryOver,
         totals: nextSnapshot.totals,
         hammerHistory: nextSnapshot.hammerHistory,
+        flipState: nextFlipState,
+        flipConfig: prev.flipConfig ?? undefined,
+        rollingCarryWindow: nextRollingCarryWindow ?? undefined,
       };
       persistOps.push(
         persist
@@ -224,9 +253,14 @@ export function useAdvanceHole(args: UseAdvanceHoleArgs): UseAdvanceHoleReturn {
     state.setHammerPending(false);
     state.setLastHammerBy(null);
     state.setNassauState(nextSnapshot.nassauState);
+    // Flip: commit the per-hole team + rolling-window transitions. No-op
+    // for non-Flip rounds (nextFlipState === prev.flipState, same for the
+    // window) so the setter runs with identical input — React short-circuits.
+    state.setFlipState(nextFlipState);
+    state.setRollingCarryWindow(nextRollingCarryWindow);
     state.setCurrentHole(nextSnapshot.currentHole);
 
-    return { ok: true, snapshot: nextSnapshot };
+    return { ok: true, snapshot: { ...nextSnapshot, flipState: nextFlipState, rollingCarryWindow: nextRollingCarryWindow } };
   }, [
     isBlockedOnPhoto, state, gameMode, players, holeValue, teams, nassauTeams,
     roundId, persist, cadenceReason,

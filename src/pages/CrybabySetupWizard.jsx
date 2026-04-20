@@ -729,6 +729,12 @@ export default function CrybabSetupWizard() {
   const [userCourses, setUserCourses] = useState([]);
   const [showAddClub, setShowAddClub] = useState(false);
   const [holeValue, setHoleValue] = useState(5);
+  // Flip-specific config (C4B). Only consumed when selectedFormat === 'flip'.
+  //   baseBet: even integer in dollars (validated below + in engine).
+  //   carryOverWindow: 1 | 2 | 3 | 4 | 5 | "all". No default — scorekeeper
+  //   must explicitly choose before advancing past step 3.
+  const [flipBaseBet, setFlipBaseBet] = useState(2);
+  const [flipCarryWindow, setFlipCarryWindow] = useState(null);
   const [enabledMechanics, setEnabledMechanics] = useState(new Set());
   const [mechanicSettings, setMechanicSettings] = useState({
     hammer: { initiator: "Losing team only", maxDepth: "∞" },
@@ -849,12 +855,23 @@ export default function CrybabSetupWizard() {
     c.city.toLowerCase().includes(courseSearch.toLowerCase())
   );
 
+  // Flip config validation: bet must be even-positive AND window must be chosen.
+  const flipBetIsValid = flipBaseBet > 0 && flipBaseBet % 2 === 0;
+  const flipWindowIsChosen = flipCarryWindow !== null;
+  const flipConfigReady = flipBetIsValid && flipWindowIsChosen;
+
   const canProceed = () => {
     switch (step) {
       case 0: return !!selectedFormat;
       case 1: return players.filter(p => p.name.trim()).length >= (format?.players.min || 2);
       case 2: return !!course && (!course.tees?.length || !!selectedTee);
-      case 3: return holeValue > 0;
+      case 3:
+        // Flip requires explicit base-bet + window selection before
+        // proceeding. Other modes just need a positive hole value.
+        if (selectedFormat === "flip") {
+          return flipConfigReady;
+        }
+        return holeValue > 0;
       case 4: return true;
       default: return false;
     }
@@ -903,17 +920,25 @@ export default function CrybabSetupWizard() {
     }
     setSaving(true);
     try {
+      // Flip mode: pass the scorekeeper's base-bet + carry-over window
+      // choice through to createRound so db.ts can seed
+      // course_details.game_state.flipConfig on the new round.
+      const flipConfig = selectedFormat === "flip"
+        ? { baseBet: flipBaseBet, carryOverWindow: flipCarryWindow }
+        : null;
+
       const roundId = await createRound({
         gameType: selectedFormat,
         course,
         courseDetails: course,
         stakes: `$${holeValue}/hole`,
-        holeValue,
+        holeValue: selectedFormat === "flip" ? flipBaseBet : holeValue,
         players,
         mechanics: enabledMechanics,
         mechanicSettings,
         privacy,
         scorekeeperMode: true,
+        flipConfig,
       });
       window.location.href = `/round?id=${roundId}`;
     } catch (err) {
@@ -1193,6 +1218,127 @@ export default function CrybabSetupWizard() {
               Set the Stakes
             </div>
 
+            {/* Flip-specific config: per-player base bet (even) + rolling carry-over window.
+                Appears instead of the generic Hole Value picker because Flip's
+                bet unit (B) drives different math (3v2 asymmetric payout,
+                rolling-window carry with forfeit). */}
+            {selectedFormat === "flip" && (
+              <div
+                data-testid="flip-config-panel"
+                style={{
+                  background: "#FAF5EC", borderRadius: 16, padding: "20px 20px",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                  display: "flex", flexDirection: "column", gap: 18,
+                }}
+              >
+                <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016" }}>
+                  Flip Settings
+                </div>
+
+                {/* Base bet — even dollars only */}
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#8B7355", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>
+                    Base Bet (per player, per push)
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20 }}>
+                    <button
+                      type="button"
+                      data-testid="flip-bet-decrement"
+                      onClick={() => setFlipBaseBet(Math.max(2, flipBaseBet - 2))}
+                      style={{
+                        width: 48, height: 48, borderRadius: 24, border: "none",
+                        background: "#EDE7D9", cursor: flipBaseBet <= 2 ? "not-allowed" : "pointer",
+                        fontSize: 22, fontWeight: 700, color: "#8B7355",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        opacity: flipBaseBet <= 2 ? 0.5 : 1,
+                      }}
+                    >−</button>
+                    <div
+                      data-testid="flip-bet-value"
+                      style={{
+                        fontFamily: mono, fontSize: 48, fontWeight: 800, color: "#1E130A",
+                        letterSpacing: "-0.03em", minWidth: 100, textAlign: "center",
+                      }}
+                    >
+                      ${flipBaseBet}
+                    </div>
+                    <button
+                      type="button"
+                      data-testid="flip-bet-increment"
+                      onClick={() => setFlipBaseBet(flipBaseBet + 2)}
+                      style={{
+                        width: 48, height: 48, borderRadius: 24, border: "none",
+                        background: "#2D5016", cursor: "pointer", fontSize: 22, fontWeight: 700, color: "#fff",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}
+                    >+</button>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 10 }}>
+                    {[2, 4, 6, 10, 20].map(v => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setFlipBaseBet(v)}
+                        style={{
+                          padding: "6px 14px", borderRadius: 8, border: "none", cursor: "pointer",
+                          fontFamily: mono, fontSize: 12, fontWeight: 700,
+                          background: flipBaseBet === v ? "#1E130A" : "#EDE7D9",
+                          color: flipBaseBet === v ? "#fff" : "#8B7355",
+                        }}
+                      >${v}</button>
+                    ))}
+                  </div>
+                  <div style={{ marginTop: 8, textAlign: "center", fontSize: 11, color: "#A8957B" }}>
+                    Even dollars only. On a push, every player antes ${flipBaseBet} into the pot.
+                  </div>
+                  {!flipBetIsValid && (
+                    <div data-testid="flip-bet-error" style={{ marginTop: 6, textAlign: "center", fontSize: 11, color: "#DC2626", fontWeight: 600 }}>
+                      Bet must be even dollars.
+                    </div>
+                  )}
+                </div>
+
+                {/* Carry-over window size */}
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#8B7355", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>
+                    Carry-Over Window
+                  </div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {[1, 2, 3, 4, 5, "all"].map(v => (
+                      <button
+                        key={String(v)}
+                        type="button"
+                        data-testid={`flip-window-${v}`}
+                        onClick={() => setFlipCarryWindow(v)}
+                        aria-pressed={flipCarryWindow === v}
+                        style={{
+                          flex: "1 0 auto",
+                          padding: "10px 14px", borderRadius: 10, border: "none", cursor: "pointer",
+                          fontFamily: mono, fontSize: 13, fontWeight: 700,
+                          background: flipCarryWindow === v ? "#2D5016" : "#EDE7D9",
+                          color: flipCarryWindow === v ? "#fff" : "#8B7355",
+                        }}
+                      >
+                        {v === "all" ? "All" : String(v)}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ marginTop: 8, textAlign: "center", fontSize: 11, color: "#A8957B", lineHeight: 1.4 }}>
+                    How many pushed holes roll forward before the oldest falls off.<br />
+                    &quot;All&quot; = no forfeit; any finite window = oldest evicts on the Nth+1 push.
+                  </div>
+                  {!flipWindowIsChosen && (
+                    <div data-testid="flip-window-error" style={{ marginTop: 6, textAlign: "center", fontSize: 11, color: "#DC2626", fontWeight: 600 }}>
+                      Pick a window size to continue.
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Hole Value — hidden in Flip mode (baseBet replaces it). */}
+            {selectedFormat !== "flip" && (
+            <>
             {/* Hole Value */}
             <div style={{
               background: "#FAF5EC", borderRadius: 16, padding: "20px 20px",
@@ -1237,6 +1383,8 @@ export default function CrybabSetupWizard() {
                 Max exposure: ~${holeValue * (format?.defaultHoles || 18) * 3}
               </div>
             </div>
+            </>
+            )}
 
             {/* Mechanics */}
             <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginTop: 4 }}>

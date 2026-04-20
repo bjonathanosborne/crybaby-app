@@ -44,15 +44,15 @@ export const GAME_FORMATS: GameFormat[] = [
   {
     id: "flip",
     name: "Flip",
-    players: { min: 3, max: 6 },
-    description: "Coin flip before each hole. Uneven teams with multiplied stakes. Crybaby rules apply.",
+    // Locked to exactly 5 players. The 3v2 split is core to the game;
+    // other counts would produce 2v2 / 3v3 / 3v4 with different payout
+    // math. Setup wizard enforces this with an explicit error state.
+    players: { min: 5, max: 5 },
+    description: "Per-hole coin flip — random 3v2. Push keeps teams. Crybaby comeback on holes 16–18.",
     mechanics: ["hammer", "crybaby", "birdie_bonus", "pops"],
     defaultHoles: 18,
     teamStructure: "coin_flip",
     requiresCarts: false,
-    // Hidden for DOC-only testing surface. See TODOS.md "Testing phase:
-    // single-game surface". Legacy Flip rounds still load + replay.
-    hidden: true,
   },
   {
     id: "nassau",

@@ -15,6 +15,12 @@ import CapturePrompt from "@/components/capture/CapturePrompt";
 import CaptureFlow from "@/components/capture/CaptureFlow";
 import EditHammerModal from "@/components/capture/hammer/EditHammerModal";
 import FinalPhotoGate from "@/components/FinalPhotoGate";
+import FlipReel from "@/components/flip/FlipReel";
+import FlipTeamsBadge from "@/components/flip/FlipTeamsBadge";
+import CrybabyTransition from "@/components/flip/CrybabyTransition";
+import CrybabyHoleSetup from "@/components/flip/CrybabyHoleSetup";
+import { commitFlipTeams, calculateCrybabyHoleResult, type TeamInfo as FlipTeamInfo, type FlipConfig as FlipConfigType, type CrybabyState as CrybabyStateType, type CrybabyHoleChoice, type GameMode, type HoleResult } from "@/lib/gameEngines";
+import { computeBaseGameBalances, canInitiateCrybabyHammer, computeFlipSettlementSplit, roundHasFlipSettlementSplit, type CrybabyIdentification } from "@/lib/flipCrybaby";
 import { supabase } from "@/integrations/supabase/client";
 import RoundLiveFeed from "@/components/RoundLiveFeed";
 import {
@@ -23,7 +29,7 @@ import {
   calculateTeamHoleResult, calculateSkinsResult, calculateNassauHoleResult,
   calculateNassauSettlement,
   calculateWolfHoleResult, calculateFoldResult as calcFoldResult,
-  generateFlipTeams, initWolfState, getWolfForHole, initNassauState,
+  initWolfState, getWolfForHole, initNassauState,
   isRoundComplete,
 } from "@/lib/gameEngines";
 
@@ -601,118 +607,6 @@ function CrybabSetupModal({ players, totals, onConfirm }) {
   );
 }
 
-// --- FLIP: Random Team Modal ---
-function FlipTeamModal({ players, onConfirm }) {
-  const [teams, setTeams] = useState(() => generateFlipTeams(players));
-  const [animating, setAnimating] = useState(false);
-  const intervalRef = useRef(null);
-
-  useEffect(() => {
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, []);
-
-  const reshuffle = () => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    setAnimating(true);
-    let count = 0;
-    intervalRef.current = setInterval(() => {
-      setTeams(generateFlipTeams(players));
-      count++;
-      if (count >= 6) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-        setAnimating(false);
-      }
-    }, 120);
-  };
-
-  return (
-    <div style={{
-      position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(12px)",
-      display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100,
-      padding: 20,
-    }}>
-      <div style={{
-        background: "#FAF5EC", borderRadius: 24, padding: "28px 24px", maxWidth: 380, width: "100%",
-        textAlign: "center",
-      }}>
-        <div style={{ fontSize: 48, marginBottom: 8 }}>🪙</div>
-        <div style={{ fontFamily: FONT, fontSize: 22, fontWeight: 800, color: "#1E130A", marginBottom: 4 }}>
-          Flip Teams
-        </div>
-        <div style={{ fontFamily: FONT, fontSize: 14, color: "#8B7355", marginBottom: 20 }}>
-          Randomly paired — tap to re-flip
-        </div>
-
-        <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
-          <div style={{
-            flex: 1, padding: "16px 12px", borderRadius: 16,
-            background: teams.teamA.color + "10",
-            border: `2px solid ${teams.teamA.color}30`,
-            transition: "all 0.2s ease",
-            opacity: animating ? 0.5 : 1,
-          }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: teams.teamA.color, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
-              {teams.teamA.name}
-            </div>
-            {teams.teamA.players.map(p => (
-              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0" }}>
-                <div style={{
-                  width: 28, height: 28, borderRadius: 14, background: p.color,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  color: "#fff", fontSize: 11, fontWeight: 700, fontFamily: FONT,
-                }}>{p.name[0]}</div>
-                <span style={{ fontFamily: FONT, fontSize: 13, fontWeight: 600, color: "#1E130A" }}>{p.name}</span>
-              </div>
-            ))}
-          </div>
-          <div style={{ display: "flex", alignItems: "center" }}>
-            <span style={{ fontFamily: FONT, fontSize: 12, fontWeight: 700, color: "#A8957B" }}>VS</span>
-          </div>
-          <div style={{
-            flex: 1, padding: "16px 12px", borderRadius: 16,
-            background: teams.teamB.color + "10",
-            border: `2px solid ${teams.teamB.color}30`,
-            transition: "all 0.2s ease",
-            opacity: animating ? 0.5 : 1,
-          }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: teams.teamB.color, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
-              {teams.teamB.name}
-            </div>
-            {teams.teamB.players.map(p => (
-              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0" }}>
-                <div style={{
-                  width: 28, height: 28, borderRadius: 14, background: p.color,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  color: "#fff", fontSize: 11, fontWeight: 700, fontFamily: FONT,
-                }}>{p.name[0]}</div>
-                <span style={{ fontFamily: FONT, fontSize: 13, fontWeight: 600, color: "#1E130A" }}>{p.name}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div style={{ display: "flex", gap: 10 }}>
-          <button onClick={reshuffle} disabled={animating} style={{
-            flex: 1, padding: "14px", borderRadius: 14, border: "none", cursor: animating ? "not-allowed" : "pointer",
-            fontFamily: FONT, fontSize: 14, fontWeight: 700,
-            background: "#EDE7D9", color: "#8B7355",
-          }}>
-            🔄 Re-flip
-          </button>
-          <button onClick={() => onConfirm(teams)} style={{
-            flex: 1, padding: "14px", borderRadius: 14, border: "none", cursor: "pointer",
-            fontFamily: FONT, fontSize: 14, fontWeight: 700,
-            background: "#EC4899", color: "#fff",
-          }}>
-            Lock Teams 🪙
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // --- WOLF: Partner Selection Modal ---
 function WolfPartnerModal({ wolfPlayer, otherPlayers, holeNumber, holeValue, onSelectPartner, onGoLone }) {
   return (
@@ -872,6 +766,14 @@ export default function CrybabActiveRound() {
   const { lastHammerBy, setLastHammerBy } = rs;
   const { carryOver, setCarryOver } = rs;
   const { flipTeams, setFlipTeams } = rs;
+  // C4B: Flip base-game per-hole state + scorekeeper setup config.
+  // flipTeams (legacy static) stays in place during the C4/C5 transition
+  // so other call sites (lines ~1476, ~1598) read the current hole's teams
+  // without a structural change. New code should read flipState directly.
+  const { flipState, setFlipState, flipConfig, setFlipConfig } = rs;
+  // C5: Flip crybaby-phase state. Set by the CrybabyTransition "Begin"
+  // handler at hole 15 → 16 handoff. Null during holes 1-15 + non-Flip.
+  const { crybabyState, setCrybabyState } = rs;
   const { wolfState, setWolfState } = rs;
   const { nassauState, setNassauState } = rs;
   const { nassauPresses, setNassauPresses } = rs;
@@ -926,6 +828,11 @@ export default function CrybabActiveRound() {
   const [completionError, setCompletionError] = useState<"completion" | "settlement" | null>(null);
   const [retryCompletionNonce, setRetryCompletionNonce] = useState<number>(0);
   const completionInFlightRef = useRef<boolean>(false);
+
+  // C4B: per-hole Flip reel visibility. Separate from the round-start
+  // `showFlipModal` so the two can coexist cleanly (and the scorekeeper
+  // can't accidentally end up with BOTH modals open on hole 1).
+  const [showPerHoleFlipReel, setShowPerHoleFlipReel] = useState<boolean>(false);
   // Phase 2 capture: tracks the hole number we most recently applied a
   // capture for. Used to clear the CapturePrompt banner after apply and
   // to re-gate advance on the next hole.
@@ -944,6 +851,10 @@ export default function CrybabActiveRound() {
   const isScorekeeper = Boolean(
     currentUser && dbPlayers.some(p => p.user_id === currentUser.id && p.is_scorekeeper === true),
   );
+  // C6.1: the scorekeeper's round_players.id (NOT their auth user_id) for
+  // the crybaby-hammer initiator gate. null when the current user isn't
+  // a player on this round (spectator / admin viewing someone else's round).
+  const currentUserPlayerId = dbPlayers.find(p => p.user_id === currentUser?.id)?.id ?? null;
   const roundIsActiveStatus = dbRound?.status === "active";
   // Bug 3: drives the "Add scorecard photo" prominence on the completed-round
   // view. True only when the scorekeeper skipped the pre-completion gate
@@ -1194,6 +1105,13 @@ export default function CrybabActiveRound() {
         if (saved.carryOver) setCarryOver(saved.carryOver);
         if (saved.totals) setTotals(saved.totals);
         if (saved.hammerHistory) setHammerHistory(saved.hammerHistory);
+        // C4B: hydrate Flip base-game state. flipConfig lands from the setup
+        // wizard at round creation; flipState accumulates via FlipReel
+        // confirmations. Absent on non-Flip rounds.
+        if (saved.flipConfig) setFlipConfig(saved.flipConfig as FlipConfigType);
+        if (saved.flipState) setFlipState(saved.flipState as import('@/lib/gameEngines').FlipState);
+        // C5: hydrate crybaby state if the round resumed past hole 15.
+        if (saved.crybabyState) setCrybabyState(saved.crybabyState as CrybabyStateType);
 
         // Restore per-hole stroke scores from round_players.hole_scores
         const restoredScores = {};
@@ -1292,11 +1210,43 @@ export default function CrybabActiveRound() {
           return;
         }
 
-        const settlementData = round.players.map(p => ({
-          userId: p.userId || null,
-          guestName: p.userId ? null : p.name,
-          amount: totals[p.id] || 0,
-        }));
+        // C7: Flip rounds persist both the combined `amount` AND the
+        // two-component split (base_amount / crybaby_amount) so audit
+        // + round-summary can show "how much of your total came from
+        // the base game vs. the crybaby comeback". Non-Flip rounds
+        // leave the split fields undefined → NULL in the DB.
+        //
+        // All-square sentinel (crybabyState.crybaby === ""): pass
+        // `crybabyWasPlayed: false` so holes 16-18 money rolls into
+        // baseAmount and crybabyAmount is an explicit $0 rather than
+        // NULL. See computeFlipSettlementSplit for the branching.
+        const splitThisRound = roundHasFlipSettlementSplit(round.gameMode as GameMode);
+        const crybabyWasPlayed = Boolean(
+          crybabyState && crybabyState.crybaby && crybabyState.crybaby !== "",
+        );
+        const settlementData = round.players.map(p => {
+          const base: {
+            userId: string | null;
+            guestName: string | null;
+            amount: number;
+            baseAmount?: number;
+            crybabyAmount?: number;
+          } = {
+            userId: p.userId || null,
+            guestName: p.userId ? null : p.name,
+            amount: totals[p.id] || 0,
+          };
+          if (splitThisRound) {
+            const split = computeFlipSettlementSplit(
+              holeResults as (HoleResult & { hole: number })[],
+              p.id,
+              crybabyWasPlayed,
+            );
+            base.baseAmount = split.baseAmount;
+            base.crybabyAmount = split.crybabyAmount;
+          }
+          return base;
+        });
         const settlementResult = await persist.persistSettlements(roundId, settlementData);
         if (!settlementResult.ok) {
           setCompletionError("settlement");
@@ -1579,6 +1529,58 @@ export default function CrybabActiveRound() {
     const cs = scores[currentHole];
     const gameMode = round.gameMode;
 
+    // C6: Flip crybaby sub-game (holes 16-18 when a crybaby exists).
+    // Payout math is completely separate from the base-game 3v2 engine
+    // — see calculateCrybabyHoleResult for the asymmetric stakes logic.
+    // The "all-square" case (crybabyState.crybaby === "") intentionally
+    // skips this branch and falls through to the base-game team path
+    // below, continuing Flip holes 16-18 as an extension of 1-15.
+    if (
+      gameMode === 'flip' &&
+      currentHole >= 16 &&
+      currentHole <= 18 &&
+      crybabyState &&
+      crybabyState.crybaby !== "" &&
+      crybabyState.byHole[currentHole]
+    ) {
+      const choice = crybabyState.byHole[currentHole];
+      const twoManTeam = choice.teams.teamA;
+      const threeManTeam = choice.teams.teamB;
+      const netScoresCry: Record<string, number> = {};
+      players.forEach(p => {
+        const strokes = settings.pops ? getStrokesOnHole(p.handicap, lowestHandicap, holeHandicap, settings.handicapPercent) : 0;
+        netScoresCry[p.id] = cs[p.id] - strokes;
+      });
+      const twoManBest = Math.min(...twoManTeam.players.map(p => netScoresCry[p.id]));
+      const threeManBest = Math.min(...threeManTeam.players.map(p => netScoresCry[p.id]));
+      const twoManWon: boolean | null = twoManBest < threeManBest
+        ? true
+        : threeManBest < twoManBest
+          ? false
+          : null;
+      const crybabyResult = calculateCrybabyHoleResult({
+        bet: choice.bet,
+        crybabyId: crybabyState.crybaby,
+        partnerId: choice.partner,
+        players,
+        twoManWon,
+      });
+      return {
+        push: crybabyResult.push,
+        winnerName: crybabyResult.winningSide === null
+          ? null
+          : crybabyResult.winningSide === 'A' ? twoManTeam.name : threeManTeam.name,
+        amount: Math.abs(crybabyResult.perPlayer.find(p => p.amount > 0)?.amount ?? 0),
+        carryOver: 0, // crybaby holes are independent — no rolling window
+        playerResults: crybabyResult.perPlayer,
+        quip: crybabyResult.push
+          ? "Crybaby push. Money back."
+          : crybabyResult.winningSide === 'A'
+            ? `${twoManTeam.name} takes it. Crybaby's comeback continues.`
+            : `The pack wins. ${crybabyState.crybaby === crybabyState.crybaby ? "Crybaby" : ""} holds on by a thread.`,
+      };
+    }
+
     // Skins — individual scoring
     if (gameMode === 'skins' || gameMode === 'custom') {
       return calculateSkinsResult(players, cs, par, currentHole, round.holeValue, carryOver, round.settings, lowestHandicap, holeHandicap);
@@ -1860,9 +1862,133 @@ export default function CrybabActiveRound() {
     setShowCrybabSetup(false);
   };
 
-  const handleFlipConfirm = (teams) => {
+  // C4B: handle a flip confirm — used by both the initial round-start reel
+  // (locks hole 1 teams) and the per-hole flip button (locks hole N teams
+  // for hole N >= 2). Writes the current-hole teams into:
+  //   - flipState.teamsByHole[N]       (new per-hole shape, source of truth)
+  //   - flipTeams (legacy single-team)  (backward compat for existing reads)
+  // Then persists game_state via the PersistResult wrapper.
+  const handleFlipConfirm = (teams: FlipTeamInfo, forHole?: number) => {
+    const targetHole = forHole ?? Math.max(1, currentHole);
+    const nextFlipState = commitFlipTeams(flipState, targetHole, teams);
     setFlipTeams(teams);
+    setFlipState(nextFlipState);
     setShowFlipModal(false);
+    setShowPerHoleFlipReel(false);
+    if (roundId) {
+      // Persist through useRoundPersistence (PersistResult wrapper) so a
+      // network failure surfaces as a toast instead of a silent swallow.
+      void persist.persistGameState(roundId, {
+        currentHole, carryOver, totals, hammerHistory,
+        flipState: nextFlipState,
+        flipConfig: flipConfig ?? undefined,
+        rollingCarryWindow: rs.rollingCarryWindow ?? undefined,
+      }).then(result => {
+        if (!result.ok) {
+          toast({
+            title: "Couldn't save flip teams",
+            description: result.error.message,
+            variant: "destructive",
+            action: (
+              <ToastAction altText="Retry saving flip teams" onClick={() => handleFlipConfirm(teams, targetHole)}>
+                Retry
+              </ToastAction>
+            ),
+          });
+        }
+      });
+    }
+  };
+
+  // C5: Crybaby transition "Begin" handler — stamp CrybabyState from the
+  // resolved identification + persist. Runs once at hole 15 → 16 handoff
+  // for Flip rounds. When no crybaby applies (all balances >= 0), we
+  // store a minimal CrybabyState with crybaby=null so the UI knows we've
+  // passed the gate; C6 / C7 handle the skip-crybaby path.
+  const handleCrybabyBegin = (identification: CrybabyIdentification) => {
+    // Build the CrybabyState payload. crybaby === null means no one in the
+    // hole — we persist an empty state so the transition doesn't re-fire,
+    // and C7 settlement path can see "no crybaby" as an explicit signal.
+    const next: CrybabyStateType = identification.crybaby
+      ? {
+          crybaby: identification.crybaby,
+          losingBalance: identification.losingBalance,
+          maxBetPerHole: identification.maxBetPerHole,
+          byHole: {},
+          tiebreakOutcome: identification.tiebreakOutcome,
+        }
+      : {
+          crybaby: "",        // empty sentinel — UI reads null vs "" as "no crybaby this round"
+          losingBalance: 0,
+          maxBetPerHole: 0,
+          byHole: {},
+        };
+    setCrybabyState(next);
+    if (roundId) {
+      void persist.persistGameState(roundId, {
+        currentHole, carryOver, totals, hammerHistory,
+        flipState,
+        flipConfig: flipConfig ?? undefined,
+        rollingCarryWindow: rs.rollingCarryWindow ?? undefined,
+        crybabyState: next,
+      }).then(result => {
+        if (!result.ok) {
+          toast({
+            title: "Couldn't save crybaby selection",
+            description: result.error.message,
+            variant: "destructive",
+            action: (
+              <ToastAction altText="Retry saving crybaby selection" onClick={() => handleCrybabyBegin(identification)}>
+                Retry
+              </ToastAction>
+            ),
+          });
+        }
+      });
+    }
+  };
+
+  // C6: Per-crybaby-hole setup confirm. Writes the scorekeeper's
+  // { bet, partner, teams } choice into CrybabyState.byHole[currentHole]
+  // and persists. The render gate below falls through to the scoring UI
+  // once byHole[currentHole] is present; submit-hole will use the crybaby
+  // payout engine instead of the base-game 3v2 formula.
+  const handleCrybabyHoleSetupConfirm = (
+    choice: { bet: number; partner: string; teams: FlipTeamInfo },
+  ) => {
+    if (!crybabyState?.crybaby) return;
+    const nextByHole: Record<number, CrybabyHoleChoice> = {
+      ...crybabyState.byHole,
+      [currentHole]: {
+        bet: choice.bet,
+        partner: choice.partner,
+        teams: choice.teams,
+      },
+    };
+    const nextCrybaby: CrybabyStateType = { ...crybabyState, byHole: nextByHole };
+    setCrybabyState(nextCrybaby);
+    if (roundId) {
+      void persist.persistGameState(roundId, {
+        currentHole, carryOver, totals, hammerHistory,
+        flipState,
+        flipConfig: flipConfig ?? undefined,
+        rollingCarryWindow: rs.rollingCarryWindow ?? undefined,
+        crybabyState: nextCrybaby,
+      }).then(result => {
+        if (!result.ok) {
+          toast({
+            title: `Couldn't save hole ${currentHole} setup`,
+            description: result.error.message,
+            variant: "destructive",
+            action: (
+              <ToastAction altText={`Retry saving hole ${currentHole} setup`} onClick={() => handleCrybabyHoleSetupConfirm(choice)}>
+                Retry
+              </ToastAction>
+            ),
+          });
+        }
+      });
+    }
   };
 
   const handleWolfPartner = (partnerId) => {
@@ -2126,6 +2252,70 @@ export default function CrybabActiveRound() {
     );
   }
 
+  // C5: Crybaby transition intercept.
+  //
+  // After hole 15 scores + persistence settle, `useAdvanceHole` advances
+  // `currentHole` to 16. Before the normal scoring UI for hole 16 renders,
+  // we show the CrybabyTransition screen that surfaces standings, picks
+  // the crybaby, and stamps CrybabyState. Once the scorekeeper taps
+  // "Begin Crybaby", `handleCrybabyBegin` writes CrybabyState + persists,
+  // which makes this gate fall-through on subsequent renders.
+  //
+  // Gate: gameMode === 'flip' AND currentHole === 16 AND no crybabyState
+  // yet AND we have at least 15 holes of results to compute balances from.
+  // The holeResults length check guards against a corrupted resume where
+  // currentHole jumped to 16 without 15 played holes.
+  if (
+    round.gameMode === 'flip' &&
+    currentHole === 16 &&
+    !crybabyState &&
+    holeResults.length >= 15
+  ) {
+    const balances = computeBaseGameBalances(
+      holeResults as (HoleResult & { hole: number })[],
+      players,
+      "base",
+    );
+    return (
+      <CrybabyTransition
+        players={players}
+        balances={balances}
+        roundId={roundId ?? "preview"}
+        onBegin={handleCrybabyBegin}
+      />
+    );
+  }
+
+  // C6: Per-crybaby-hole setup intercept.
+  //
+  // On each crybaby hole (16-18) in a Flip round where a crybaby was
+  // designated (non-empty `crybabyState.crybaby`), the setup screen runs
+  // FIRST: scorekeeper picks the bet + partner, locks teams, and then
+  // the normal scoring UI renders below. Once byHole[currentHole] is
+  // populated, this gate falls through and the scoring view renders.
+  //
+  // Skipped entirely when crybabyState.crybaby === "" (all-square sentinel):
+  // holes 16-18 then run as continuation of the base Flip game (C5
+  // product decision, confirmed in PR #16 discussion).
+  if (
+    round.gameMode === 'flip' &&
+    currentHole >= 16 &&
+    currentHole <= 18 &&
+    crybabyState &&
+    crybabyState.crybaby !== "" &&
+    !crybabyState.byHole[currentHole]
+  ) {
+    return (
+      <CrybabyHoleSetup
+        holeNumber={currentHole}
+        players={players}
+        crybabyId={crybabyState.crybaby}
+        maxBetPerHole={crybabyState.maxBetPerHole}
+        onConfirm={handleCrybabyHoleSetupConfirm}
+      />
+    );
+  }
+
   // Wolf info for current hole
   const wolfId = round.gameMode === 'wolf' ? getWolfForHole(wolfState, currentHole) : null;
   const wolfPlayer = wolfId ? players.find(p => p.id === wolfId) : null;
@@ -2136,6 +2326,61 @@ export default function CrybabActiveRound() {
       background: "#F5EFE0", fontFamily: FONT,
       paddingBottom: 140,
     }}>
+
+      {/* C4B: Flip base-game persistent teams badge + per-hole Flip button.
+          Rendered only when gameMode is flip and we're in the base game
+          (holes 1-15). Crybaby phase (16-18) is C5-C7 scope. */}
+      {round.gameMode === 'flip' && currentHole <= 15 && (
+        <>
+          <FlipTeamsBadge
+            holeNumber={currentHole}
+            teams={flipState.teamsByHole[currentHole] ?? flipTeams ?? null}
+          />
+          {isScorekeeper && currentHole >= 2 && (() => {
+            // Teams-stay-after-push rule: if the prior hole was a push
+            // AND teams are already committed for the current hole (by
+            // advanceFlipState's auto-carry), the flip button is disabled
+            // with an explanatory tooltip. Decided-hole follow-up: button
+            // is enabled; tapping opens the per-hole FlipReel.
+            const prevResult = holeResults.find(hr => hr.hole === currentHole - 1);
+            const prevHoleWasPush = !!prevResult?.push;
+            const teamsAlreadyLocked = !!flipState.teamsByHole[currentHole];
+            const disabled = prevHoleWasPush && teamsAlreadyLocked;
+            const tooltip = disabled ? "Teams stay after a push" : "Flip 3v2 for this hole";
+            return (
+              <button
+                type="button"
+                data-testid="flip-per-hole-button"
+                aria-label={`Flip teams for hole ${currentHole}`}
+                aria-disabled={disabled}
+                title={tooltip}
+                onClick={() => { if (!disabled) setShowPerHoleFlipReel(true); }}
+                disabled={disabled}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  margin: "8px 16px 0",
+                  padding: "10px 14px",
+                  borderRadius: 12,
+                  border: "none",
+                  cursor: disabled ? "not-allowed" : "pointer",
+                  background: disabled ? "#EDE7D9" : "#EC4899",
+                  color: disabled ? "#A8957B" : "#fff",
+                  fontFamily: FONT,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  opacity: disabled ? 0.6 : 1,
+                }}
+              >
+                🪙 {teamsAlreadyLocked
+                  ? (disabled ? "Teams stay after a push" : `Re-flip hole ${currentHole}`)
+                  : `Flip teams for hole ${currentHole}`}
+              </button>
+            );
+          })()}
+        </>
+      )}
 
       {/* Phase 2 capture prompt — shown when cadence requires a photo
           and no capture has been applied for the current hole. The
@@ -2484,17 +2729,46 @@ export default function CrybabActiveRound() {
 
       {/* Action Buttons Row */}
       <div style={{ padding: "12px 20px", display: "flex", gap: 8 }}>
-        {/* Hammer Button — for team games with hammer enabled */}
-        {settings.hammer && teams && !allScored && (
-          hammerDepth === 0 ? (
-            <button onClick={handleHammer} style={{
-              flex: 1, padding: "14px", borderRadius: 14, border: "none", cursor: "pointer",
-              fontFamily: FONT, fontSize: 14, fontWeight: 700,
-              background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)",
-              color: "#fff", boxShadow: "0 4px 12px rgba(245,158,11,0.3)",
-            }}>
-              🔨 Throw Hammer
-            </button>
+        {/* Hammer Button — for team games with hammer enabled.
+            C6.1: during Flip crybaby phase (holes 16-18 with a designated
+            crybaby + per-hole setup confirmed), depth-0 initiation is gated
+            to the 2-man team (crybaby + partner). Hammer-BACKs at depth >= 1
+            are unchanged — alternation rules handle them at the engine level. */}
+        {settings.hammer && teams && !allScored && (() => {
+          const canInitiate = canInitiateCrybabyHammer({
+            gameMode: round.gameMode,
+            currentHole,
+            crybabyState,
+            currentUserPlayerId,
+          });
+          return hammerDepth === 0 ? (
+            canInitiate ? (
+              <button onClick={handleHammer} style={{
+                flex: 1, padding: "14px", borderRadius: 14, border: "none", cursor: "pointer",
+                fontFamily: FONT, fontSize: 14, fontWeight: 700,
+                background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)",
+                color: "#fff", boxShadow: "0 4px 12px rgba(245,158,11,0.3)",
+              }}>
+                🔨 Throw Hammer
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled
+                data-testid="hammer-initiate-gated"
+                aria-disabled="true"
+                title="Only the crybaby's team can initiate a hammer in crybaby phase."
+                style={{
+                  flex: 1, padding: "14px", borderRadius: 14, border: "none",
+                  cursor: "not-allowed",
+                  fontFamily: FONT, fontSize: 14, fontWeight: 700,
+                  background: "#DDD0BB", color: "#8B7355",
+                  opacity: 0.7,
+                }}
+              >
+                🔨 Only crybaby's team can hammer
+              </button>
+            )
           ) : (
             <button onClick={handleHammerBack} style={{
               flex: 1, padding: "14px", borderRadius: 14, border: "none", cursor: "pointer",
@@ -2509,8 +2783,8 @@ export default function CrybabActiveRound() {
             }}>
               {"🔨".repeat(Math.min(hammerDepth + 1, 5))} Hammer Back — ${round.holeValue * Math.pow(2, hammerDepth) + carryOver} → ${round.holeValue * Math.pow(2, hammerDepth + 1) + carryOver}
             </button>
-          )
-        )}
+          );
+        })()}
 
         {/* Nassau Press Button */}
         {round.gameMode === 'nassau' && settings.presses && !allScored && (
@@ -2607,9 +2881,21 @@ export default function CrybabActiveRound() {
         />
       )}
       {showFlipModal && (
-        <FlipTeamModal
+        <FlipReel
+          mode="initial"
           players={players}
-          onConfirm={handleFlipConfirm}
+          onConfirm={(teams) => handleFlipConfirm(teams, 1)}
+          testIdPrefix="initial-flip-reel"
+        />
+      )}
+      {showPerHoleFlipReel && (
+        <FlipReel
+          mode="per-hole"
+          players={players}
+          holeNumber={currentHole}
+          onConfirm={(teams) => handleFlipConfirm(teams, currentHole)}
+          onCancel={() => setShowPerHoleFlipReel(false)}
+          testIdPrefix="per-hole-flip-reel"
         />
       )}
       {showWolfModal && wolfPlayer && (

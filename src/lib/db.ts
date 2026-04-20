@@ -77,7 +77,7 @@ export async function removePushSubscription(endpoint: string) {
 }
 
 // Create a round in the database and return its ID
-export async function createRound({ gameType, course, courseDetails, stakes, holeValue, players, mechanics, mechanicSettings, privacy, scorekeeperMode }) {
+export async function createRound({ gameType, course, courseDetails, stakes, holeValue, players, mechanics, mechanicSettings, privacy, scorekeeperMode, flipConfig }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
@@ -110,6 +110,17 @@ export async function createRound({ gameType, course, courseDetails, stakes, hol
         mechanicSettings,
         privacy,
         playerConfig,
+        // Flip mode: pre-seed game_state with the scorekeeper's setup
+        // choice so CrybabyActiveRound can read flipConfig.baseBet +
+        // carryOverWindow on first render. flipState is initialised
+        // empty; teams are populated by the round-start FlipReel modal
+        // + per-hole Flip button taps.
+        ...(flipConfig && {
+          game_state: {
+            flipConfig,
+            flipState: { teamsByHole: {}, currentHole: 0 },
+          },
+        }),
       },
       stakes: `$${holeValue}/hole`,
       status: "active",
@@ -955,7 +966,22 @@ export async function loadUserScoreDistribution(userId?: string): Promise<UserSc
 }
 
 // Insert settlements after a round completes
-export async function insertSettlements(roundId: string, settlements: { userId?: string; guestName?: string; amount: number }[]) {
+export async function insertSettlements(
+  roundId: string,
+  settlements: {
+    userId?: string | null;
+    guestName?: string | null;
+    amount: number;
+    /**
+     * Flip-only: per-player net from holes 1-15. Optional so non-Flip
+     * callers (DOC / Solo / etc.) can omit — undefined lands as NULL
+     * in the DB via the column's default.
+     */
+    baseAmount?: number;
+    /** Flip-only: per-player net from holes 16-18. Same NULL-on-omit semantics. */
+    crybabyAmount?: number;
+  }[],
+) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
@@ -973,6 +999,10 @@ export async function insertSettlements(roundId: string, settlements: { userId?:
     user_id: s.userId || null,
     guest_name: s.guestName || null,
     amount: s.amount,
+    // Only set the split columns when callers provide them — Flip
+    // populates both; other modes leave them NULL via the column default.
+    ...(s.baseAmount !== undefined ? { base_amount: s.baseAmount } : {}),
+    ...(s.crybabyAmount !== undefined ? { crybaby_amount: s.crybabyAmount } : {}),
   }));
 
   const { error } = await supabase.from("round_settlements").insert(inserts);
@@ -981,7 +1011,36 @@ export async function insertSettlements(roundId: string, settlements: { userId?:
 
 // Save round game state (current hole, carry-over, running totals) to course_details JSONB.
 // Called after every hole so a killed/backgrounded app can resume from the right position.
-export async function saveGameState(roundId: string, state: { currentHole: number; carryOver: number; totals: Record<string, number> }): Promise<void> {
+/**
+ * Persisted game-state shape on `rounds.course_details.game_state`.
+ *
+ * Required fields are the scoring essentials that every game mode needs.
+ * Optional fields carry mode-specific state so reload + apply-capture
+ * replay both see the same data the client had in memory:
+ *
+ *   - `hammerHistory`     — DOC / Flip: per-hole hammer depth + fold state.
+ *   - `flipState`         — Flip: per-hole team assignments (replaces
+ *                            the previously-broken `flipTeams` field —
+ *                            apply-capture falls back to that name for
+ *                            any legacy row, but new writes use `flipState`).
+ *   - `flipConfig`        — Flip: setup-time choices (baseBet + carry window).
+ *   - `crybabyState`      — Flip: crybaby sub-game state (holes 16-18).
+ *   - `hammerStateByHole` — CrybabyActiveRound: hammer state by hole number
+ *                            for post-round hammer correction.
+ */
+export interface GameStatePersisted {
+  currentHole: number;
+  carryOver: number;
+  totals: Record<string, number>;
+  hammerHistory?: unknown[];
+  flipState?: unknown;
+  flipConfig?: unknown;
+  crybabyState?: unknown;
+  hammerStateByHole?: Record<number, unknown>;
+  [key: string]: unknown;
+}
+
+export async function saveGameState(roundId: string, state: GameStatePersisted): Promise<void> {
   const { data: round, error: readError } = await supabase
     .from("rounds")
     .select("course_details")
@@ -1135,6 +1194,10 @@ export interface RoundDetailBundle {
     user_id: string | null;
     guest_name: string | null;
     amount: number;
+    /** Flip-only: holes 1-15 per-player net. NULL on non-Flip settlements. */
+    base_amount?: number | null;
+    /** Flip-only: holes 16-18 per-player net. NULL on non-Flip settlements. */
+    crybaby_amount?: number | null;
     is_manual_adjustment?: boolean | null;
     notes?: string | null;
   }>;
@@ -1152,7 +1215,7 @@ export async function loadRoundDetail(roundId: string): Promise<RoundDetailBundl
   const [roundRes, playersRes, settleRes, eventRes] = await Promise.all([
     supabase.from("rounds").select("*").eq("id", roundId).maybeSingle(),
     supabase.from("round_players").select("*").eq("round_id", roundId).order("created_at"),
-    supabase.from("round_settlements").select("user_id, guest_name, amount, is_manual_adjustment, notes").eq("round_id", roundId),
+    supabase.from("round_settlements").select("user_id, guest_name, amount, base_amount, crybaby_amount, is_manual_adjustment, notes").eq("round_id", roundId),
     supabase.from("round_events").select("id, hole_number, event_type, event_data, created_at").eq("round_id", roundId).order("created_at"),
   ]);
   if (roundRes.error) throw roundRes.error;
@@ -1182,6 +1245,12 @@ export async function loadRoundDetail(roundId: string): Promise<RoundDetailBundl
       user_id: s.user_id,
       guest_name: s.guest_name,
       amount: Number(s.amount),
+      base_amount: s.base_amount === null || s.base_amount === undefined
+        ? null
+        : Number(s.base_amount),
+      crybaby_amount: s.crybaby_amount === null || s.crybaby_amount === undefined
+        ? null
+        : Number(s.crybaby_amount),
       is_manual_adjustment: s.is_manual_adjustment ?? null,
       notes: s.notes ?? null,
     })),

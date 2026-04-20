@@ -55,6 +55,137 @@ export interface GameSettings {
   pressType: string;
 }
 
+// ============================================================
+// FLIP MODE — full type system
+//
+// Flip is a per-hole team game exclusive to 5-player rounds.
+// Holes 1-15 are the base game (random 3v2 reshuffled per decided
+// hole, teams stay on a push, rolling-window carry-over). Holes
+// 16-18 are the crybaby sub-game (worst-balance player picks a
+// partner + bet each hole, 2v3 with custom payout math).
+//
+// All Flip state is serialised to
+// `rounds.course_details.game_state.flipState` JSONB. There is no
+// schema migration for the state itself — it's a typed JSON blob.
+// A separate tiny migration adds nullable `base_amount` and
+// `crybaby_amount` columns to `round_settlements` so the two
+// settlement components are queryable at audit time.
+// ============================================================
+
+/**
+ * Scorekeeper's setup-wizard choices for a Flip round.
+ *
+ * `baseBet`: per-hole stake in the base game (holes 1-15). Enforced
+ *            to be an even integer in dollars by the setup wizard
+ *            AND by the engine (both validate — UI is the fast path,
+ *            engine is the guarantee).
+ *
+ * `carryOverWindow`: size of the rolling push-carry queue. When the
+ *                    window fills, the oldest push-hole's money is
+ *                    forfeited (goes to no one) on the next push.
+ *                    `"all"` disables the eviction (infinite window).
+ */
+export interface FlipConfig {
+  baseBet: number;
+  carryOverWindow: number | "all";
+}
+
+/**
+ * Per-hole Flip team assignments for the base game (holes 1-15).
+ * Crybaby-phase teams are stored on `CrybabyState.byHole`, NOT here.
+ *
+ * `teamsByHole` is keyed by hole number (1..15). Missing keys mean
+ * the scorekeeper hasn't tapped the Flip button for that hole yet.
+ */
+export interface FlipState {
+  teamsByHole: Record<number, TeamInfo>;
+  /**
+   * The last hole for which teams have been committed. Used as a
+   * guard so the UI can't render a hole whose teams aren't locked
+   * in (would be a race condition on the flip button tap).
+   */
+  currentHole: number;
+}
+
+/**
+ * Crybaby sub-game state (holes 16-18).
+ *
+ * Determined between hole 15 and hole 16 from the base-game balance.
+ * The crybaby = the player with the most-negative hole-15 balance.
+ * If two or more players are tied for most-negative, a deterministic
+ * tiebreaker runs (seeded by `round.id` so an audit replay of the
+ * same round always picks the same crybaby).
+ *
+ * `losingBalance` is the crybaby's negative dollar amount after 15
+ * holes, stored as a POSITIVE number for cap math clarity. The 50%
+ * cap on per-hole bets is `floor(losingBalance / 2)` rounded DOWN
+ * to the nearest even dollar — AND computed ONCE at hole 15, never
+ * updated during crybaby play even if the crybaby's running balance
+ * swings positive.
+ *
+ * `byHole` holds the crybaby's choices per crybaby hole (16/17/18):
+ * their bet, their partner, and the resulting 2v3 team assignment.
+ */
+export interface CrybabyState {
+  /** Player id of the crybaby. Set once between hole 15 and hole 16. */
+  crybaby: string;
+  /** Crybaby's base-game losing balance (positive dollars). */
+  losingBalance: number;
+  /** 50% cap, pre-computed at hole 15. floor(losingBalance / 2) rounded DOWN to even dollars. */
+  maxBetPerHole: number;
+
+  /** Per-hole crybaby choices. Keys are hole numbers 16, 17, 18. */
+  byHole: Record<number, CrybabyHoleChoice>;
+
+  /**
+   * Audit record if a tiebreaker ran at hole 15. Undefined when the
+   * crybaby was unambiguous (single most-negative player).
+   *
+   * The `seed` field lets a future session replay the tiebreaker
+   * deterministically. We store the seed SOURCE (e.g., the round id)
+   * rather than the derived number so humans can verify the choice
+   * was made by rule rather than by accident.
+   */
+  tiebreakOutcome?: {
+    tied: string[];
+    winner: string;
+    seedSource: string;
+  };
+}
+
+export interface CrybabyHoleChoice {
+  /** Even-dollar bet the crybaby chose for this hole. <= maxBetPerHole. */
+  bet: number;
+  /** Player id of the crybaby's chosen partner. One of the 4 non-crybaby players. */
+  partner: string;
+  /**
+   * Team split for this crybaby hole:
+   *   teamA = [crybaby, partner]       (the 2-man team)
+   *   teamB = [other 3]                (the 3-man team)
+   * Recorded here rather than recomputed so it survives any post-round
+   * player-order changes and any partner-name edits.
+   */
+  teams: TeamInfo;
+}
+
+/**
+ * Rolling-window carry-over queue for the Flip base game.
+ *
+ * Unlike DOC/Nassau's scalar carry-over (a single accumulator that
+ * zeroes on a decided hole), Flip's carry is a FIFO queue of push
+ * entries. When the queue grows beyond `windowSize`, the oldest
+ * entry is evicted and its money is FORFEITED (goes to no one).
+ *
+ * `forfeited` is a running total of money that has fallen off the
+ * window over the course of the round — strictly for audit display
+ * ("$14 fell into the ether on hole 12"), never paid out.
+ */
+export interface RollingCarryWindow {
+  entries: Array<{ holeNumber: number; amount: number }>;
+  forfeited: number;
+  windowSize: number | "all";
+}
+
 // --- HANDICAP STROKES ---
 export function getStrokesOnHole(playerHandicap: number, lowestHandicap: number, holeHandicapRank: number, handicapPercent = 100): number {
   const adjustedHandicap = Math.round(playerHandicap * handicapPercent / 100);
@@ -120,12 +251,45 @@ export function getPhaseColor(phase: string): string {
 
 // --- TEAM FORMATION ---
 
-export function getTeamsForHole(gameMode: GameMode, holeNumber: number, players: Player[], flipTeams?: TeamInfo | null): TeamInfo | null {
+/**
+ * Flip teams input for `getTeamsForHole`. Callers pass EITHER a static
+ * `TeamInfo` (legacy shape — teams held constant across the round) OR
+ * a `FlipState` (per-hole shape). The union preserves backward compat
+ * for any test / legacy caller still handing in a single TeamInfo,
+ * while letting the new Flip implementation pass hole-specific teams.
+ *
+ * Crybaby-phase teams (holes 16-18) are passed via the SEPARATE
+ * `crybabyTeams` arg, not through this union — crybaby has its own
+ * per-hole team shape on `CrybabyState.byHole` and the engine reads
+ * that directly at the caller boundary.
+ */
+export type FlipTeamsInput = TeamInfo | FlipState | null | undefined;
+
+function resolveFlipTeams(input: FlipTeamsInput, holeNumber: number): TeamInfo | null {
+  if (!input) return null;
+  // FlipState has `teamsByHole`; a raw TeamInfo has `teamA`.
+  if ("teamsByHole" in input) {
+    return input.teamsByHole[holeNumber] ?? null;
+  }
+  return input;
+}
+
+export function getTeamsForHole(
+  gameMode: GameMode,
+  holeNumber: number,
+  players: Player[],
+  flipTeams?: FlipTeamsInput,
+  crybabyTeams?: TeamInfo | null,
+): TeamInfo | null {
   switch (gameMode) {
     case 'drivers_others_carts':
       return getDOCTeams(holeNumber, players);
     case 'flip':
-      return flipTeams || null;
+      // Crybaby sub-game (holes 16-18) uses its own team shape passed
+      // explicitly by the caller; the base game reads per-hole teams
+      // off FlipState (or falls back to a static TeamInfo for legacy).
+      if (holeNumber >= 16 && crybabyTeams) return crybabyTeams;
+      return resolveFlipTeams(flipTeams, holeNumber);
     case 'nassau':
       if (players.length === 4) {
         return {
@@ -180,6 +344,354 @@ export function generateFlipTeams(players: Player[]): TeamInfo {
   return {
     teamA: { name: 'Heads', players: shuffled.slice(0, half), color: '#16A34A' },
     teamB: { name: 'Tails', players: shuffled.slice(half), color: '#DC2626' },
+  };
+}
+
+// ============================================================
+// FLIP ENGINE — pure primitives
+// ============================================================
+
+/**
+ * Create an empty FlipState at round start. `currentHole` is 0 because
+ * no teams have been committed yet; the initial FlipTeamModal at hole 1
+ * will advance it to 1.
+ */
+export function initFlipState(): FlipState {
+  return { teamsByHole: {}, currentHole: 0 };
+}
+
+/**
+ * Commit teams for a specific hole. Pure — returns a new state with
+ * `teamsByHole[holeNumber]` set and `currentHole` advanced to match.
+ * The caller decides WHEN to call this (round-start modal, per-hole
+ * flip button tap, or push-carry auto-advance).
+ */
+export function commitFlipTeams(prev: FlipState, holeNumber: number, teams: TeamInfo): FlipState {
+  return {
+    ...prev,
+    teamsByHole: { ...prev.teamsByHole, [holeNumber]: teams },
+    currentHole: Math.max(prev.currentHole, holeNumber),
+  };
+}
+
+/**
+ * Compute the next hole's Flip teams given the previous hole's outcome.
+ *
+ *   - Previous hole was a push     → carry same teams forward (spec).
+ *   - Previous hole was decided    → new random 3v2 shuffle.
+ *   - `prev.teamsByHole[prevHole]` missing → generate fresh teams
+ *     (fallback for the very-first hole before any modal tap).
+ *
+ * Pure: the random shuffle is deterministic per call only if callers
+ * stub `Math.random` — which our test harness does. Production callers
+ * let it be genuinely random.
+ */
+export function advanceFlipState(
+  prev: FlipState,
+  prevHoleNumber: number,
+  prevHolePush: boolean,
+  players: Player[],
+): FlipState {
+  const nextHoleNumber = prevHoleNumber + 1;
+  const priorTeams = prev.teamsByHole[prevHoleNumber];
+
+  if (prevHolePush && priorTeams) {
+    // Push → teams stay. Copy the prior teams into the next hole slot.
+    return commitFlipTeams(prev, nextHoleNumber, priorTeams);
+  }
+
+  // Decided hole (win/loss) or no prior teams → fresh flip.
+  return commitFlipTeams(prev, nextHoleNumber, generateFlipTeams(players));
+}
+
+// ============================================================
+// FLIP ROLLING CARRY-OVER
+// ============================================================
+
+/**
+ * Initialise an empty rolling carry window at round start.
+ */
+export function initRollingCarryWindow(windowSize: number | "all"): RollingCarryWindow {
+  return { entries: [], forfeited: 0, windowSize };
+}
+
+/**
+ * Append a new push-hole's money to the window. If the window has
+ * a finite size and adding this entry would exceed it, the oldest
+ * entry is evicted — its money is added to `forfeited` (audit only).
+ */
+export function appendPushToWindow(
+  prev: RollingCarryWindow,
+  holeNumber: number,
+  pushAmount: number,
+): RollingCarryWindow {
+  const nextEntries = [...prev.entries, { holeNumber, amount: pushAmount }];
+  const cap = prev.windowSize;
+  if (cap !== "all" && nextEntries.length > cap) {
+    const evicted = nextEntries.shift()!;
+    return {
+      entries: nextEntries,
+      forfeited: prev.forfeited + evicted.amount,
+      windowSize: cap,
+    };
+  }
+  return { entries: nextEntries, forfeited: prev.forfeited, windowSize: prev.windowSize };
+}
+
+/**
+ * Compute the total pot to award on a decided hole: sum of all entries
+ * currently in the window (everything that hasn't been forfeited).
+ * Returns the sum and a CLEARED window (entries reset to empty).
+ *
+ * Note: `forfeited` is preserved across claims — it's a running audit
+ * counter for the whole round.
+ */
+export function claimRollingCarryWindow(
+  prev: RollingCarryWindow,
+): { total: number; cleared: RollingCarryWindow } {
+  const total = prev.entries.reduce((acc, e) => acc + e.amount, 0);
+  return {
+    total,
+    cleared: { entries: [], forfeited: prev.forfeited, windowSize: prev.windowSize },
+  };
+}
+
+// ============================================================
+// FLIP PAYOUT MATH — Model C
+//
+// Each push is a flat-ante into the rolling window. Every player
+// debits `effectiveBet` ($B) on a push; the hole's pot entry on
+// the window is `N * B` (5 players × bet for standard Flip).
+//
+// On a decided hole there is NO separate ante. Losers pay
+// asymmetrically per spec's "risk" scaling:
+//    - 3-man side losing: each pays B.
+//    - 2-man side losing: each pays 1.5B.
+// Either framing yields a losers' pot of 3B. Winners split
+// `3B + window` evenly among the winning side's players.
+//
+// The 1.5B factor depends on B being even — that invariant is
+// enforced at setup + in FlipConfig typing. For B=$2: 2-man
+// losers each pay $3. For B=$4: $6. For B=$6: $9. etc. All
+// integer dollars when B is even.
+//
+// Closed-system invariants:
+//    - On a pure push: sum(balance deltas) = -N*B (real money
+//      leaves wallets into the window).
+//    - On a decided hole after claims: sum(balance deltas) =
+//      winnerPayout - losersCollected = +windowSum (winners
+//      receive more than losers pay because the window had
+//      prior-push money).
+//    - Across the full round: sum(all player balances) =
+//      -(forfeited + any unclaimed window entries).
+//
+// The `forfeited` counter on RollingCarryWindow accrues real
+// money that left the closed system permanently (evicted push
+// entries). Never repaid.
+// ============================================================
+
+export interface FlipPayoutResult {
+  push: boolean;
+  winningSide: "A" | "B" | null;
+  /**
+   * Total dollars the losing side collectively contributes on a
+   * decided hole (3B), OR the total ante pot on a push (N*B).
+   * Zero on any result where no player-to-pot transfer happened.
+   */
+  potFromBet: number;
+  /** Dollars pulled from the rolling window and paid to winners. */
+  potFromCarry: number;
+  perPlayer: Array<{ id: string; name: string; amount: number }>;
+  forfeitedThisHole: number;
+  newWindow: RollingCarryWindow;
+}
+
+export function calculateFlipHoleResult(args: {
+  teams: TeamInfo;
+  teamABest: number;
+  teamBBest: number;
+  effectiveBet: number;
+  window: RollingCarryWindow;
+  holeNumber: number;
+}): FlipPayoutResult {
+  const { teams, teamABest, teamBBest, effectiveBet, window, holeNumber } = args;
+  const allPlayers = [...teams.teamA.players, ...teams.teamB.players];
+  const playerCount = allPlayers.length;
+
+  if (teamABest === teamBBest) {
+    // PUSH: every player antes the flat base bet. The full N*B lands
+    // in the rolling window as a single entry. If this push evicts
+    // an older entry, its amount is added to `forfeited` (real money
+    // out of the closed system permanently).
+    const perPlayerAnte = effectiveBet;
+    const totalAntePot = perPlayerAnte * playerCount;
+    const newWindow = appendPushToWindow(window, holeNumber, totalAntePot);
+    const forfeitedThisHole = newWindow.forfeited - window.forfeited;
+    return {
+      push: true,
+      winningSide: null,
+      potFromBet: totalAntePot,
+      potFromCarry: 0,
+      perPlayer: allPlayers.map(p => ({ id: p.id, name: p.name, amount: -perPlayerAnte })),
+      forfeitedThisHole,
+      newWindow,
+    };
+  }
+
+  const winningSide: "A" | "B" = teamABest < teamBBest ? "A" : "B";
+  const winTeam = winningSide === "A" ? teams.teamA : teams.teamB;
+  const loseTeam = winningSide === "A" ? teams.teamB : teams.teamA;
+
+  // DECIDED: losers pay asymmetrically. No flat ante — the losers'
+  // contribution IS the hole's money-out-of-pocket. 3-man loser pays
+  // B; 2-man loser pays 1.5B. Either side's collective loss = 3B.
+  //
+  // Fallback: for any non-3-and-non-2 team split (legacy flip rounds
+  // that were 2v2 / 3v3 from before the 5-player-only lock), we keep
+  // the symmetric flat-B path so historical replay stays sane.
+  let loserPerPlayer: number;
+  if (loseTeam.players.length === 3) {
+    loserPerPlayer = effectiveBet;
+  } else if (loseTeam.players.length === 2) {
+    loserPerPlayer = (effectiveBet * 3) / 2;
+  } else {
+    loserPerPlayer = effectiveBet; // legacy fallback
+  }
+  const totalFromLosers = loserPerPlayer * loseTeam.players.length;
+
+  const { total: carryTotal, cleared: newWindow } = claimRollingCarryWindow(window);
+  const potTotal = totalFromLosers + carryTotal;
+  const winnerShare = potTotal / winTeam.players.length;
+
+  const perPlayer = allPlayers.map(p => {
+    const onWinTeam = winTeam.players.some(w => w.id === p.id);
+    return { id: p.id, name: p.name, amount: onWinTeam ? winnerShare : -loserPerPlayer };
+  });
+
+  return {
+    push: false,
+    winningSide,
+    potFromBet: totalFromLosers,
+    potFromCarry: carryTotal,
+    perPlayer,
+    forfeitedThisHole: 0,
+    newWindow,
+  };
+}
+
+// ============================================================
+// CRYBABY SUB-GAME PAYOUT MATH (holes 16-18)
+//
+// Separate engine from the Flip base game. Crybaby holes are
+// INDEPENDENT (no rolling window, no cross-hole carry). Each hole:
+//
+//   - Crybaby picks their bet B (even, capped at maxBetPerHole).
+//   - Partner matches B.
+//   - Each of 3 opponents antes opponentStake = computeOpponentStake(B)
+//     — even-dollar round of B/3.
+//   - Teams: { crybaby + partner } vs { other 3 }.
+//   - Decided hole: losers pay their ante, winners split loser's
+//     pot among the winning side.
+//       2-man wins: 2-man each gain (3 * opp) / 2. 3-man each lose opp.
+//       3-man wins: 3-man each gain (2 * B) / 3. 2-man each lose B.
+//     Zero-sum per hole (2 * (3*opp/2) = 3*opp, 3 * (2B/3) = 2B).
+//   - Push: money returned, net 0 per player.
+//
+// Rounding note: `computeOpponentStake` always yields an even int, so
+// (3 * opp) / 2 is always an integer. The 3-man-winner share
+// (2 * B / 3) is an integer only when B is divisible by 3 — otherwise
+// fractional dollars land on each 3-man player. C7 settlement
+// rounds the final total for display; intermediate per-hole amounts
+// stay as-is so zero-sum is exact across the hole.
+// ============================================================
+
+/**
+ * Round a crybaby's bet divided by 3 to the nearest EVEN dollar.
+ * Returns 0 if bet is 0; returns minimum of 2 for any positive bet
+ * whose /3 rounds below $2 (even-bet floor). Deterministic.
+ */
+export function computeOpponentStake(bet: number): number {
+  if (bet <= 0) return 0;
+  const exact = bet / 3;
+  const rounded = Math.round(exact);
+  const nearestEven = rounded % 2 === 0
+    ? rounded
+    : Math.abs(exact - (rounded - 1)) <= Math.abs(exact - (rounded + 1))
+      ? rounded - 1
+      : rounded + 1;
+  return Math.max(2, nearestEven);
+}
+
+export interface CrybabyPayoutArgs {
+  /** Crybaby's bet for this hole (even, > 0, <= maxBetPerHole). */
+  bet: number;
+  /** Player id of the crybaby. */
+  crybabyId: string;
+  /** Player id of the partner chosen this hole. */
+  partnerId: string;
+  /** All 5 round players. */
+  players: Player[];
+  /**
+   * Outcome:
+   *   true  — 2-man team (crybaby + partner) won
+   *   false — 3-man team (other 3) won
+   *   null  — push (money returned)
+   */
+  twoManWon: boolean | null;
+}
+
+export interface CrybabyPayoutResult {
+  push: boolean;
+  /** 'A' = 2-man (crybaby+partner), 'B' = 3-man (other 3), null on push. */
+  winningSide: "A" | "B" | null;
+  opponentStake: number;
+  /** Per-player net dollar delta for this hole. Sum = 0 on decided. */
+  perPlayer: Array<{ id: string; name: string; amount: number }>;
+}
+
+export function calculateCrybabyHoleResult(args: CrybabyPayoutArgs): CrybabyPayoutResult {
+  const { bet, crybabyId, partnerId, players, twoManWon } = args;
+  const twoManSet = new Set([crybabyId, partnerId]);
+  const opponentStake = computeOpponentStake(bet);
+
+  // Push: everyone's ante is returned, net zero delta. No carry-over
+  // (crybaby phase holes are independent).
+  if (twoManWon === null) {
+    return {
+      push: true,
+      winningSide: null,
+      opponentStake,
+      perPlayer: players.map(p => ({ id: p.id, name: p.name, amount: 0 })),
+    };
+  }
+
+  if (twoManWon) {
+    // 2-man wins: each 2-man gains (3 * opponentStake) / 2 from the 3-man
+    // pot. 3-man losers each pay opponentStake.
+    const twoManGain = (3 * opponentStake) / 2;
+    return {
+      push: false,
+      winningSide: "A",
+      opponentStake,
+      perPlayer: players.map(p => ({
+        id: p.id,
+        name: p.name,
+        amount: twoManSet.has(p.id) ? twoManGain : -opponentStake,
+      })),
+    };
+  }
+
+  // 3-man wins: each 3-man gains (2 * bet) / 3. 2-man losers each pay bet.
+  const threeManGain = (2 * bet) / 3;
+  return {
+    push: false,
+    winningSide: "B",
+    opponentStake,
+    perPlayer: players.map(p => ({
+      id: p.id,
+      name: p.name,
+      amount: twoManSet.has(p.id) ? -bet : threeManGain,
+    })),
   };
 }
 
@@ -799,7 +1311,9 @@ export function replayRound(
   holeValue: number,
   settings: GameSettings,
   holes: ReplayHoleInput[],
-  flipTeams?: TeamInfo | null,
+  flipTeams?: FlipTeamsInput,
+  flipConfig?: FlipConfig,
+  crybabyState?: CrybabyState | null,
 ): ReplayRoundResult {
   const lowestHandicap = Math.min(...players.map(p => p.handicap));
   const totals: Record<string, number> = {};
@@ -807,6 +1321,15 @@ export function replayRound(
   const holeResults: (HoleResult & { hole: number })[] = [];
   let carryOver = 0;
   const carryOverCap = settings.carryOverCap || "∞";
+
+  // Flip rolling carry-over window. Only used when gameMode === 'flip' AND
+  // the caller passed a FlipState (per-hole shape). Legacy callers passing
+  // a static TeamInfo stay on the scalar `carryOver` path below.
+  const usingFlipState = gameMode === 'flip' && flipTeams !== null && flipTeams !== undefined
+    && typeof flipTeams === 'object' && 'teamsByHole' in flipTeams;
+  let flipWindow: RollingCarryWindow | null = usingFlipState
+    ? initRollingCarryWindow(flipConfig?.carryOverWindow ?? 'all')
+    : null;
 
   // Nassau match state reconstructed as we replay
   const nassauState: NassauState | null = gameMode === 'nassau' ? initNassauState(players) : null;
@@ -836,8 +1359,90 @@ export function replayRound(
       result = calculateSkinsResult(players, scores, par, holeNumber, holeValue, carryOver, settings, lowestHandicap, holeHandicapRank);
     } else if (gameMode === 'nassau') {
       result = calculateNassauHoleResult(players, nassauTeams, scores, par, holeNumber, holeValue, settings, lowestHandicap, holeHandicapRank);
+    } else if (
+      gameMode === 'flip' &&
+      holeNumber >= 16 &&
+      holeNumber <= 18 &&
+      crybabyState &&
+      crybabyState.crybaby !== '' &&
+      crybabyState.byHole[holeNumber]
+    ) {
+      // Flip crybaby sub-game (holes 16-18). Uses the 2v3 asymmetric
+      // payout engine (calculateCrybabyHoleResult), NOT the base-game
+      // rolling window. `crybabyState.crybaby === ""` is the all-square
+      // sentinel — it falls through to the base-game branch below so
+      // holes 16-18 replay as Flip base-game continuation.
+      const choice = crybabyState.byHole[holeNumber];
+      const twoManTeam = choice.teams.teamA;
+      const threeManTeam = choice.teams.teamB;
+      const netCry: Record<string, number> = {};
+      players.forEach(p => {
+        const strokes = settings.pops
+          ? getStrokesOnHole(p.handicap, lowestHandicap, holeHandicapRank, settings.handicapPercent)
+          : 0;
+        netCry[p.id] = scores[p.id] - strokes;
+      });
+      const twoManBest = Math.min(...twoManTeam.players.map(p => netCry[p.id]));
+      const threeManBest = Math.min(...threeManTeam.players.map(p => netCry[p.id]));
+      const twoManWon: boolean | null =
+        twoManBest < threeManBest ? true
+          : threeManBest < twoManBest ? false
+            : null;
+      const cry = calculateCrybabyHoleResult({
+        bet: choice.bet,
+        crybabyId: crybabyState.crybaby,
+        partnerId: choice.partner,
+        players,
+        twoManWon,
+      });
+      result = {
+        push: cry.push,
+        winnerName: cry.winningSide === null
+          ? null
+          : cry.winningSide === 'A' ? twoManTeam.name : threeManTeam.name,
+        amount: Math.abs(cry.perPlayer.find(p => p.amount > 0)?.amount ?? 0),
+        carryOver: 0, // crybaby holes are independent — no rolling window
+        playerResults: cry.perPlayer,
+        quip: cry.push
+          ? 'Crybaby push. Money back.'
+          : cry.winningSide === 'A'
+            ? `${twoManTeam.name} takes it.`
+            : `${threeManTeam.name} takes it.`,
+      };
+    } else if (usingFlipState && teams && flipWindow) {
+      // Flip base game (1-15) — rolling-window carry-over, 3v2 payouts.
+      // Also catches the all-square case: holes 16-18 with no crybaby
+      // designated (crybabyState.crybaby === "" or absent entirely) run
+      // as base-game continuation through this same branch.
+      const baseBet = flipConfig?.baseBet ?? holeValue;
+      const effectiveBet = baseBet * Math.pow(2, hammerDepth);
+      const netScores: Record<string, number> = {};
+      players.forEach(p => {
+        const strokes = settings.pops ? getStrokesOnHole(p.handicap, lowestHandicap, holeHandicapRank, settings.handicapPercent) : 0;
+        netScores[p.id] = scores[p.id] - strokes;
+      });
+      const teamABest = Math.min(...teams.teamA.players.map(p => netScores[p.id]));
+      const teamBBest = Math.min(...teams.teamB.players.map(p => netScores[p.id]));
+      const flipResult = calculateFlipHoleResult({
+        teams, teamABest, teamBBest, effectiveBet, window: flipWindow, holeNumber,
+      });
+      flipWindow = flipResult.newWindow;
+      result = {
+        push: flipResult.push,
+        winnerName: flipResult.winningSide === null
+          ? null
+          : flipResult.winningSide === 'A' ? teams.teamA.name : teams.teamB.name,
+        amount: flipResult.potFromBet + flipResult.potFromCarry,
+        carryOver: 0, // scalar unused in rolling-window mode
+        playerResults: flipResult.perPlayer,
+        quip: flipResult.push
+          ? flipResult.forfeitedThisHole > 0
+            ? `Push. $${flipResult.forfeitedThisHole} fell into the ether.`
+            : 'Push. Pot carries to next hole.'
+          : `${flipResult.winningSide === 'A' ? teams.teamA.name : teams.teamB.name} takes the hole.`,
+      };
     } else if (teams) {
-      // DOC / Flip — team best ball
+      // DOC / legacy-Flip path — team best ball with scalar carry.
       result = calculateTeamHoleResult(players, teams, scores, par, holeValue, carryOver, hammerDepth, settings, lowestHandicap, holeHandicapRank, carryOverCap);
     } else {
       // DOC crybaby phase (holes 16-18) — skins scoring

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=1200"/>
+  <title>OG Card Preview — Crybaby Golf</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=DM+Sans:wght@400;600;800&display=swap" rel="stylesheet"/>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #111; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+
+    /* ── Card: exactly 1200×630 ── */
+    .card {
+      width: 1200px;
+      height: 630px;
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(135deg, #0F2208 0%, #1A3A0F 50%, #112609 100%);
+      flex-shrink: 0;
+    }
+
+    /* Fairway stripes */
+    .card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        90deg,
+        rgba(26,58,15,0.35) 0px,
+        rgba(26,58,15,0.35) 60px,
+        rgba(14,34,8,0.35) 60px,
+        rgba(14,34,8,0.35) 120px
+      );
+    }
+
+    /* Vignette */
+    .card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.55) 100%);
+      pointer-events: none;
+    }
+
+    /* Gold bars */
+    .bar-top, .bar-bottom {
+      position: absolute;
+      left: 0; right: 0;
+      height: 9px;
+      background: linear-gradient(90deg, #A07820, #F5E070 30%, #D4AF37 60%, #A07820);
+      z-index: 10;
+    }
+    .bar-top { top: 0; }
+    .bar-bottom { bottom: 0; }
+
+    /* Content */
+    .content {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding-top: 44px;
+      z-index: 5;
+    }
+
+    /* Logo glow */
+    .logo-wrap {
+      position: relative;
+      width: 232px;
+      height: 287px;
+      flex-shrink: 0;
+    }
+    .logo-wrap::before {
+      content: '';
+      position: absolute;
+      inset: -20px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,0.07) 0%, transparent 70%);
+    }
+    .logo-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      position: relative;
+      z-index: 1;
+      filter: drop-shadow(0 4px 20px rgba(0,0,0,0.5));
+    }
+
+    /* Title */
+    .title {
+      font-family: 'Pacifico', cursive;
+      font-size: 88px;
+      font-weight: 400;
+      color: transparent;
+      background: linear-gradient(180deg, #F5E070 0%, #D4AF37 45%, #A07820 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-align: center;
+      line-height: 1;
+      margin-top: 12px;
+      filter: drop-shadow(0 2px 16px rgba(212,175,55,0.35));
+      letter-spacing: -1px;
+    }
+
+    /* Divider */
+    .divider {
+      width: 520px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #D4AF37 20%, #D4AF37 80%, transparent);
+      margin: 14px 0 18px;
+      opacity: 0.7;
+    }
+
+    /* Tagline */
+    .tagline {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 26px;
+      font-weight: 600;
+      color: #D4AF37;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      opacity: 0.9;
+      text-align: center;
+    }
+
+    /* Sub tagline */
+    .sub {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 17px;
+      font-weight: 400;
+      color: rgba(255,255,255,0.4);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-top: 16px;
+      text-align: center;
+    }
+
+    /* Golf flag decorations */
+    .flag {
+      position: absolute;
+      bottom: 30px;
+      opacity: 0.22;
+    }
+    .flag-left  { left: 64px; }
+    .flag-right { right: 64px; transform: scaleX(-1); }
+
+    /* Domain hint */
+    .domain {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      color: rgba(255,255,255,0.2);
+      letter-spacing: 2px;
+      z-index: 5;
+    }
+
+    /* Screenshot instructions (hidden in PNG export) */
+    .instructions {
+      position: fixed;
+      top: 0; right: 0;
+      background: #fff;
+      color: #333;
+      padding: 14px 18px;
+      font-family: sans-serif;
+      font-size: 13px;
+      line-height: 1.6;
+      max-width: 280px;
+      border-bottom-left-radius: 8px;
+      z-index: 999;
+    }
+    .instructions strong { display: block; margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+
+  <div class="instructions">
+    <strong>📸 To export PNG:</strong>
+    Set browser to 1200px wide, screenshot just the card,
+    or use <code>puppeteer</code> / <code>playwright</code> to render.<br><br>
+    Save as <code>/public/og-image.png</code> then update <code>index.html</code>.
+  </div>
+
+  <div class="card">
+    <div class="bar-top"></div>
+    <div class="bar-bottom"></div>
+
+    <div class="content">
+      <div class="logo-wrap">
+        <img src="/images/crybaby-logo-transparent.png" alt="Crybaby"/>
+      </div>
+      <div class="title">Crybaby Golf</div>
+      <div class="divider"></div>
+      <div class="tagline">Golf's Social Scoring App</div>
+      <div class="sub">Track Rounds · Bet Friends · Settle the Score</div>
+    </div>
+
+    <!-- Golf flag left -->
+    <svg class="flag flag-left" width="58" height="230" viewBox="0 0 58 230">
+      <line x1="4" y1="0" x2="4" y2="220" stroke="#D4AF37" stroke-width="3"/>
+      <polygon points="4,4 56,26 4,48" fill="#D4AF37"/>
+      <ellipse cx="4" cy="220" rx="18" ry="6" fill="#D4AF37"/>
+    </svg>
+
+    <!-- Golf flag right -->
+    <svg class="flag flag-right" width="58" height="230" viewBox="0 0 58 230">
+      <line x1="4" y1="0" x2="4" y2="220" stroke="#D4AF37" stroke-width="3"/>
+      <polygon points="4,4 56,26 4,48" fill="#D4AF37"/>
+      <ellipse cx="4" cy="220" rx="18" ry="6" fill="#D4AF37"/>
+    </svg>
+
+    <div class="domain">crybabygolf.app</div>
+  </div>
+
+</body>
+</html>
