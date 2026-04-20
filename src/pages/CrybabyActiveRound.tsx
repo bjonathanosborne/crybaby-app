@@ -18,7 +18,8 @@ import FinalPhotoGate from "@/components/FinalPhotoGate";
 import FlipReel from "@/components/flip/FlipReel";
 import FlipTeamsBadge from "@/components/flip/FlipTeamsBadge";
 import CrybabyTransition from "@/components/flip/CrybabyTransition";
-import { commitFlipTeams, type TeamInfo as FlipTeamInfo, type FlipConfig as FlipConfigType, type CrybabyState as CrybabyStateType } from "@/lib/gameEngines";
+import CrybabyHoleSetup from "@/components/flip/CrybabyHoleSetup";
+import { commitFlipTeams, calculateCrybabyHoleResult, type TeamInfo as FlipTeamInfo, type FlipConfig as FlipConfigType, type CrybabyState as CrybabyStateType, type CrybabyHoleChoice } from "@/lib/gameEngines";
 import { computeBaseGameBalances, type CrybabyIdentification } from "@/lib/flipCrybaby";
 import { supabase } from "@/integrations/supabase/client";
 import RoundLiveFeed from "@/components/RoundLiveFeed";
@@ -1604,6 +1605,58 @@ export default function CrybabActiveRound() {
     const cs = scores[currentHole];
     const gameMode = round.gameMode;
 
+    // C6: Flip crybaby sub-game (holes 16-18 when a crybaby exists).
+    // Payout math is completely separate from the base-game 3v2 engine
+    // — see calculateCrybabyHoleResult for the asymmetric stakes logic.
+    // The "all-square" case (crybabyState.crybaby === "") intentionally
+    // skips this branch and falls through to the base-game team path
+    // below, continuing Flip holes 16-18 as an extension of 1-15.
+    if (
+      gameMode === 'flip' &&
+      currentHole >= 16 &&
+      currentHole <= 18 &&
+      crybabyState &&
+      crybabyState.crybaby !== "" &&
+      crybabyState.byHole[currentHole]
+    ) {
+      const choice = crybabyState.byHole[currentHole];
+      const twoManTeam = choice.teams.teamA;
+      const threeManTeam = choice.teams.teamB;
+      const netScoresCry: Record<string, number> = {};
+      players.forEach(p => {
+        const strokes = settings.pops ? getStrokesOnHole(p.handicap, lowestHandicap, holeHandicap, settings.handicapPercent) : 0;
+        netScoresCry[p.id] = cs[p.id] - strokes;
+      });
+      const twoManBest = Math.min(...twoManTeam.players.map(p => netScoresCry[p.id]));
+      const threeManBest = Math.min(...threeManTeam.players.map(p => netScoresCry[p.id]));
+      const twoManWon: boolean | null = twoManBest < threeManBest
+        ? true
+        : threeManBest < twoManBest
+          ? false
+          : null;
+      const crybabyResult = calculateCrybabyHoleResult({
+        bet: choice.bet,
+        crybabyId: crybabyState.crybaby,
+        partnerId: choice.partner,
+        players,
+        twoManWon,
+      });
+      return {
+        push: crybabyResult.push,
+        winnerName: crybabyResult.winningSide === null
+          ? null
+          : crybabyResult.winningSide === 'A' ? twoManTeam.name : threeManTeam.name,
+        amount: Math.abs(crybabyResult.perPlayer.find(p => p.amount > 0)?.amount ?? 0),
+        carryOver: 0, // crybaby holes are independent — no rolling window
+        playerResults: crybabyResult.perPlayer,
+        quip: crybabyResult.push
+          ? "Crybaby push. Money back."
+          : crybabyResult.winningSide === 'A'
+            ? `${twoManTeam.name} takes it. Crybaby's comeback continues.`
+            : `The pack wins. ${crybabyState.crybaby === crybabyState.crybaby ? "Crybaby" : ""} holds on by a thread.`,
+      };
+    }
+
     // Skins — individual scoring
     if (gameMode === 'skins' || gameMode === 'custom') {
       return calculateSkinsResult(players, cs, par, currentHole, round.holeValue, carryOver, round.settings, lowestHandicap, holeHandicap);
@@ -1971,6 +2024,49 @@ export default function CrybabActiveRound() {
     }
   };
 
+  // C6: Per-crybaby-hole setup confirm. Writes the scorekeeper's
+  // { bet, partner, teams } choice into CrybabyState.byHole[currentHole]
+  // and persists. The render gate below falls through to the scoring UI
+  // once byHole[currentHole] is present; submit-hole will use the crybaby
+  // payout engine instead of the base-game 3v2 formula.
+  const handleCrybabyHoleSetupConfirm = (
+    choice: { bet: number; partner: string; teams: FlipTeamInfo },
+  ) => {
+    if (!crybabyState?.crybaby) return;
+    const nextByHole: Record<number, CrybabyHoleChoice> = {
+      ...crybabyState.byHole,
+      [currentHole]: {
+        bet: choice.bet,
+        partner: choice.partner,
+        teams: choice.teams,
+      },
+    };
+    const nextCrybaby: CrybabyStateType = { ...crybabyState, byHole: nextByHole };
+    setCrybabyState(nextCrybaby);
+    if (roundId) {
+      void persist.persistGameState(roundId, {
+        currentHole, carryOver, totals, hammerHistory,
+        flipState,
+        flipConfig: flipConfig ?? undefined,
+        rollingCarryWindow: rs.rollingCarryWindow ?? undefined,
+        crybabyState: nextCrybaby,
+      }).then(result => {
+        if (!result.ok) {
+          toast({
+            title: `Couldn't save hole ${currentHole} setup`,
+            description: result.error.message,
+            variant: "destructive",
+            action: (
+              <ToastAction altText={`Retry saving hole ${currentHole} setup`} onClick={() => handleCrybabyHoleSetupConfirm(choice)}>
+                Retry
+              </ToastAction>
+            ),
+          });
+        }
+      });
+    }
+  };
+
   const handleWolfPartner = (partnerId) => {
     setWolfPartner(partnerId);
     setIsLoneWolf(false);
@@ -2262,6 +2358,36 @@ export default function CrybabActiveRound() {
         balances={balances}
         roundId={roundId ?? "preview"}
         onBegin={handleCrybabyBegin}
+      />
+    );
+  }
+
+  // C6: Per-crybaby-hole setup intercept.
+  //
+  // On each crybaby hole (16-18) in a Flip round where a crybaby was
+  // designated (non-empty `crybabyState.crybaby`), the setup screen runs
+  // FIRST: scorekeeper picks the bet + partner, locks teams, and then
+  // the normal scoring UI renders below. Once byHole[currentHole] is
+  // populated, this gate falls through and the scoring view renders.
+  //
+  // Skipped entirely when crybabyState.crybaby === "" (all-square sentinel):
+  // holes 16-18 then run as continuation of the base Flip game (C5
+  // product decision, confirmed in PR #16 discussion).
+  if (
+    round.gameMode === 'flip' &&
+    currentHole >= 16 &&
+    currentHole <= 18 &&
+    crybabyState &&
+    crybabyState.crybaby !== "" &&
+    !crybabyState.byHole[currentHole]
+  ) {
+    return (
+      <CrybabyHoleSetup
+        holeNumber={currentHole}
+        players={players}
+        crybabyId={crybabyState.crybaby}
+        maxBetPerHole={crybabyState.maxBetPerHole}
+        onConfirm={handleCrybabyHoleSetupConfirm}
       />
     );
   }

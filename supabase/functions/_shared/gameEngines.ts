@@ -579,6 +579,122 @@ export function calculateFlipHoleResult(args: {
   };
 }
 
+// ============================================================
+// CRYBABY SUB-GAME PAYOUT MATH (holes 16-18)
+//
+// Separate engine from the Flip base game. Crybaby holes are
+// INDEPENDENT (no rolling window, no cross-hole carry). Each hole:
+//
+//   - Crybaby picks their bet B (even, capped at maxBetPerHole).
+//   - Partner matches B.
+//   - Each of 3 opponents antes opponentStake = computeOpponentStake(B)
+//     — even-dollar round of B/3.
+//   - Teams: { crybaby + partner } vs { other 3 }.
+//   - Decided hole: losers pay their ante, winners split loser's
+//     pot among the winning side.
+//       2-man wins: 2-man each gain (3 * opp) / 2. 3-man each lose opp.
+//       3-man wins: 3-man each gain (2 * B) / 3. 2-man each lose B.
+//     Zero-sum per hole (2 * (3*opp/2) = 3*opp, 3 * (2B/3) = 2B).
+//   - Push: money returned, net 0 per player.
+//
+// Rounding note: `computeOpponentStake` always yields an even int, so
+// (3 * opp) / 2 is always an integer. The 3-man-winner share
+// (2 * B / 3) is an integer only when B is divisible by 3 — otherwise
+// fractional dollars land on each 3-man player. C7 settlement
+// rounds the final total for display; intermediate per-hole amounts
+// stay as-is so zero-sum is exact across the hole.
+// ============================================================
+
+/**
+ * Round a crybaby's bet divided by 3 to the nearest EVEN dollar.
+ * Returns 0 if bet is 0; returns minimum of 2 for any positive bet
+ * whose /3 rounds below $2 (even-bet floor). Deterministic.
+ */
+export function computeOpponentStake(bet: number): number {
+  if (bet <= 0) return 0;
+  const exact = bet / 3;
+  const rounded = Math.round(exact);
+  const nearestEven = rounded % 2 === 0
+    ? rounded
+    : Math.abs(exact - (rounded - 1)) <= Math.abs(exact - (rounded + 1))
+      ? rounded - 1
+      : rounded + 1;
+  return Math.max(2, nearestEven);
+}
+
+export interface CrybabyPayoutArgs {
+  /** Crybaby's bet for this hole (even, > 0, <= maxBetPerHole). */
+  bet: number;
+  /** Player id of the crybaby. */
+  crybabyId: string;
+  /** Player id of the partner chosen this hole. */
+  partnerId: string;
+  /** All 5 round players. */
+  players: Player[];
+  /**
+   * Outcome:
+   *   true  — 2-man team (crybaby + partner) won
+   *   false — 3-man team (other 3) won
+   *   null  — push (money returned)
+   */
+  twoManWon: boolean | null;
+}
+
+export interface CrybabyPayoutResult {
+  push: boolean;
+  /** 'A' = 2-man (crybaby+partner), 'B' = 3-man (other 3), null on push. */
+  winningSide: "A" | "B" | null;
+  opponentStake: number;
+  /** Per-player net dollar delta for this hole. Sum = 0 on decided. */
+  perPlayer: Array<{ id: string; name: string; amount: number }>;
+}
+
+export function calculateCrybabyHoleResult(args: CrybabyPayoutArgs): CrybabyPayoutResult {
+  const { bet, crybabyId, partnerId, players, twoManWon } = args;
+  const twoManSet = new Set([crybabyId, partnerId]);
+  const opponentStake = computeOpponentStake(bet);
+
+  // Push: everyone's ante is returned, net zero delta. No carry-over
+  // (crybaby phase holes are independent).
+  if (twoManWon === null) {
+    return {
+      push: true,
+      winningSide: null,
+      opponentStake,
+      perPlayer: players.map(p => ({ id: p.id, name: p.name, amount: 0 })),
+    };
+  }
+
+  if (twoManWon) {
+    // 2-man wins: each 2-man gains (3 * opponentStake) / 2 from the 3-man
+    // pot. 3-man losers each pay opponentStake.
+    const twoManGain = (3 * opponentStake) / 2;
+    return {
+      push: false,
+      winningSide: "A",
+      opponentStake,
+      perPlayer: players.map(p => ({
+        id: p.id,
+        name: p.name,
+        amount: twoManSet.has(p.id) ? twoManGain : -opponentStake,
+      })),
+    };
+  }
+
+  // 3-man wins: each 3-man gains (2 * bet) / 3. 2-man losers each pay bet.
+  const threeManGain = (2 * bet) / 3;
+  return {
+    push: false,
+    winningSide: "B",
+    opponentStake,
+    perPlayer: players.map(p => ({
+      id: p.id,
+      name: p.name,
+      amount: twoManSet.has(p.id) ? -bet : threeManGain,
+    })),
+  };
+}
+
 // --- SKINS SCORING ---
 export function calculateSkinsResult(
   players: Player[],
