@@ -12,6 +12,47 @@ import {
 } from "recharts";
 import ScoringDistributionChart from "@/components/stats/ScoringDistributionChart";
 
+// ============================================================
+// Error surfacing for Promise.all RPC blocks
+//
+// Rule: every async call inside a Promise.all MUST resolve with a value
+// (never reject). If it rejects, the whole Promise.all rejects and the
+// page renders blank-state despite having data to show.
+//
+// `resilient()` wraps a promise, catches any error, surfaces it as a
+// toast with the actual error detail (PostgrestError shape → message +
+// code + hint), logs to the console, and resolves with null so the
+// outer Promise.all keeps its shape. Callers use `null` fallbacks on
+// their setState line.
+// ============================================================
+
+function formatRpcError(err: unknown): string {
+  // Supabase PostgrestError is a plain object with {message, code, details, hint},
+  // not an Error instance. Check object shape first so we don't lose the detail.
+  if (err && typeof err === "object") {
+    const e = err as { message?: string; code?: string; details?: string; hint?: string };
+    const parts: string[] = [];
+    if (e.message) parts.push(e.message);
+    if (e.code) parts.push(`(${e.code})`);
+    if (e.hint) parts.push(`— ${e.hint}`);
+    if (parts.length > 0) return parts.join(" ");
+  }
+  if (err instanceof Error) return err.message;
+  return "Unknown error";
+}
+
+function resilient<T>(p: Promise<T>, label: string): Promise<T | null> {
+  return p.catch((err: unknown) => {
+    console.error(`[stats] ${label} failed`, err);
+    toast({
+      title: `Couldn't load ${label}`,
+      description: formatRpcError(err),
+      variant: "destructive",
+    });
+    return null;
+  });
+}
+
 export default function StatsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -24,31 +65,24 @@ export default function StatsPage() {
 
   useEffect(() => {
     if (!user) { setLoading(false); return; }
-    // loadUserScoreDistribution errors are surfaced via a toast instead of
-    // silently swallowed — a silent swallow previously made a broken RPC
-    // look like a legitimate empty-state. The chart still falls back to
-    // its empty-state rendering if the bucket counts are all 0.
+    // Every RPC call in the Promise.all gets individual error surfacing so
+    // one broken RPC does NOT reject the whole promise and blank the page.
+    // (A single bare loadUserStats() here rejected the whole Promise.all for
+    // hours on 2026-04-20 because get_user_stats was missing from prod —
+    // the page rendered as "0 rounds, no pie chart" with no error visible.
+    // Never again.)
     Promise.all([
-      loadProfile(),
-      loadMyRounds(200),
-      loadSettlements(),
-      loadUserStats(),
-      loadUserScoreDistribution().catch((err: unknown) => {
-        console.error("[stats] loadUserScoreDistribution failed", err);
-        const message = err instanceof Error ? err.message : "Unknown error";
-        toast({
-          title: "Couldn't load scoring distribution",
-          description: message,
-          variant: "destructive",
-        });
-        return null;
-      }),
+      resilient(loadProfile(), "profile"),
+      resilient(loadMyRounds(200), "recent rounds"),
+      resilient(loadSettlements(), "settlement ledger"),
+      resilient(loadUserStats(), "career stats"),
+      resilient(loadUserScoreDistribution(), "scoring distribution"),
     ]).then(([p, r, s, ss, sd]) => {
       setProfile(p);
-      setRounds(r || []);
-      setSettlements(s || []);
+      setRounds((r as unknown[] | null) ?? []);
+      setSettlements((s as unknown[] | null) ?? []);
       setServerStats(ss);
-      setScoreDist(sd);
+      setScoreDist(sd as UserScoreDistribution | null);
     }).finally(() => setLoading(false));
   }, [user]);
 
