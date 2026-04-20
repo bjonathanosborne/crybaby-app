@@ -17,7 +17,9 @@ import EditHammerModal from "@/components/capture/hammer/EditHammerModal";
 import FinalPhotoGate from "@/components/FinalPhotoGate";
 import FlipReel from "@/components/flip/FlipReel";
 import FlipTeamsBadge from "@/components/flip/FlipTeamsBadge";
-import { commitFlipTeams, type TeamInfo as FlipTeamInfo, type FlipConfig as FlipConfigType } from "@/lib/gameEngines";
+import CrybabyTransition from "@/components/flip/CrybabyTransition";
+import { commitFlipTeams, type TeamInfo as FlipTeamInfo, type FlipConfig as FlipConfigType, type CrybabyState as CrybabyStateType } from "@/lib/gameEngines";
+import { computeBaseGameBalances, type CrybabyIdentification } from "@/lib/flipCrybaby";
 import { supabase } from "@/integrations/supabase/client";
 import RoundLiveFeed from "@/components/RoundLiveFeed";
 import {
@@ -880,6 +882,9 @@ export default function CrybabActiveRound() {
   // so other call sites (lines ~1476, ~1598) read the current hole's teams
   // without a structural change. New code should read flipState directly.
   const { flipState, setFlipState, flipConfig, setFlipConfig } = rs;
+  // C5: Flip crybaby-phase state. Set by the CrybabyTransition "Begin"
+  // handler at hole 15 → 16 handoff. Null during holes 1-15 + non-Flip.
+  const { crybabyState, setCrybabyState } = rs;
   const { wolfState, setWolfState } = rs;
   const { nassauState, setNassauState } = rs;
   const { nassauPresses, setNassauPresses } = rs;
@@ -1212,6 +1217,8 @@ export default function CrybabActiveRound() {
         // confirmations. Absent on non-Flip rounds.
         if (saved.flipConfig) setFlipConfig(saved.flipConfig as FlipConfigType);
         if (saved.flipState) setFlipState(saved.flipState as import('@/lib/gameEngines').FlipState);
+        // C5: hydrate crybaby state if the round resumed past hole 15.
+        if (saved.crybabyState) setCrybabyState(saved.crybabyState as CrybabyStateType);
 
         // Restore per-hole stroke scores from round_players.hole_scores
         const restoredScores = {};
@@ -1916,6 +1923,54 @@ export default function CrybabActiveRound() {
     }
   };
 
+  // C5: Crybaby transition "Begin" handler — stamp CrybabyState from the
+  // resolved identification + persist. Runs once at hole 15 → 16 handoff
+  // for Flip rounds. When no crybaby applies (all balances >= 0), we
+  // store a minimal CrybabyState with crybaby=null so the UI knows we've
+  // passed the gate; C6 / C7 handle the skip-crybaby path.
+  const handleCrybabyBegin = (identification: CrybabyIdentification) => {
+    // Build the CrybabyState payload. crybaby === null means no one in the
+    // hole — we persist an empty state so the transition doesn't re-fire,
+    // and C7 settlement path can see "no crybaby" as an explicit signal.
+    const next: CrybabyStateType = identification.crybaby
+      ? {
+          crybaby: identification.crybaby,
+          losingBalance: identification.losingBalance,
+          maxBetPerHole: identification.maxBetPerHole,
+          byHole: {},
+          tiebreakOutcome: identification.tiebreakOutcome,
+        }
+      : {
+          crybaby: "",        // empty sentinel — UI reads null vs "" as "no crybaby this round"
+          losingBalance: 0,
+          maxBetPerHole: 0,
+          byHole: {},
+        };
+    setCrybabyState(next);
+    if (roundId) {
+      void persist.persistGameState(roundId, {
+        currentHole, carryOver, totals, hammerHistory,
+        flipState,
+        flipConfig: flipConfig ?? undefined,
+        rollingCarryWindow: rs.rollingCarryWindow ?? undefined,
+        crybabyState: next,
+      }).then(result => {
+        if (!result.ok) {
+          toast({
+            title: "Couldn't save crybaby selection",
+            description: result.error.message,
+            variant: "destructive",
+            action: (
+              <ToastAction altText="Retry saving crybaby selection" onClick={() => handleCrybabyBegin(identification)}>
+                Retry
+              </ToastAction>
+            ),
+          });
+        }
+      });
+    }
+  };
+
   const handleWolfPartner = (partnerId) => {
     setWolfPartner(partnerId);
     setIsLoneWolf(false);
@@ -2174,6 +2229,40 @@ export default function CrybabActiveRound() {
             can actually show the flow. */}
         {capture.activeCapture && <CaptureFlow {...capture.activeCapture} />}
       </div>
+    );
+  }
+
+  // C5: Crybaby transition intercept.
+  //
+  // After hole 15 scores + persistence settle, `useAdvanceHole` advances
+  // `currentHole` to 16. Before the normal scoring UI for hole 16 renders,
+  // we show the CrybabyTransition screen that surfaces standings, picks
+  // the crybaby, and stamps CrybabyState. Once the scorekeeper taps
+  // "Begin Crybaby", `handleCrybabyBegin` writes CrybabyState + persists,
+  // which makes this gate fall-through on subsequent renders.
+  //
+  // Gate: gameMode === 'flip' AND currentHole === 16 AND no crybabyState
+  // yet AND we have at least 15 holes of results to compute balances from.
+  // The holeResults length check guards against a corrupted resume where
+  // currentHole jumped to 16 without 15 played holes.
+  if (
+    round.gameMode === 'flip' &&
+    currentHole === 16 &&
+    !crybabyState &&
+    holeResults.length >= 15
+  ) {
+    const balances = computeBaseGameBalances(
+      holeResults as (HoleResult & { hole: number })[],
+      players,
+      "base",
+    );
+    return (
+      <CrybabyTransition
+        players={players}
+        balances={balances}
+        roundId={roundId ?? "preview"}
+        onBegin={handleCrybabyBegin}
+      />
     );
   }
 

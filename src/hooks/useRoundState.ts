@@ -10,6 +10,7 @@ import {
   type FlipState,
   type FlipConfig,
   type RollingCarryWindow,
+  type CrybabyState,
 } from "@/lib/gameEngines";
 
 /**
@@ -65,6 +66,12 @@ export interface RoundStateSnapshot {
   flipConfig: FlipConfig | null;
   /** Flip base-game rolling carry-over window (FIFO push pot queue). */
   rollingCarryWindow: RollingCarryWindow | null;
+  /**
+   * Flip crybaby sub-game state (holes 16-18). Populated by the
+   * CrybabyTransition screen at hole 15 → 16 handoff. Null during
+   * holes 1-15 and for non-Flip rounds.
+   */
+  crybabyState: CrybabyState | null;
   wolfState: WolfState;
   nassauState: NassauState;
   nassauPresses: { startHole: number; match: Record<string, number> }[];
@@ -222,6 +229,8 @@ export interface UseRoundStateReturn {
   setFlipConfig: React.Dispatch<React.SetStateAction<FlipConfig | null>>;
   rollingCarryWindow: RollingCarryWindow | null;
   setRollingCarryWindow: React.Dispatch<React.SetStateAction<RollingCarryWindow | null>>;
+  crybabyState: CrybabyState | null;
+  setCrybabyState: React.Dispatch<React.SetStateAction<CrybabyState | null>>;
   wolfState: WolfState;
   setWolfState: React.Dispatch<React.SetStateAction<WolfState>>;
   nassauState: NassauState;
@@ -258,6 +267,7 @@ export function useRoundState(): UseRoundStateReturn {
   const [flipState, setFlipState] = useState<FlipState>(() => initFlipState());
   const [flipConfig, setFlipConfig] = useState<FlipConfig | null>(null);
   const [rollingCarryWindow, setRollingCarryWindow] = useState<RollingCarryWindow | null>(null);
+  const [crybabyState, setCrybabyState] = useState<CrybabyState | null>(null);
   const [wolfState, setWolfState] = useState<WolfState>({
     wolfOrder: [],
     currentWolfIndex: 0,
@@ -293,13 +303,14 @@ export function useRoundState(): UseRoundStateReturn {
     flipState,
     flipConfig,
     rollingCarryWindow,
+    crybabyState,
     wolfState,
     nassauState,
     nassauPresses,
   }), [
     currentHole, scores, totals, holeResults, hammerDepth, hammerHistory,
     hammerPending, lastHammerBy, carryOver, flipTeams, flipState, flipConfig,
-    rollingCarryWindow, wolfState, nassauState, nassauPresses,
+    rollingCarryWindow, crybabyState, wolfState, nassauState, nassauPresses,
   ]);
 
   return {
@@ -316,6 +327,7 @@ export function useRoundState(): UseRoundStateReturn {
     flipState, setFlipState,
     flipConfig, setFlipConfig,
     rollingCarryWindow, setRollingCarryWindow,
+    crybabyState, setCrybabyState,
     wolfState, setWolfState,
     nassauState, setNassauState,
     nassauPresses, setNassauPresses,
