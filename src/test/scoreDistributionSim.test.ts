@@ -268,19 +268,68 @@ describe("Migration 20260419050000 — fix shape", () => {
 // StatsPage — client-side error hardening
 // ============================================================
 
-describe("StatsPage — loadUserScoreDistribution error surface", () => {
-  it("no longer silently nulls errors (toasts on failure)", async () => {
+describe("StatsPage — client-side error hardening", () => {
+  it("no longer silently nulls errors (toasts with real detail)", async () => {
     const fs = await import("fs");
     const path = await import("path");
     const src = fs.readFileSync(
       path.resolve(__dirname, "../../src/pages/StatsPage.tsx"),
       "utf-8",
     );
-    // The old `.catch(() => null)` silent-swallow must not be present.
+    // The old `.catch(() => null)` silent-swallow must not be present
+    // for any RPC call in the Promise.all.
     expect(src).not.toMatch(/loadUserScoreDistribution\(\)\.catch\(\(\)\s*=>\s*null\)/);
-    // The new handler must toast + log.
-    expect(src).toMatch(/loadUserScoreDistribution\(\)\.catch\(/);
-    expect(src).toMatch(/Couldn't load scoring distribution/);
-    expect(src).toMatch(/console\.error\("\[stats\] loadUserScoreDistribution failed"/);
+    expect(src).not.toMatch(/loadUserStats\(\)\.catch\(\(\)\s*=>\s*null\)/);
+  });
+
+  it("every RPC call in the Promise.all is wrapped by resilient()", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../src/pages/StatsPage.tsx"),
+      "utf-8",
+    );
+    // The Promise.all block must wrap loadProfile, loadMyRounds,
+    // loadSettlements, loadUserStats, and loadUserScoreDistribution
+    // each in resilient() — so a single RPC failure cannot blank the page.
+    expect(src).toMatch(/resilient\(loadProfile\(\)/);
+    expect(src).toMatch(/resilient\(loadMyRounds\(/);
+    expect(src).toMatch(/resilient\(loadSettlements\(\)/);
+    expect(src).toMatch(/resilient\(loadUserStats\(\)/);
+    expect(src).toMatch(/resilient\(loadUserScoreDistribution\(\)/);
+  });
+
+  it("resilient() toasts with PostgrestError detail (message + code + hint)", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../src/pages/StatsPage.tsx"),
+      "utf-8",
+    );
+    // formatRpcError must handle the PostgrestError shape — not just Error
+    // instances. Prior failure mode: err from supabase-js was a plain object
+    // so instanceof Error was false and the toast said "Unknown error".
+    expect(src).toMatch(/function formatRpcError\(err:\s*unknown\)/);
+    expect(src).toMatch(/typeof err\s*===\s*"object"/);
+    // Should pull message, code, and hint fields off the object.
+    expect(src).toMatch(/e\.message/);
+    expect(src).toMatch(/e\.code/);
+    expect(src).toMatch(/e\.hint/);
+  });
+
+  it("resilient() logs + toasts + returns null without rejecting", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../src/pages/StatsPage.tsx"),
+      "utf-8",
+    );
+    const fn = src.match(/function resilient<T>\(p:\s*Promise<T>[\s\S]*?\n\}/);
+    expect(fn).toBeTruthy();
+    const body = fn?.[0] ?? "";
+    expect(body).toMatch(/console\.error/);
+    expect(body).toMatch(/toast\(/);
+    expect(body).toMatch(/return\s+null/);
+    expect(body).toMatch(/variant:\s*"destructive"/);
   });
 });
