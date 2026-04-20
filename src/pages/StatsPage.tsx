@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { loadProfile, loadMyRounds, loadSettlements, loadUserStats, loadUserScoreDistribution, type UserScoreDistribution } from "@/lib/db";
+import { toast } from "@/hooks/use-toast";
 import { format, parseISO, subMonths } from "date-fns";
 import { ChevronLeft, Loader2, BarChart3 } from "lucide-react";
 import { EagleIcon, BirdieIcon, ParFlagIcon, BogeyIcon } from "@/components/icons/CrybIcons";
@@ -23,12 +24,25 @@ export default function StatsPage() {
 
   useEffect(() => {
     if (!user) { setLoading(false); return; }
+    // loadUserScoreDistribution errors are surfaced via a toast instead of
+    // silently swallowed — a silent swallow previously made a broken RPC
+    // look like a legitimate empty-state. The chart still falls back to
+    // its empty-state rendering if the bucket counts are all 0.
     Promise.all([
       loadProfile(),
       loadMyRounds(200),
       loadSettlements(),
       loadUserStats(),
-      loadUserScoreDistribution().catch(() => null),
+      loadUserScoreDistribution().catch((err: unknown) => {
+        console.error("[stats] loadUserScoreDistribution failed", err);
+        const message = err instanceof Error ? err.message : "Unknown error";
+        toast({
+          title: "Couldn't load scoring distribution",
+          description: message,
+          variant: "destructive",
+        });
+        return null;
+      }),
     ]).then(([p, r, s, ss, sd]) => {
       setProfile(p);
       setRounds(r || []);
