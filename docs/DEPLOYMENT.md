@@ -90,10 +90,15 @@ Migrations applied out-of-band to production (not recorded in `supabase_migratio
 
 | Date (UTC) | Migration | How | Notes |
 |---|---|---|---|
-| 2026-04-20 | `20260409000000_add_user_stats_function.sql` | Management API (dashboard session token) | Function was missing from prod — never previously applied. Caused `StatsPage` to hit PGRST202 404 on `get_user_stats` RPC, which crashed the whole `Promise.all`, rendering "0 rounds / no pie chart / no wins-losses" empty state. Applied via `POST /v1/projects/<ref>/database/query`. Verified: `curl /rest/v1/rpc/get_user_stats` returns `rounds_played=1, avg_score=71.0, best_score=71` for Jonathan. |
+| 2026-04-20 | `20260420000000_reconcile_schema_migrations_tracker.sql` | Management API | Back-fills tracker rows for every out-of-band apply from `20260409000000` onward (see below). Closes the gap between the repo's migration folder and `supabase_migrations.schema_migrations`, restoring `supabase db push` parity. |
+| 2026-04-20 | `20260419030000_rounds_visible_to_friends.sql` | Management API | **Was never applied to prod** — discovered during the tracker audit. The column had been referenced by the UI privacy toggle for a day but the save would have thrown `42703: column "rounds_visible_to_friends" does not exist`. |
+| 2026-04-20 | `20260419020000_needs_final_photo.sql` | Management API | **Was never applied to prod** — discovered during the tracker audit. The Bug 2 Skip-photo path would have thrown on `UPDATE rounds SET needs_final_photo = true`. |
+| 2026-04-20 | `20260409000000_add_user_stats_function.sql` | Management API (dashboard session token) | Function was missing from prod — never previously applied. Caused `StatsPage` to hit PGRST202 404 on `get_user_stats` RPC, which crashed the whole `Promise.all`, rendering "0 rounds / no pie chart / no wins-losses" empty state. Verified: `curl /rest/v1/rpc/get_user_stats` returns `rounds_played=1, avg_score=71.0, best_score=71` for Jonathan. |
 | 2026-04-19 | `20260419050000_fix_get_user_score_distribution.sql` | Management API (dashboard session token) | `CREATE OR REPLACE` errored `42P13` against the pre-existing `20260419040000` function; used `DROP FUNCTION IF EXISTS` + `CREATE`. Migration file in repo has since been updated to this pattern. |
 
-Older out-of-band applies (`20260415+` through `20260419040000`) pre-date this log and were applied by Jonathan via the Supabase SQL editor. The `schema_migrations` reconciliation migration (`20260420000000_*` in this PR) back-fills all of them.
+Older out-of-band applies (everything between `20260415000000` and `20260419040000` not listed above) were applied by Jonathan via the Supabase SQL editor as each PR merged. Their tracker rows are also back-filled by `20260420000000_reconcile_schema_migrations_tracker.sql`.
+
+**Process fix going forward:** the tracker audit found that **three** migrations had been committed to the repo (and had UI code depending on them) without ever being applied to prod. Every future PR that includes a migration must explicitly confirm the apply on the PR before merge — either by pasting the `schema_migrations` row back, or by showing the `curl` probe result for the intended schema object.
 
 ---
 
