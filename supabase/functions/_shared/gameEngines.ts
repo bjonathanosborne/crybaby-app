@@ -251,12 +251,45 @@ export function getPhaseColor(phase: string): string {
 
 // --- TEAM FORMATION ---
 
-export function getTeamsForHole(gameMode: GameMode, holeNumber: number, players: Player[], flipTeams?: TeamInfo | null): TeamInfo | null {
+/**
+ * Flip teams input for `getTeamsForHole`. Callers pass EITHER a static
+ * `TeamInfo` (legacy shape — teams held constant across the round) OR
+ * a `FlipState` (per-hole shape). The union preserves backward compat
+ * for any test / legacy caller still handing in a single TeamInfo,
+ * while letting the new Flip implementation pass hole-specific teams.
+ *
+ * Crybaby-phase teams (holes 16-18) are passed via the SEPARATE
+ * `crybabyTeams` arg, not through this union — crybaby has its own
+ * per-hole team shape on `CrybabyState.byHole` and the engine reads
+ * that directly at the caller boundary.
+ */
+export type FlipTeamsInput = TeamInfo | FlipState | null | undefined;
+
+function resolveFlipTeams(input: FlipTeamsInput, holeNumber: number): TeamInfo | null {
+  if (!input) return null;
+  // FlipState has `teamsByHole`; a raw TeamInfo has `teamA`.
+  if ("teamsByHole" in input) {
+    return input.teamsByHole[holeNumber] ?? null;
+  }
+  return input;
+}
+
+export function getTeamsForHole(
+  gameMode: GameMode,
+  holeNumber: number,
+  players: Player[],
+  flipTeams?: FlipTeamsInput,
+  crybabyTeams?: TeamInfo | null,
+): TeamInfo | null {
   switch (gameMode) {
     case 'drivers_others_carts':
       return getDOCTeams(holeNumber, players);
     case 'flip':
-      return flipTeams || null;
+      // Crybaby sub-game (holes 16-18) uses its own team shape passed
+      // explicitly by the caller; the base game reads per-hole teams
+      // off FlipState (or falls back to a static TeamInfo for legacy).
+      if (holeNumber >= 16 && crybabyTeams) return crybabyTeams;
+      return resolveFlipTeams(flipTeams, holeNumber);
     case 'nassau':
       if (players.length === 4) {
         return {
@@ -311,6 +344,205 @@ export function generateFlipTeams(players: Player[]): TeamInfo {
   return {
     teamA: { name: 'Heads', players: shuffled.slice(0, half), color: '#16A34A' },
     teamB: { name: 'Tails', players: shuffled.slice(half), color: '#DC2626' },
+  };
+}
+
+// ============================================================
+// FLIP ENGINE — pure primitives
+// ============================================================
+
+/**
+ * Create an empty FlipState at round start. `currentHole` is 0 because
+ * no teams have been committed yet; the initial FlipTeamModal at hole 1
+ * will advance it to 1.
+ */
+export function initFlipState(): FlipState {
+  return { teamsByHole: {}, currentHole: 0 };
+}
+
+/**
+ * Commit teams for a specific hole. Pure — returns a new state with
+ * `teamsByHole[holeNumber]` set and `currentHole` advanced to match.
+ * The caller decides WHEN to call this (round-start modal, per-hole
+ * flip button tap, or push-carry auto-advance).
+ */
+export function commitFlipTeams(prev: FlipState, holeNumber: number, teams: TeamInfo): FlipState {
+  return {
+    ...prev,
+    teamsByHole: { ...prev.teamsByHole, [holeNumber]: teams },
+    currentHole: Math.max(prev.currentHole, holeNumber),
+  };
+}
+
+/**
+ * Compute the next hole's Flip teams given the previous hole's outcome.
+ *
+ *   - Previous hole was a push     → carry same teams forward (spec).
+ *   - Previous hole was decided    → new random 3v2 shuffle.
+ *   - `prev.teamsByHole[prevHole]` missing → generate fresh teams
+ *     (fallback for the very-first hole before any modal tap).
+ *
+ * Pure: the random shuffle is deterministic per call only if callers
+ * stub `Math.random` — which our test harness does. Production callers
+ * let it be genuinely random.
+ */
+export function advanceFlipState(
+  prev: FlipState,
+  prevHoleNumber: number,
+  prevHolePush: boolean,
+  players: Player[],
+): FlipState {
+  const nextHoleNumber = prevHoleNumber + 1;
+  const priorTeams = prev.teamsByHole[prevHoleNumber];
+
+  if (prevHolePush && priorTeams) {
+    // Push → teams stay. Copy the prior teams into the next hole slot.
+    return commitFlipTeams(prev, nextHoleNumber, priorTeams);
+  }
+
+  // Decided hole (win/loss) or no prior teams → fresh flip.
+  return commitFlipTeams(prev, nextHoleNumber, generateFlipTeams(players));
+}
+
+// ============================================================
+// FLIP ROLLING CARRY-OVER
+// ============================================================
+
+/**
+ * Initialise an empty rolling carry window at round start.
+ */
+export function initRollingCarryWindow(windowSize: number | "all"): RollingCarryWindow {
+  return { entries: [], forfeited: 0, windowSize };
+}
+
+/**
+ * Append a new push-hole's money to the window. If the window has
+ * a finite size and adding this entry would exceed it, the oldest
+ * entry is evicted — its money is added to `forfeited` (audit only).
+ */
+export function appendPushToWindow(
+  prev: RollingCarryWindow,
+  holeNumber: number,
+  pushAmount: number,
+): RollingCarryWindow {
+  const nextEntries = [...prev.entries, { holeNumber, amount: pushAmount }];
+  const cap = prev.windowSize;
+  if (cap !== "all" && nextEntries.length > cap) {
+    const evicted = nextEntries.shift()!;
+    return {
+      entries: nextEntries,
+      forfeited: prev.forfeited + evicted.amount,
+      windowSize: cap,
+    };
+  }
+  return { entries: nextEntries, forfeited: prev.forfeited, windowSize: prev.windowSize };
+}
+
+/**
+ * Compute the total pot to award on a decided hole: sum of all entries
+ * currently in the window (everything that hasn't been forfeited).
+ * Returns the sum and a CLEARED window (entries reset to empty).
+ *
+ * Note: `forfeited` is preserved across claims — it's a running audit
+ * counter for the whole round.
+ */
+export function claimRollingCarryWindow(
+  prev: RollingCarryWindow,
+): { total: number; cleared: RollingCarryWindow } {
+  const total = prev.entries.reduce((acc, e) => acc + e.amount, 0);
+  return {
+    total,
+    cleared: { entries: [], forfeited: prev.forfeited, windowSize: prev.windowSize },
+  };
+}
+
+// ============================================================
+// FLIP PAYOUT MATH — 3v2 per-player money on a decided hole
+// ============================================================
+
+/**
+ * Compute per-player payouts for a decided Flip hole.
+ *
+ * Split logic (for baseBet = B):
+ *   - Losers each pay B.
+ *   - Pot = (# losers) * B.
+ *   - Winners split the pot evenly: each winner gets Pot / (# winners).
+ *
+ * With 5 players in 3v2:
+ *   - 3-man wins: 2 losers * B = 2B pot, 3 winners split → 2B/3 each.
+ *     Example B=$3: losers pay $3 each (pot $6), winners get $2 each. ✓
+ *   - 2-man wins: 3 losers * B = 3B pot, 2 winners split → 3B/2 each.
+ *     Example B=$2: losers pay $2 each (pot $6), winners get $3 each. ✓
+ *
+ * The spec's stated "2-man team each risks (3/2)*base" is equivalent:
+ * a 2-man winner receives 3B/2 = 1.5B, same as risking 1.5B and doubling
+ * on a win. Either framing produces identical cash flow.
+ *
+ * On a push, returns zero-sum results and adds the hole's baseBet to
+ * the rolling carry window. Caller is responsible for applying any
+ * hammer multiplier BEFORE calling this function — `effectiveBet` is
+ * post-hammer.
+ */
+export interface FlipPayoutResult {
+  push: boolean;
+  winningSide: "A" | "B" | null;
+  potFromBet: number;
+  potFromCarry: number;
+  perPlayer: Array<{ id: string; name: string; amount: number }>;
+  forfeitedThisHole: number;
+  newWindow: RollingCarryWindow;
+}
+
+export function calculateFlipHoleResult(args: {
+  teams: TeamInfo;
+  teamABest: number;
+  teamBBest: number;
+  effectiveBet: number;
+  window: RollingCarryWindow;
+  holeNumber: number;
+}): FlipPayoutResult {
+  const { teams, teamABest, teamBBest, effectiveBet, window, holeNumber } = args;
+  const allPlayers = [...teams.teamA.players, ...teams.teamB.players];
+
+  if (teamABest === teamBBest) {
+    // Push — carry the hole's bet into the rolling window.
+    const newWindow = appendPushToWindow(window, holeNumber, effectiveBet);
+    const forfeitedThisHole = newWindow.forfeited - window.forfeited;
+    return {
+      push: true,
+      winningSide: null,
+      potFromBet: 0,
+      potFromCarry: 0,
+      perPlayer: allPlayers.map(p => ({ id: p.id, name: p.name, amount: 0 })),
+      forfeitedThisHole,
+      newWindow,
+    };
+  }
+
+  const winningSide: "A" | "B" = teamABest < teamBBest ? "A" : "B";
+  const winTeam = winningSide === "A" ? teams.teamA : teams.teamB;
+  const loseTeam = winningSide === "A" ? teams.teamB : teams.teamA;
+  const { total: carryTotal, cleared: newWindow } = claimRollingCarryWindow(window);
+
+  // Losers each pay effectiveBet. Winners split (losers_count * effectiveBet + carry).
+  const potFromBet = loseTeam.players.length * effectiveBet;
+  const pot = potFromBet + carryTotal;
+  const winnerShare = pot / winTeam.players.length;
+  const loserShare = effectiveBet; // each loser pays the flat bet
+
+  const perPlayer = allPlayers.map(p => {
+    const onWinTeam = winTeam.players.some(w => w.id === p.id);
+    return { id: p.id, name: p.name, amount: onWinTeam ? winnerShare : -loserShare };
+  });
+
+  return {
+    push: false,
+    winningSide,
+    potFromBet,
+    potFromCarry: carryTotal,
+    perPlayer,
+    forfeitedThisHole: 0,
+    newWindow,
   };
 }
 
@@ -930,7 +1162,8 @@ export function replayRound(
   holeValue: number,
   settings: GameSettings,
   holes: ReplayHoleInput[],
-  flipTeams?: TeamInfo | null,
+  flipTeams?: FlipTeamsInput,
+  flipConfig?: FlipConfig,
 ): ReplayRoundResult {
   const lowestHandicap = Math.min(...players.map(p => p.handicap));
   const totals: Record<string, number> = {};
@@ -938,6 +1171,15 @@ export function replayRound(
   const holeResults: (HoleResult & { hole: number })[] = [];
   let carryOver = 0;
   const carryOverCap = settings.carryOverCap || "∞";
+
+  // Flip rolling carry-over window. Only used when gameMode === 'flip' AND
+  // the caller passed a FlipState (per-hole shape). Legacy callers passing
+  // a static TeamInfo stay on the scalar `carryOver` path below.
+  const usingFlipState = gameMode === 'flip' && flipTeams !== null && flipTeams !== undefined
+    && typeof flipTeams === 'object' && 'teamsByHole' in flipTeams;
+  let flipWindow: RollingCarryWindow | null = usingFlipState
+    ? initRollingCarryWindow(flipConfig?.carryOverWindow ?? 'all')
+    : null;
 
   // Nassau match state reconstructed as we replay
   const nassauState: NassauState | null = gameMode === 'nassau' ? initNassauState(players) : null;
@@ -967,8 +1209,39 @@ export function replayRound(
       result = calculateSkinsResult(players, scores, par, holeNumber, holeValue, carryOver, settings, lowestHandicap, holeHandicapRank);
     } else if (gameMode === 'nassau') {
       result = calculateNassauHoleResult(players, nassauTeams, scores, par, holeNumber, holeValue, settings, lowestHandicap, holeHandicapRank);
+    } else if (usingFlipState && teams && flipWindow) {
+      // Flip base game (1-15) — rolling-window carry-over, 3v2 payouts.
+      // Crybaby phase (16-18) bypasses this and is replayed via the crybaby
+      // engine in a separate code path once Commit 6 lands.
+      const baseBet = flipConfig?.baseBet ?? holeValue;
+      const effectiveBet = baseBet * Math.pow(2, hammerDepth);
+      const netScores: Record<string, number> = {};
+      players.forEach(p => {
+        const strokes = settings.pops ? getStrokesOnHole(p.handicap, lowestHandicap, holeHandicapRank, settings.handicapPercent) : 0;
+        netScores[p.id] = scores[p.id] - strokes;
+      });
+      const teamABest = Math.min(...teams.teamA.players.map(p => netScores[p.id]));
+      const teamBBest = Math.min(...teams.teamB.players.map(p => netScores[p.id]));
+      const flipResult = calculateFlipHoleResult({
+        teams, teamABest, teamBBest, effectiveBet, window: flipWindow, holeNumber,
+      });
+      flipWindow = flipResult.newWindow;
+      result = {
+        push: flipResult.push,
+        winnerName: flipResult.winningSide === null
+          ? null
+          : flipResult.winningSide === 'A' ? teams.teamA.name : teams.teamB.name,
+        amount: flipResult.potFromBet + flipResult.potFromCarry,
+        carryOver: 0, // scalar unused in rolling-window mode
+        playerResults: flipResult.perPlayer,
+        quip: flipResult.push
+          ? flipResult.forfeitedThisHole > 0
+            ? `Push. $${flipResult.forfeitedThisHole} fell into the ether.`
+            : 'Push. Pot carries to next hole.'
+          : `${flipResult.winningSide === 'A' ? teams.teamA.name : teams.teamB.name} takes the hole.`,
+      };
     } else if (teams) {
-      // DOC / Flip — team best ball
+      // DOC / legacy-Flip path — team best ball with scalar carry.
       result = calculateTeamHoleResult(players, teams, scores, par, holeValue, carryOver, hammerDepth, settings, lowestHandicap, holeHandicapRank, carryOverCap);
     } else {
       // DOC crybaby phase (holes 16-18) — skins scoring
