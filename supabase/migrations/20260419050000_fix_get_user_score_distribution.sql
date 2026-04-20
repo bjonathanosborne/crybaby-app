@@ -17,10 +17,19 @@
 -- hole-in-one-only-on-par-3+ rule, same 9-hole correctness
 -- via jsonb_array_length of pars.
 --
--- Idempotent (CREATE OR REPLACE). Safe to re-apply.
+-- Idempotent. Safe to re-apply.
+--
+-- NOTE: we DROP before CREATE (rather than using CREATE OR REPLACE) because
+-- the original 20260419040000 function had a row-type signature subtly
+-- incompatible with this one — Postgres errors 42P13 "cannot change return
+-- type of existing function" on a bare CREATE OR REPLACE. DROP IF EXISTS
+-- keeps the migration safe to run against a fresh DB (no-op drop) AND
+-- against any DB still carrying the old function.
 -- ============================================================
 
-CREATE OR REPLACE FUNCTION public.get_user_score_distribution(p_user_id uuid)
+DROP FUNCTION IF EXISTS public.get_user_score_distribution(uuid);
+
+CREATE FUNCTION public.get_user_score_distribution(p_user_id uuid)
 RETURNS TABLE (
   ace          bigint,
   eagle        bigint,
