@@ -1,6 +1,6 @@
 # TODOS — crybaby-app
 
-Last updated: 2026-04-19 (Westlake tees corrected; dedupe AUSTIN_COURSES noted)
+Last updated: 2026-04-20 (Flip mode shipped via PR #16; remaining un-hide queue is Nassau, Skins, Custom, Wolf)
 Branch: main
 
 ---
@@ -65,8 +65,8 @@ Each un-hide is a single-flag flip + a brief on-course test + ship.
   BEFORE scores are known. Like hammers, partner picks can't be derived
   from scores — the round's money math is wrong without them captured.
 - Wolf was first hidden in phase 2.5a; currently hidden alongside
-  Nassau/Skins/Flip/Custom during the DOC-focused testing surface
-  (see section above).
+  Nassau/Skins/Custom during the DOC-focused testing surface (Flip
+  shipped 2026-04-20 via PR #16; see section above).
 - When re-enabling: extend the sequenced-prompt pattern from Phase 2.5's
   hammer flow — after scores, ask "Who was the wolf?" and "Partner or
   lone wolf?" per hole. The `HammerPromptFlow` component is a template.

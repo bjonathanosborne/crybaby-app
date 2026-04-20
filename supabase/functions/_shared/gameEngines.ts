@@ -1313,6 +1313,7 @@ export function replayRound(
   holes: ReplayHoleInput[],
   flipTeams?: FlipTeamsInput,
   flipConfig?: FlipConfig,
+  crybabyState?: CrybabyState | null,
 ): ReplayRoundResult {
   const lowestHandicap = Math.min(...players.map(p => p.handicap));
   const totals: Record<string, number> = {};
@@ -1358,10 +1359,61 @@ export function replayRound(
       result = calculateSkinsResult(players, scores, par, holeNumber, holeValue, carryOver, settings, lowestHandicap, holeHandicapRank);
     } else if (gameMode === 'nassau') {
       result = calculateNassauHoleResult(players, nassauTeams, scores, par, holeNumber, holeValue, settings, lowestHandicap, holeHandicapRank);
+    } else if (
+      gameMode === 'flip' &&
+      holeNumber >= 16 &&
+      holeNumber <= 18 &&
+      crybabyState &&
+      crybabyState.crybaby !== '' &&
+      crybabyState.byHole[holeNumber]
+    ) {
+      // Flip crybaby sub-game (holes 16-18). Uses the 2v3 asymmetric
+      // payout engine (calculateCrybabyHoleResult), NOT the base-game
+      // rolling window. `crybabyState.crybaby === ""` is the all-square
+      // sentinel — it falls through to the base-game branch below so
+      // holes 16-18 replay as Flip base-game continuation.
+      const choice = crybabyState.byHole[holeNumber];
+      const twoManTeam = choice.teams.teamA;
+      const threeManTeam = choice.teams.teamB;
+      const netCry: Record<string, number> = {};
+      players.forEach(p => {
+        const strokes = settings.pops
+          ? getStrokesOnHole(p.handicap, lowestHandicap, holeHandicapRank, settings.handicapPercent)
+          : 0;
+        netCry[p.id] = scores[p.id] - strokes;
+      });
+      const twoManBest = Math.min(...twoManTeam.players.map(p => netCry[p.id]));
+      const threeManBest = Math.min(...threeManTeam.players.map(p => netCry[p.id]));
+      const twoManWon: boolean | null =
+        twoManBest < threeManBest ? true
+          : threeManBest < twoManBest ? false
+            : null;
+      const cry = calculateCrybabyHoleResult({
+        bet: choice.bet,
+        crybabyId: crybabyState.crybaby,
+        partnerId: choice.partner,
+        players,
+        twoManWon,
+      });
+      result = {
+        push: cry.push,
+        winnerName: cry.winningSide === null
+          ? null
+          : cry.winningSide === 'A' ? twoManTeam.name : threeManTeam.name,
+        amount: Math.abs(cry.perPlayer.find(p => p.amount > 0)?.amount ?? 0),
+        carryOver: 0, // crybaby holes are independent — no rolling window
+        playerResults: cry.perPlayer,
+        quip: cry.push
+          ? 'Crybaby push. Money back.'
+          : cry.winningSide === 'A'
+            ? `${twoManTeam.name} takes it.`
+            : `${threeManTeam.name} takes it.`,
+      };
     } else if (usingFlipState && teams && flipWindow) {
       // Flip base game (1-15) — rolling-window carry-over, 3v2 payouts.
-      // Crybaby phase (16-18) bypasses this and is replayed via the crybaby
-      // engine in a separate code path once Commit 6 lands.
+      // Also catches the all-square case: holes 16-18 with no crybaby
+      // designated (crybabyState.crybaby === "" or absent entirely) run
+      // as base-game continuation through this same branch.
       const baseBet = flipConfig?.baseBet ?? holeValue;
       const effectiveBet = baseBet * Math.pow(2, hammerDepth);
       const netScores: Record<string, number> = {};

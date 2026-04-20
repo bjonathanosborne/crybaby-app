@@ -611,4 +611,151 @@ Copy one of these and fill in. Paste into a chat / email / Slack. I'll triage fr
 
 ---
 
-**Checklist last updated:** 2026-04-19 after PR #12 (profile + round detail + stats polish). Section 7 added for the three profile-dashboard improvements (rounds list hierarchy, round detail drill-down, stats back button + pie chart).
+**Checklist last updated:** 2026-04-20 after PR #16 (Flip mode full implementation). Section 8 added for the end-to-end Flip round — setup, base-game play, rolling-window forfeits, crybaby transition, crybaby sub-game, settlement, post-round correction, and the all-square edge case.
+
+---
+
+## Section 8 — Flip mode (full 5-man 3v2 + crybaby)
+
+Added for PR #16. Run this section on your next 5-man round. It covers every state transition in Flip — if anything in F8.1–F8.8 deviates from "Expect," file a bug before continuing the round.
+
+**Prereqs:** 5 real (signed-in) players, one is you (scorekeeper). Pick a course with all 18 holes. Agree on stakes before you start (base bet $2 or $4, window size 2 or "all" recommended).
+
+### F8.1 — Setup walkthrough (~5 minutes, do once before tee-off)
+
+**Do:** `/feed` → Start Action.
+**Expect:** Setup wizard step 1.
+
+**Do:** Look at the game picker. Tap **Flip**.
+**Expect:** Flip is visible and selectable. Tap Continue.
+
+**Do:** Add 5 players (you + 4 others). Try to add a 6th.
+**Expect:** 6th-player attempt blocked with "Flip locks at 5 players" — confirms the 5-player cap from C2.
+
+**Do:** Advance to course + mechanics. Set base bet to **$4** (must be even). Set carry-over window to **2**.
+**Expect:** Both fields accept the values; odd values (e.g., $3) are rejected with a validation message. Hammer mechanic is available (Flip supports hammer).
+
+**Do:** Tap **Start Round**.
+**Expect:** Redirect to the round. The initial **FlipReel** animation plays and lands on the first 3v2 split. Teams lock in. Hole 1 ready for score entry. Running money shows $0 for everyone.
+
+### F8.2 — Base game flow (holes 1-15, ~45 minutes during play)
+
+**Do:** Score hole 1 as a **push** (every player same score).
+**Expect:** Hole resolves with "Push. Pot carries to next hole." quip. Running money shifts: every player shows **−$4** (flat ante per push per player, Model C).
+
+**Do:** Advance to hole 2. Look at the teams badge at the top of the hole row.
+**Expect:** **Same teams as hole 1** — pushes don't re-shuffle. Flip button is disabled with a tooltip saying "Teams stay after a push."
+
+**Do:** Score hole 2 as **decided** (one team clearly has the best net score).
+**Expect:** Winning team gets positive delta, losing team negative. Pot claims from the window — the hole-1 push money flows into winners' balances.
+
+**Do:** Advance to hole 3. Flip button is now **enabled** (decided hole triggers a re-shuffle offer).
+**Expect:** Tap the Flip button. FlipReel plays a short shuffle animation and lands on new teams. Badge updates with the new split.
+
+**Do:** Repeat through hole 15. Mix pushes, decided holes, and at least one **hammer throw** if you have the appetite.
+**Expect:** On a hammer throw at depth 1, the effective bet doubles (B × 2). If folded, the thrower at depth wins regardless of scores (release gate from Phase 2.5).
+
+### F8.3 — Rolling window forfeit verification (~5 minutes)
+
+This exercises the forfeit path. Only run if your window is set to 2.
+
+**Do:** Engineer 3 consecutive pushes somewhere in holes 1-15 (pick a tee box, everyone makes the same net score).
+**Expect:** After the 3rd consecutive push, the hole summary shows **"$X fell into the ether"** — this is the oldest push being evicted. The window now holds only the 2 most-recent pushes.
+
+**Do:** Next hole after the forfeit, score a decided hole.
+**Expect:** Winner claims ONLY the most-recent 2 pushes (not all 3). The forfeited money is never paid out — it's gone.
+
+### F8.4 — Crybaby transition (hole 15 → 16, ~2 minutes)
+
+**Do:** Finish hole 15. Advance to hole 16.
+**Expect:** Instead of the normal score-entry panel, the **Crybaby Transition Screen** renders. It shows:
+- Each player's hole-15 balance, sorted most-negative first
+- The crybaby is announced (most-negative player, or deterministic tiebreaker if tied)
+- **Max bet cap math**: `floor(losingBalance / 2)` rounded down to the nearest even dollar, min $2
+
+**Do:** If multiple players are tied for most-negative, watch the coin-flip animation.
+**Expect:** The reel animates for ~1 second and lands on one of the tied players. If you reload the page and re-run, it picks the SAME player (seeded by round.id, deterministic).
+
+**Do:** Tap **Enter Crybaby Phase**.
+**Expect:** Transition to hole 16 scoring.
+
+### F8.5 — Crybaby hole flow (holes 16-18, ~15 minutes)
+
+**Do:** At hole 16, look at the crybaby setup panel.
+**Expect:** Crybaby's name is shown. Bet picker defaults to max; you can step down in $2 increments to min $2. Partner picker shows the **other 4 players** (crybaby is excluded from partner options).
+
+**Do:** Pick a partner + set a bet. Look at the stakes preview.
+**Expect:** "If 2-man wins: +$X each for {crybaby, partner}, −$Y each for the 3-man team." "If 3-man wins: +$Z each for 3-man, −$bet each for 2-man." Numbers match `calculateCrybabyHoleResult` math (opponentStake = bet/3 rounded to even dollar, min $2).
+
+**Do:** Check the hammer button.
+**Expect:** If you (scorekeeper) are on the 2-man team, hammer is **enabled**. If you're on the 3-man team (or a non-player), hammer is **disabled** with a tooltip: "Only the crybaby + partner can throw a hammer."
+
+**Do:** Confirm setup. Enter scores for all 5 players. Resolve the hole.
+**Expect:** 2-man-wins: +$15/−$10 at $30 bet (or ratio for your chosen bet). 3-man-wins: +$20 loser-math at $30 bet.
+
+**Do:** Repeat for holes 17 and 18.
+
+### F8.6 — Round completion (~2 minutes)
+
+**Do:** Finish hole 18. Advance.
+**Expect:** Round completes. Settlement screen shows each player with a card containing **three lines**:
+- Combined total ($X)
+- **Base game (1-15)**: $Y
+- **Crybaby (16-18)**: $Z
+
+where `Y + Z == X` for every player. Numbers match what you saw during live play (hole-by-hole money should sum to these).
+
+**Do:** Open the profile round-card for this round (on your profile, in the recent rounds list).
+**Expect:** Card shows the **combined** total only (split is in the detail view, not the list).
+
+**Do:** Tap through to round detail (/round/:id/summary).
+**Expect:** The three-line breakdown renders under the Settlement section. The Base/Crybaby lines use smaller muted text; combined total is bolded.
+
+### F8.7 — Post-round correction (~5 minutes, only if a score was wrong)
+
+**Do:** From the round detail page (or the completion screen), tap **Fix scores / add photo** and correct a hole 1-15 score.
+**Expect:** Apply-capture re-runs. The settlement card refreshes. **Only `base_amount` changed** for affected players; `crybaby_amount` is identical to before. Combined `amount` = base + crybaby.
+
+**Do:** Correct a hole 16-18 score (change a crybaby hole's outcome).
+**Expect:** **Only `crybaby_amount` changed**; `base_amount` is identical to before. Combined `amount` updated.
+
+**Note:** If the correction changes hole 15 such that the crybaby designation would change, **it doesn't re-designate** — apply-capture preserves the original `crybabyState.crybaby` (matches the `hammerHistory` preservation pattern). This is by design; a re-designation would require a separate "reset crybaby" flow and invalidate all hole 16-18 choices.
+
+### F8.8 — All-square edge case (if balances all finish at $0 after 15)
+
+**Do:** If at hole 15 **every player's balance is $0**, advance to hole 16.
+**Expect:** Transition screen shows **"All Square — no crybaby this round."** Tapping through lands on hole 16 with the **normal base-game score-entry panel** (same 3v2 teams can be re-flipped, same rolling window, same pot).
+
+**Do:** Play holes 16, 17, 18 as base-game continuation.
+**Expect:** Holes 16-18 score exactly like holes 1-15 — no asymmetric payouts, no bet picker, no partner picker. On the settlement screen, the per-player card shows `Crybaby (16-18): $0` explicitly (not "—" / missing data). Combined total includes all 18 holes of base-game money.
+
+### Flip mode — report-back template
+
+Copy/paste into a bug report or checkpoint. Mark ✅ / ❌ per item:
+
+```
+Date:
+Course:
+Players (5):
+Base bet:
+Window size:
+
+- F8.1 setup walkthrough (game picker, 5-player cap, even-bet validation): ✅ / ❌
+- F8.2 base game flow (push persists teams; decide re-enables flip button): ✅ / ❌
+- F8.3 rolling window forfeit ("$X fell into the ether"): ✅ / ❌
+- F8.4 crybaby transition screen (standings, cap math, tiebreaker reel): ✅ / ❌
+- F8.5 crybaby hole flow (bet picker max, partner exclusion, hammer gate): ✅ / ❌
+- F8.6 settlement three-line breakdown (base + crybaby + combined): ✅ / ❌
+- F8.7 post-round correction (base-only update preserves crybaby; crybaby-only update preserves base): ✅ / ❌ / skipped
+- F8.8 all-square sentinel (holes 16-18 as base continuation; crybaby_amount = $0): ✅ / ❌ / skipped
+
+Bugs to file:
+- [Paste bug reports above]
+
+Notes on UX:
+- [Anything felt slow / confusing / delightful / broken]
+```
+
+---
+
+**Checklist last updated:** 2026-04-20 after PR #16 (Flip mode full implementation). Section 8 added for the end-to-end Flip round — 8 sub-scenarios covering setup through all-square edge case.

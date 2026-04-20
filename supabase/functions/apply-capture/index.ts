@@ -26,6 +26,7 @@ import {
   type FlipState,
   type FlipConfig,
   type FlipTeamsInput,
+  type CrybabyState,
 } from "../_shared/gameEngines.ts";
 import {
   translateToLegacy,
@@ -418,12 +419,19 @@ serve(async (req) => {
     // the replay safe under any future historical surprise).
     let flipTeamsInput: FlipTeamsInput = null;
     let flipConfigInput: FlipConfig | undefined;
+    let crybabyStateInput: CrybabyState | null = null;
     if ((round.game_type as GameMode) === 'flip') {
       const rawFlipState = gameState.flipState as FlipState | undefined;
       const rawFlipConfig = gameState.flipConfig as FlipConfig | undefined;
       const rawLegacyFlipTeams = gameState.flipTeams as TeamInfo | undefined;
       flipTeamsInput = rawFlipState ?? rawLegacyFlipTeams ?? null;
       flipConfigInput = rawFlipConfig;
+      // C8: crybaby sub-game replay. Preserved on gameState exactly like
+      // hammerHistory (see below) — apply-capture does not re-designate
+      // the crybaby when scores change; we replay whatever the live game
+      // locked in at hole 15.
+      const rawCrybaby = gameState.crybabyState as CrybabyState | undefined;
+      crybabyStateInput = rawCrybaby ?? null;
     }
 
     const replayStart = Date.now();
@@ -437,6 +445,7 @@ serve(async (req) => {
       replayInputs,
       flipTeamsInput,
       flipConfigInput,
+      crybabyStateInput,
     );
     const replayLatencyMs = Date.now() - replayStart;
 
