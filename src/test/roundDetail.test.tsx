@@ -377,3 +377,92 @@ describe("Part 2 — route wiring", () => {
     expect(src).toMatch(/<Route\s+path="\/round\/:id\/summary"\s+element=\{<RoundDetailPage\s*\/>\}/);
   });
 });
+
+// ============================================================
+// PR #21 — Legacy Solo round regression.
+//
+// Solo was hidden from the format picker in this PR because Scorecard
+// (1 player) covers the same use case with more capability. The 2
+// Solo rounds in prod at hide-time — plus any rounds created before
+// the hide — must continue to render cleanly on the detail page.
+//
+// Solo rounds have a DIFFERENT course_details shape than every other
+// mode: no `playerConfig` (it's a single-player inserted-at-finish
+// round, not a wizard-driven multi-player round), and `city` + `state`
+// at the course_details root instead. Verify RoundDetailPage doesn't
+// choke on the absence.
+// ============================================================
+
+const LEGACY_SOLO_BUNDLE = {
+  round: {
+    id: "solo-r1",
+    course: "Austin Muni",
+    game_type: "solo",
+    status: "completed",
+    created_at: "2026-04-14T08:30:00Z",
+    course_details: {
+      // Solo's shape — note: no playerConfig, no handicap_percent,
+      // adds city + state at the root. Mirrors what SoloRound.jsx:73
+      // inserts.
+      city: "Austin",
+      state: "TX",
+      pars: [4, 4, 3, 4, 5, 4, 3, 5, 4, 4, 4, 4, 3, 4, 5, 4, 3, 5],
+      handicaps: [5, 3, 15, 9, 1, 11, 17, 7, 13, 6, 2, 14, 16, 10, 4, 8, 18, 12],
+      selectedTee: "Blue",
+    },
+  },
+  players: [
+    {
+      id: "sp1", user_id: "viewer", guest_name: null,
+      hole_scores: [4, 5, 3, 5, 5, 4, 3, 6, 4, 4, 5, 4, 3, 4, 6, 4, 3, 5],
+      total_score: 77, is_scorekeeper: true,
+    },
+  ],
+  // Solo rounds never write settlement rows — isMoneyRound stays false.
+  settlements: [],
+  events: [],
+  participant_names: { viewer: "Jonathan" },
+};
+
+describe("<RoundDetailPage /> — legacy Solo round (PR #21 regression)", () => {
+  it("renders without error despite missing playerConfig", async () => {
+    db.loadRoundDetail.mockResolvedValue(LEGACY_SOLO_BUNDLE);
+    renderAtRoute("/round/solo-r1/summary", <RoundDetailPage />);
+    expect(await screen.findByTestId("round-detail-page")).toBeInTheDocument();
+    expect(screen.queryByTestId("round-detail-error")).not.toBeInTheDocument();
+  });
+
+  it("surfaces the viewer's stroke total + diff in the header", async () => {
+    db.loadRoundDetail.mockResolvedValue(LEGACY_SOLO_BUNDLE);
+    renderAtRoute("/round/solo-r1/summary", <RoundDetailPage />);
+    const row = await screen.findByTestId("round-detail-viewer-row");
+    expect(within(row).getByText("77")).toBeInTheDocument();
+    // par = 72, gross = 77 → diff = +5
+    expect(within(row).getByText(/\+5/)).toBeInTheDocument();
+  });
+
+  it("suppresses every money section (no settlements → isMoneyRound=false)", async () => {
+    db.loadRoundDetail.mockResolvedValue(LEGACY_SOLO_BUNDLE);
+    renderAtRoute("/round/solo-r1/summary", <RoundDetailPage />);
+    await screen.findByTestId("round-detail-page");
+    expect(screen.queryByTestId("round-detail-settlement")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("round-detail-viewer-pnl")).not.toBeInTheDocument();
+  });
+
+  it("net-score leaderboard is hidden (no playerConfig to read handicaps from)", async () => {
+    db.loadRoundDetail.mockResolvedValue(LEGACY_SOLO_BUNDLE);
+    renderAtRoute("/round/solo-r1/summary", <RoundDetailPage />);
+    await screen.findByTestId("round-detail-page");
+    // PR #19 net leaderboard bails when playerConfig is absent or
+    // length mismatches bundle.players.length. Solo's missing
+    // playerConfig trips the first gate — leaderboard stays hidden.
+    expect(screen.queryByTestId("round-detail-net-leaderboard")).not.toBeInTheDocument();
+  });
+
+  it("renders the Scorecard view with the single player's holes", async () => {
+    db.loadRoundDetail.mockResolvedValue(LEGACY_SOLO_BUNDLE);
+    renderAtRoute("/round/solo-r1/summary", <RoundDetailPage />);
+    await screen.findByTestId("round-detail-page");
+    expect(screen.getByTestId("scorecard-view")).toBeInTheDocument();
+  });
+});
