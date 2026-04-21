@@ -15,6 +15,7 @@ import CapturePrompt from "@/components/capture/CapturePrompt";
 import CaptureFlow from "@/components/capture/CaptureFlow";
 import EditHammerModal from "@/components/capture/hammer/EditHammerModal";
 import FinalPhotoGate from "@/components/FinalPhotoGate";
+import FinishRoundConfirm from "@/components/round/FinishRoundConfirm";
 import FlipReel from "@/components/flip/FlipReel";
 import FlipTeamsBadge from "@/components/flip/FlipTeamsBadge";
 import CrybabyTransition from "@/components/flip/CrybabyTransition";
@@ -817,6 +818,20 @@ export default function CrybabActiveRound() {
   const [skipInFlight, setSkipInFlight] = useState(false);
   const gateCaptureInFlightRef = useRef<boolean>(false);
 
+  // PR #18: Explicit scorekeeper confirmation BEFORE auto-finish fires.
+  // The round auto-enters completion state when hole 18 is scored, but
+  // we now gate the FinalPhotoGate + settlement write on a deliberate
+  // "Finish Round" tap. Cancel path leaves the round scored-but-
+  // unlocked so the scorekeeper can edit a score or swap the handicap
+  // % before committing. `finishConfirmed` is the latch: once true the
+  // finish chain runs, never auto-resets.
+  const [finishConfirmed, setFinishConfirmed] = useState<boolean>(false);
+  // Dialog open state — user-controlled so Cancel truly closes it.
+  // Auto-opened ONCE when hole 18 completes (see effect below); after
+  // that the scorekeeper re-opens by tapping the sticky Finish button.
+  const [showFinishConfirm, setShowFinishConfirm] = useState<boolean>(false);
+  const finishAutoOpenedRef = useRef<boolean>(false);
+
   // Bug 1 carry-over: user-triggered retry for the completion/settlement
   // write. Previously a failure left settlementsSaved=false with the effect
   // auto-re-firing every render (persist + totals are fresh refs each pass),
@@ -961,6 +976,26 @@ export default function CrybabActiveRound() {
       }
     },
   });
+
+  // PR #18: Auto-open the Finish Round confirmation ONCE when the
+  // scorekeeper crosses into the completed state (hole 18 scored).
+  // The ref gate prevents the dialog from re-popping after the user
+  // cancels — they control the re-open via the sticky Finish button
+  // below. Non-scorekeepers never see the dialog; only the creator
+  // can finalize. Already-saved rounds (resumed into completion)
+  // don't re-trigger since finishConfirmed is not latched in that
+  // case... wait, they DO need to not re-trigger. Extra gate below.
+  useEffect(() => {
+    if (!isScorekeeper) return;
+    if (finishAutoOpenedRef.current) return;
+    if (!(currentHole >= 18 && holeResults.length >= 18)) return;
+    if (settlementsSaved) return;          // already-finalised round: no dialog
+    if (finishConfirmed) return;           // post-refresh with latch somehow set
+    if (capture.isOpen) return;            // don't stack over capture flow
+    if (showCancelConfirm) return;         // don't stack over cancel dialog
+    finishAutoOpenedRef.current = true;
+    setShowFinishConfirm(true);
+  }, [isScorekeeper, currentHole, holeResults.length, settlementsSaved, finishConfirmed, capture.isOpen, showCancelConfirm]);
 
   // Guard back-button navigation while round is active
   useEffect(() => {
@@ -1194,6 +1229,11 @@ export default function CrybabActiveRound() {
     if (!round) return;
     const isComplete = currentHole >= 18 && holeResults.length >= 18;
     if (!isComplete || settlementsSaved || !roundId) return;
+    // PR #18: Block completion until the scorekeeper explicitly
+    // confirms via the Finish Round dialog. Before this, hole 18
+    // auto-fired the save chain — now the dialog gates it so a
+    // misread score can still be corrected before money locks.
+    if (!finishConfirmed) return;
     if (finalPhotoDecision === "pending") return;
     // After a failure, wait for the user to tap Retry before trying again.
     // This prevents a render-loop (persist + totals are fresh references on
@@ -1281,7 +1321,7 @@ export default function CrybabActiveRound() {
       }
     };
     saveRoundSettlements();
-  }, [currentHole, holeResults.length, settlementsSaved, roundId, persist, round, totals, finalPhotoDecision, completionError, retryCompletionNonce, retryCompletion]);
+  }, [currentHole, holeResults.length, settlementsSaved, roundId, persist, round, totals, finalPhotoDecision, completionError, retryCompletionNonce, retryCompletion, finishConfirmed]);
 
   // Bug 2: final-photo gate handlers.
   //
@@ -2425,12 +2465,75 @@ export default function CrybabActiveRound() {
           currentHole >= 18 &&
           holeResults.length >= 18 &&
           finalPhotoDecision === "pending" &&
-          !settlementsSaved
+          !settlementsSaved &&
+          // PR #18: FinalPhotoGate is part of the finish chain — wait
+          // for the scorekeeper's confirm before it renders, so cancel
+          // on the confirm dialog keeps the round's completion UI clean.
+          finishConfirmed
         }
         onTakePhoto={handleTakeFinalPhoto}
         onSkip={handleSkipFinalPhoto}
         skipping={skipInFlight}
       />
+
+      {/* PR #18: Finish-round confirmation gate. Auto-opens ONCE when
+          the scorekeeper submits hole 18; after that the scorekeeper
+          controls it via the sticky Finish Round button rendered
+          below. Cancel truly closes — the user can navigate, edit a
+          hole, swap the handicap %, and return to tap the button
+          again. Confirm flips finishConfirmed → true, which unblocks
+          the FinalPhotoGate + settlement-write useEffect above. */}
+      <FinishRoundConfirm
+        open={showFinishConfirm}
+        confirming={false}
+        onCancel={() => setShowFinishConfirm(false)}
+        onConfirm={() => {
+          setShowFinishConfirm(false);
+          setFinishConfirmed(true);
+        }}
+      />
+
+      {/* PR #18: Sticky Finish Round CTA. Visible to the scorekeeper
+          once hole 18 is scored, hidden after they confirm. Lets the
+          scorekeeper re-open the confirm dialog after tapping Cancel
+          on the auto-open. Also the primary affordance if the round
+          is resumed from a mid-completion state. */}
+      {isScorekeeper
+        && currentHole >= 18
+        && holeResults.length >= 18
+        && !finishConfirmed
+        && !settlementsSaved
+        && !showFinishConfirm
+        && !capture.isOpen
+        && !showCancelConfirm && (
+        <div
+          data-testid="finish-round-cta-container"
+          style={{
+            position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
+            width: "100%", maxWidth: 420,
+            padding: "16px 16px 32px",
+            background: "linear-gradient(to top, #F5EFE0 70%, transparent)",
+            zIndex: 40,
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setShowFinishConfirm(true)}
+            data-testid="finish-round-cta-button"
+            style={{
+              width: "100%", padding: "16px", borderRadius: 16, border: "none",
+              background: "#2D5016",
+              color: "#fff",
+              fontFamily: "'Pacifico', cursive", fontSize: 18,
+              cursor: "pointer",
+              boxShadow: "0 4px 16px rgba(45,80,22,0.35)",
+              transition: "all 0.2s ease",
+            }}
+          >
+            Finish Round ⛳
+          </button>
+        </div>
+      )}
 
       {/* Phase 2.5 "Fix hammers" retro-correction entry point.
           Scorekeeper-only; only visible when hammer mechanic is active and

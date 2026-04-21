@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import CourseSearch from "@/components/CourseSearch";
 import { ChevronLeft } from "lucide-react";
+import FinishRoundConfirm from "@/components/round/FinishRoundConfirm";
 
 const font = "'DM Sans', system-ui, sans-serif";
 const mono = "'JetBrains Mono', 'SF Mono', monospace";
@@ -37,6 +38,10 @@ export default function SoloRound() {
   // ── Phase B state ──
   const [scores, setScores] = useState([]);
   const [saving, setSaving] = useState(false);
+  // PR #18: confirm dialog gate. Button click opens; confirm inside
+  // runs the existing finishRound() save flow. Caller-owned state so
+  // the dialog's behaviour is testable in isolation.
+  const [showFinishConfirm, setShowFinishConfirm] = useState(false);
 
   // Derived
   const holes = course?.pars?.length ?? 18;
@@ -393,8 +398,9 @@ export default function SoloRound() {
         background: "linear-gradient(to top, #F5EFE0 70%, transparent)",
       }}>
         <button
-          onClick={finishRound}
+          onClick={() => setShowFinishConfirm(true)}
           disabled={saving}
+          data-testid="solo-finish-round-button"
           style={{
             width: "100%", padding: "16px", borderRadius: 16, border: "none",
             background: saving ? "#DDD0BB" : "#D4AF37",
@@ -408,6 +414,25 @@ export default function SoloRound() {
           {saving ? "Saving…" : "Finish Round ⛳"}
         </button>
       </div>
+
+      {/* PR #18: Finish-round confirmation. The button above no longer
+          fires the save directly — it opens this dialog, whose confirm
+          handler calls the existing finishRound() flow. Cancel is a
+          no-op (round stays in-progress; scorecard state preserved). */}
+      <FinishRoundConfirm
+        open={showFinishConfirm}
+        confirming={saving}
+        onCancel={() => setShowFinishConfirm(false)}
+        onConfirm={() => {
+          // Close the dialog immediately so the saving-state pill on
+          // the button itself is the progress indicator. Race-safety:
+          // finishRound() owns `saving`; if it errors, button returns
+          // to enabled + the toast surfaces the error, and the
+          // scorekeeper can re-tap to re-open the dialog.
+          setShowFinishConfirm(false);
+          finishRound();
+        }}
+      />
     </div>
   );
 }
