@@ -393,6 +393,24 @@ function PlayerRow({ player, index, onUpdate, onRemove, showCarts, cartOptions, 
           </div>
         )}
 
+        {/* Empty-state prompt: when a LINKED user (userId set, implies profile
+            was loaded) has no handicap on their profile, surface an explicit
+            nudge to the scorekeeper. Guests don't show this — a null handicap
+            on a guest row is the default starting state, not a gap.
+            Round-specific value does NOT back-save to the profile (per spec). */}
+        {player.userId && (player.handicap === null || player.handicap === undefined) && (
+          <div
+            data-testid={`player-handicap-empty-prompt-${index}`}
+            style={{
+              fontFamily: font, fontSize: 11, color: "#8B7355",
+              background: "#FFF4D1", border: "1px solid #F5D77B",
+              borderRadius: 8, padding: "6px 10px", lineHeight: 1.4,
+            }}
+          >
+            {(player.name || "This player").split(" ")[0] || "This player"} hasn't set a handicap. Enter one for this round?
+          </div>
+        )}
+
         <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
           <input
             type="number"
@@ -402,13 +420,18 @@ function PlayerRow({ player, index, onUpdate, onRemove, showCarts, cartOptions, 
               if (val === "") { onUpdate(index, { ...player, handicap: null }); return; }
               const num = parseFloat(val);
               if (isNaN(num)) return;
-              const clamped = Math.min(54, Math.max(-10, num));
+              // Clamp to the shared handicap bounds (-5 to 54, 0.1 step).
+              // The bounds live in src/lib/handicap.ts; duplicating the numeric
+              // literals here avoids an import into this .jsx file and keeps
+              // the wizard's inline validation fast. Spec 2026-04-20.
+              const clamped = Math.min(54, Math.max(-5, num));
               onUpdate(index, { ...player, handicap: clamped });
             }}
             placeholder="HCP"
-            min="-10"
+            min="-5"
             max="54"
-            step="0.5"
+            step="0.1"
+            data-testid={`player-handicap-input-${index}`}
             style={{
               fontFamily: mono, fontSize: 13, color: "#8B7355",
               border: "1px solid #DDD0BB", borderRadius: 6, padding: "8px 10px",
@@ -648,28 +671,67 @@ function MechanicToggle({ id, config, enabled, onToggle, expanded, onExpand, set
           ))}
         </div>
       )}
-      {enabled && id === "pops" && (
-        <div style={{ padding: "0 16px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontFamily: font, fontSize: 12, color: "#8B7355" }}>Handicap %:</span>
-            {[60, 70, 80, 90, 100].map(pct => (
-              <button key={pct} onClick={() => onSettings(id, { ...settings, handicapPercent: pct })} style={{
-                minWidth: 42, height: 36, borderRadius: 8, border: "none", cursor: "pointer",
-                fontFamily: "'SF Mono', 'JetBrains Mono', monospace", fontSize: 12, fontWeight: 600,
-                background: (settings?.handicapPercent || 100) === pct ? "#2D5016" : "#EDE7D9",
-                color: (settings?.handicapPercent || 100) === pct ? "#fff" : "#8B7355",
-                transition: "all 0.15s ease",
-              }}>{pct}%</button>
-            ))}
-          </div>
-          <div style={{ fontFamily: font, fontSize: 11, color: "#A8957B", fontStyle: "italic" }}>
-            {(settings?.handicapPercent || 100) === 100
-              ? "Full handicap — strokes based on 100% of each player's index."
-              : `Playing at ${settings?.handicapPercent}% — a ${20} HCP gets ${Math.round(20 * (settings?.handicapPercent || 100) / 100)} strokes.`
-            }
-          </div>
+      {/* pops handicapPercent button tabs removed in PR #17 commit 2. The
+          setting is now a top-level slider (see HandicapPercentSlider below)
+          visible for DOC + Flip regardless of whether pops is enabled. */}
+    </div>
+  );
+}
+
+// --- HANDICAP PERCENTAGE SLIDER (PR #17 commit 2) ---
+//
+// Per-round scale factor applied uniformly to every player's raw
+// handicap. Pulled out of the `pops` mechanic block so the scorekeeper
+// can set a team-game reduction (e.g. 80%) without having to enable
+// pops as a separate toggle. Visible only for DOC + Flip — Skins,
+// Nassau, Solo, Custom all use 100% and this control stays hidden.
+//
+// Stored at round creation via `rounds.handicap_percent` (new column,
+// migration 20260420030000). Legacy rounds that predate the column
+// read through `resolveHandicapPercent` with a fallback chain to the
+// old `course_details.mechanicSettings.pops.handicapPercent` location.
+function HandicapPercentSlider({ value, onChange, font }) {
+  const mono = "'SF Mono', 'JetBrains Mono', monospace";
+  return (
+    <div
+      data-testid="handicap-percent-slider"
+      style={{
+        background: "#FAF5EC", borderRadius: 14, padding: 16,
+        boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+        display: "flex", flexDirection: "column", gap: 10,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+        <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016" }}>
+          Handicap %
         </div>
-      )}
+        <div
+          data-testid="handicap-percent-value"
+          style={{ fontFamily: mono, fontSize: 14, fontWeight: 700, color: "#1E130A" }}
+        >
+          {value}%
+        </div>
+      </div>
+      <input
+        type="range"
+        min={50}
+        max={100}
+        step={5}
+        value={value}
+        onChange={e => onChange(Number(e.target.value))}
+        data-testid="handicap-percent-slider-input"
+        aria-label="Handicap percentage"
+        aria-valuemin={50}
+        aria-valuemax={100}
+        aria-valuenow={value}
+        style={{
+          width: "100%",
+          accentColor: "#2D5016",
+        }}
+      />
+      <div style={{ fontFamily: font, fontSize: 11, color: "#A8957B", lineHeight: 1.4 }}>
+        Scale each player's handicap for team fairness. 100% = full handicap, 80% = common team-game reduction.
+      </div>
     </div>
   );
 }
@@ -742,8 +804,18 @@ export default function CrybabSetupWizard() {
     birdie_bonus: { multiplier: "2x" },
     carry_overs: { cap: "∞" },
     presses: { autoPress: "Optional (must request)" },
-    pops: { handicapPercent: 100 },
+    // pops-scoped handicapPercent removed in PR #17 commit 2 — the
+    // scaling is now a first-class round-level setting. Retain the
+    // `pops` entry as {} so code paths still iterating over mechanic
+    // settings (telemetry, legacy test mocks) don't break.
+    pops: {},
   });
+  // PR #17 commit 2: per-round handicap percentage. Applies to DOC +
+  // Flip (team games). 50-100 in 5%% steps. Lives at top level, not
+  // nested under mechanicSettings.pops, so the slider is visible
+  // regardless of whether the pops mechanic is enabled. Persists to
+  // rounds.handicap_percent on round creation.
+  const [handicapPercent, setHandicapPercent] = useState(100);
   const [privacy, setPrivacy] = useState("friends");
   const [roundStarted, setRoundStarted] = useState(false);
   const [activeRound, setActiveRound] = useState(null);
@@ -927,6 +999,14 @@ export default function CrybabSetupWizard() {
         ? { baseBet: flipBaseBet, carryOverWindow: flipCarryWindow }
         : null;
 
+      // Per-round handicap % applies only to team games. For individual-
+      // scoring formats we pass 100 so the playerConfig.handicap math
+      // below is a no-op (floor(raw * 1.0) === raw).
+      const roundHandicapPercent =
+        (selectedFormat === "drivers_others_carts" || selectedFormat === "flip")
+          ? handicapPercent
+          : 100;
+
       const roundId = await createRound({
         gameType: selectedFormat,
         course,
@@ -939,6 +1019,7 @@ export default function CrybabSetupWizard() {
         privacy,
         scorekeeperMode: true,
         flipConfig,
+        handicapPercent: roundHandicapPercent,
       });
       window.location.href = `/round?id=${roundId}`;
     } catch (err) {
@@ -1386,6 +1467,18 @@ export default function CrybabSetupWizard() {
             </>
             )}
 
+            {/* Handicap % slider — team games only (DOC + Flip). Non-team
+                formats (Skins, Nassau, Solo, Custom) play at full handicap;
+                we hide the control entirely so the wizard doesn't imply a
+                setting that will be ignored. */}
+            {(selectedFormat === "drivers_others_carts" || selectedFormat === "flip") && (
+              <HandicapPercentSlider
+                value={handicapPercent}
+                onChange={setHandicapPercent}
+                font={font}
+              />
+            )}
+
             {/* Mechanics */}
             <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginTop: 4 }}>
               Game Mechanics
@@ -1496,7 +1589,7 @@ export default function CrybabSetupWizard() {
                   )}
                   {enabledMechanics.has("pops") && (
                     <div style={{ fontFamily: font, fontSize: 13, color: "#8B7355" }}>
-                      🎯 Handicap strokes at {mechanicSettings.pops?.handicapPercent || 100}%{enabledMechanics.has("no_pops_par3") ? " (no pops on par 3s)" : ""}
+                      🎯 Handicap strokes at {handicapPercent}%{enabledMechanics.has("no_pops_par3") ? " (no pops on par 3s)" : ""}
                     </div>
                   )}
                   {enabledMechanics.has("carry_overs") && (

@@ -65,8 +65,16 @@ describe("Locked-at-round-start rule — architecture check", () => {
       path.resolve(__dirname, "../../src/lib/db.ts"),
       "utf-8",
     );
-    // Look for the playerConfig builder — it must still spread `handicap: p.handicap`.
-    expect(src).toMatch(/playerConfig\s*=\s*players[\s\S]*?handicap:\s*p\.handicap/);
+    // Look for the playerConfig builder — it must still capture each
+    // player's handicap as a numeric value at round start. Pre-PR-#17
+    // this was `handicap: p.handicap` directly; PR #17 commit 2 scales
+    // the value via `handicap: adjusted` (where `adjusted` is computed
+    // from `p.handicap` at lock time). Either shape preserves the
+    // "locked at round start, not a live FK" invariant.
+    expect(src).toMatch(/playerConfig\s*=\s*players[\s\S]*?handicap:\s*(p\.handicap|adjusted)/);
+    // Commit 2 also preserves the raw profile handicap alongside the
+    // scaled one as an audit field.
+    expect(src).toMatch(/rawHandicap:\s*raw/);
     // Look for the course_details assembly — it must include playerConfig.
     expect(src).toMatch(/course_details:\s*\{[\s\S]*?playerConfig/);
   });

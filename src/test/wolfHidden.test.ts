@@ -6,24 +6,37 @@ import type { GameMode } from "@/lib/gameEngines";
  * Testing-surface invariants for the setup wizard's visible game list.
  *
  * Phase 2.5a hid Wolf. The DOC-focused testing pass (this branch) also
- * hides Nassau, Skins, Flip, and Custom so on-course validation focuses
- * on one game that exercises every mechanic in the stack.
+ * hid Nassau, Skins, Flip, and Custom so on-course validation could
+ * focus on one mode exercising every mechanic.
  *
- * Legacy rounds in hidden modes must still load + replay — the test
- * suite for the engine (`gameEngines.test.ts`) + `replayEquivalence`
- * cover money math for those modes; this file just locks in the
- * visibility flags.
+ * Un-hide history:
+ *   - Flip   — un-hidden 2026-04-20 via PR #16 (5-man 3v2 + crybaby).
+ *   - Skins  — un-hidden 2026-04-21 via PR #17 commit 3 (engine had
+ *              full coverage via replayEquivalence; this commit adds
+ *              direct unit tests at the engine boundary).
+ *
+ * Legacy rounds in still-hidden modes (Nassau, Wolf, Custom) must
+ * continue to load + replay — the engine suite + replayEquivalence
+ * cover money math for those; this file locks visibility flags.
  */
 
-describe("GAME_FORMATS — visible set (DOC-focused testing surface, Flip un-hidden 2026-04-20)", () => {
-  it("DOC, Flip, and Solo are visible in the setup picker", () => {
+describe("GAME_FORMATS — visible set (DOC + Flip + Skins + Solo, 2026-04-21)", () => {
+  it("DOC, Flip, Skins, and Solo are visible in the setup picker", () => {
     const visible = GAME_FORMATS.filter(g => !g.hidden).map(g => g.id).sort();
-    expect(visible).toEqual(["drivers_others_carts", "flip", "solo"]);
+    expect(visible).toEqual(["drivers_others_carts", "flip", "skins", "solo"]);
   });
 
-  it("every other mode (Nassau, Skins, Wolf, Custom) exists with hidden: true", () => {
+  it("Nassau, Wolf, and Custom remain hidden", () => {
     const hidden = GAME_FORMATS.filter(g => g.hidden === true).map(g => g.id).sort();
-    expect(hidden).toEqual(["custom", "nassau", "skins", "wolf"]);
+    expect(hidden).toEqual(["custom", "nassau", "wolf"]);
+  });
+
+  it("Skins is visible with the un-hide-era description copy", () => {
+    const skins = GAME_FORMATS.find(g => g.id === "skins");
+    expect(skins?.hidden).toBe(false);
+    expect(skins?.players).toEqual({ min: 2, max: 6 });
+    expect(skins?.description).toMatch(/Per-hole competition/);
+    expect(skins?.description).toMatch(/2.?6 players/);
   });
 
   it("GAME_FORMATS is the single source of truth — no duplicate ids", () => {
@@ -51,7 +64,7 @@ describe("GAME_FORMATS — hidden modes keep full metadata for legacy renders", 
     expect(wolf?.hidden).toBe(true);
   });
 
-  it("Nassau/Skins/Flip/Custom all exist with full names", () => {
+  it("Nassau/Skins/Flip/Custom all exist with full names (visibility aside)", () => {
     const nassau = GAME_FORMATS.find(g => g.id === "nassau");
     const skins = GAME_FORMATS.find(g => g.id === "skins");
     const flip = GAME_FORMATS.find(g => g.id === "flip");

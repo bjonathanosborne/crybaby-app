@@ -320,6 +320,40 @@ serve(async (req) => {
       : [];
     const mechanicSettings = (courseDetails.mechanicSettings || {}) as Record<string, unknown>;
 
+    // PR #17 commit 2: Resolve the handicap scale factor for the engine.
+    //
+    // Two eras of rounds coexist:
+    //   - NEW-WORLD rounds (post-2026-04-20): store ADJUSTED handicap
+    //     in `playerConfig[i].handicap` and tag each entry with a
+    //     `handicap_percent` audit field + a first-class
+    //     `rounds.handicap_percent` column. Engine must NOT re-scale
+    //     or it double-applies the factor.
+    //   - LEGACY rounds: store RAW handicap in `playerConfig[i].handicap`.
+    //     The scale factor was buried at
+    //     `course_details.mechanicSettings.pops.handicapPercent`.
+    //     Engine DOES scale, using that legacy value.
+    //
+    // Detect the era via the presence of `handicap_percent` on any
+    // playerConfig entry. A pre-existing bug in this file read the
+    // flat `mechanicSettings.handicapPercent` field the client never
+    // wrote, so legacy rounds with pops=60 silently replayed at 100.
+    // Fixed here by reading the correct nested location.
+    const popsSettings = (mechanicSettings as { pops?: { handicapPercent?: unknown } }).pops;
+    const legacyPopsPercent = (popsSettings && typeof popsSettings.handicapPercent === "number")
+      ? popsSettings.handicapPercent
+      : null;
+    const newWorldRound = playerConfigs.some(
+      (pc) => typeof (pc as { handicap_percent?: unknown }).handicap_percent === "number",
+    );
+    const roundLevelPercent = (round as { handicap_percent?: number | null }).handicap_percent;
+    const resolvedEnginePercent = newWorldRound
+      ? 100
+      : (typeof roundLevelPercent === "number" && roundLevelPercent !== null)
+        ? roundLevelPercent
+        : legacyPopsPercent !== null
+          ? legacyPopsPercent
+          : 100;
+
     const settings: GameSettings = {
       hammer: Array.isArray(courseDetails.mechanics) && (courseDetails.mechanics as string[]).includes("hammer"),
       hammerInitiator: String(mechanicSettings.hammerInitiator ?? "any"),
@@ -332,7 +366,7 @@ serve(async (req) => {
       pops: Array.isArray(courseDetails.mechanics) && (courseDetails.mechanics as string[]).includes("pops"),
       noPopsParThree: true,
       carryOverCap: String(mechanicSettings.carryOverCap ?? "∞"),
-      handicapPercent: typeof mechanicSettings.handicapPercent === "number" ? mechanicSettings.handicapPercent : 100,
+      handicapPercent: resolvedEnginePercent,
       presses: Array.isArray(courseDetails.mechanics) && (courseDetails.mechanics as string[]).includes("presses"),
       pressType: String(mechanicSettings.pressType ?? "auto"),
     };
