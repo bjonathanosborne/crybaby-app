@@ -70,13 +70,17 @@ export const GAME_FORMATS: GameFormat[] = [
     id: "skins",
     name: "Skins",
     players: { min: 2, max: 6 },
-    description: "Every hole is its own bet. Low score takes the skin. Ties carry over.",
+    description: "Per-hole competition with carry-over. 2–6 players, net or gross.",
     mechanics: ["carry_overs", "pops"],
     defaultHoles: 18,
     teamStructure: "individual",
     requiresCarts: false,
-    // Hidden for DOC-only testing surface. See TODOS.md. Un-hide order: #1 (with Nassau).
-    hidden: true,
+    // Un-hidden 2026-04-21 (PR #17 commit 3). Engine (calculateSkinsResult)
+    // + setup wizard + runtime + settlement all work via the generic
+    // individual-format path. No Skins-specific UI shipped this commit —
+    // follow-up PR will add running skins count, carry indicator, and
+    // per-hole winners display once the mode has on-course mileage.
+    hidden: false,
   },
   {
     id: "wolf",

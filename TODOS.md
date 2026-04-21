@@ -1,6 +1,6 @@
 # TODOS — crybaby-app
 
-Last updated: 2026-04-20 (Flip mode shipped via PR #16; remaining un-hide queue is Nassau, Skins, Custom, Wolf)
+Last updated: 2026-04-21 (Skins un-hidden via PR #17 commit 3; remaining un-hide queue is Nassau, Custom, Wolf)
 Branch: main
 
 ---
@@ -35,7 +35,7 @@ architecture.
 
 **Hidden from setup; legacy rounds still load and replay:**
 - Nassau
-- Skins
+- ~~Skins~~ — un-hidden 2026-04-21 via PR #17 commit 3. Engine already production-ready (recon found `calculateSkinsResult` complete — ties carry, N×pot math correct, pops scaling via `getStrokesOnHole`). Commit added 19 direct unit tests to fill the engine-boundary coverage gap.
 - ~~Flip~~ — un-hidden 2026-04-20 via PR #16 with full per-hole re-flip + crybaby sub-game + Model C accounting. See `supabase/functions/_shared/gameEngines.ts` Flip section.
 - Custom
 - Wolf (separately deferred; needs partner-pick capture)
@@ -47,13 +47,39 @@ round-load, RoundLiveFeed) remains untouched so rounds created before
 the flip still work.
 
 **Un-hide order after DOC validates on-course:**
-1. Nassau + Skins — simpler money math, no team logic. Low risk.
+1. ~~Nassau + Skins — simpler money math, no team logic. Low risk.~~ Skins shipped 2026-04-21, PR #17 commit 3 (flag flip + 19-test engine coverage). Nassau still pending; engine is implemented but NOT yet validated with dedicated unit tests — recommend doing the same recon + un-hide-with-tests pattern before flipping its flag.
 2. ~~Flip — DOC variant with random teams; low marginal risk once DOC works.~~ — Done 2026-04-20, PR #16. Flip ended up being a much bigger build than "DOC variant": per-hole reshuffle, rolling-window carry-over with forfeit accounting, separate crybaby sub-game on holes 16-18.
 3. Custom — freeform, least-tested path.
 4. Wolf — needs partner-pick capture work (see section below).
 
 Each un-hide is a single-flag flip + a brief on-course test + ship.
 <1 day each.
+
+---
+
+## Deferred: Skins UI polish (post-on-course validation)
+
+PR #17 commit 3 un-hid Skins with ZERO UI changes — the engine, wizard,
+runtime, settlement, and round detail all work via the generic
+individual-format path. But a real Skins round would benefit from:
+
+- **Running skins count per player** — live UI showing how many skins
+  each player has taken so far (tied skins count as 0 for both
+  players, they carry). Currently only the dollar balance is visible.
+- **Carry-over indicator before scoring** — "$10 carry from hole 3"
+  banner on the current hole pre-score, so players know the stakes
+  before they swing. The post-resolution `quip` ("Tied! $X carries to
+  the next hole.") surfaces this after the fact but not up front.
+- **Per-hole Skins winners in round detail** — scorecard view could
+  show which player took each skin (or "carry" for ties). Currently
+  the detail view renders only the final settlement + hole scores.
+
+Deferred intentionally: do the UI work AFTER Jonathan plays a real
+Skins round and surfaces what he actually wants to see. Building the
+polish blind risks shipping what a designer thinks a Skins player
+needs rather than what the actual player needs.
+
+Estimated effort when ready: ~1-2 days.
 
 ---
 
