@@ -76,7 +76,10 @@ export async function removePushSubscription(endpoint: string) {
     .eq("endpoint", endpoint);
 }
 
-// Create a round in the database and return its ID
+// Create a round in the database and return its ID.
+// `stakes` is optional — when omitted, we compute a default "$X/hole"
+// from holeValue. Scorecard rounds (PR #19) pass "Scorecard" here so
+// the rounds row doesn't falsely advertise a dollar amount.
 export async function createRound({ gameType, course, courseDetails, stakes, holeValue, players, mechanics, mechanicSettings, privacy, scorekeeperMode, flipConfig, handicapPercent }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
@@ -142,7 +145,7 @@ export async function createRound({ gameType, course, courseDetails, stakes, hol
           },
         }),
       },
-      stakes: `$${holeValue}/hole`,
+      stakes: stakes ?? `$${holeValue}/hole`,
       status: "active",
       scorekeeper_mode: scorekeeperMode,
       is_broadcast: autoBroadcast,

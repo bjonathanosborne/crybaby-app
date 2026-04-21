@@ -2,7 +2,7 @@
 // GAME ENGINES — Scoring logic for all Crybaby game formats
 // ============================================================
 
-export type GameMode = 'drivers_others_carts' | 'skins' | 'nassau' | 'wolf' | 'flip' | 'custom';
+export type GameMode = 'drivers_others_carts' | 'skins' | 'nassau' | 'wolf' | 'flip' | 'custom' | 'scorecard';
 
 export interface Player {
   id: string;
@@ -752,6 +752,28 @@ export function calculateSkinsResult(
   };
 }
 
+// --- SCORECARD SCORING ---
+//
+// No-money game mode (PR #19). Satisfies the HoleResult interface so
+// CrybabyActiveRound + replayRound can dispatch to it the same way they
+// do for skins/nassau/wolf, but every per-player amount is 0 and the
+// round emits no winner.
+//
+// Intentionally takes only the ids needed — no par, no hole number, no
+// settings, no handicaps. Score tracking is entirely client-side via
+// round_players.hole_scores; the engine doesn't need to know the gross
+// strokes to return an all-zero payout.
+export function calculateScorecardResult(players: Player[]): HoleResult {
+  return {
+    push: false,
+    winnerName: null,
+    amount: 0,
+    carryOver: 0,
+    playerResults: players.map(p => ({ id: p.id, name: p.name, amount: 0 })),
+    quip: "Scored.",
+  };
+}
+
 // --- NASSAU SCORING ---
 export interface NassauState {
   frontMatch: Record<string, number>; // player/team → holes won on front 9
@@ -1355,6 +1377,12 @@ export function replayRound(
       const foldValue = holeValue * Math.pow(2, hammerDepth) + carryOver;
       result = calculateFoldResult(players, teams, foldValue, foldWinnerTeamId);
       result.carryOver = 0;
+    } else if (gameMode === 'scorecard') {
+      // PR #19: No-money mode. Engine returns zero-amount payout; any
+      // apply-capture replay triggered by a post-round score correction
+      // on a Scorecard round produces an all-zeros holeResult that sums
+      // cleanly to totals = 0 for every player.
+      result = calculateScorecardResult(players);
     } else if (gameMode === 'skins' || gameMode === 'custom') {
       result = calculateSkinsResult(players, scores, par, holeNumber, holeValue, carryOver, settings, lowestHandicap, holeHandicapRank);
     } else if (gameMode === 'nassau') {

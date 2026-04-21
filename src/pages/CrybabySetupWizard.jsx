@@ -939,9 +939,13 @@ export default function CrybabSetupWizard() {
       case 2: return !!course && (!course.tees?.length || !!selectedTee);
       case 3:
         // Flip requires explicit base-bet + window selection before
-        // proceeding. Other modes just need a positive hole value.
+        // proceeding. Scorecard has no hole value (PR #19) — always OK.
+        // Other modes just need a positive hole value.
         if (selectedFormat === "flip") {
           return flipConfigReady;
+        }
+        if (selectedFormat === "scorecard") {
+          return true;
         }
         return holeValue > 0;
       case 4: return true;
@@ -1007,12 +1011,24 @@ export default function CrybabSetupWizard() {
           ? handicapPercent
           : 100;
 
+      // PR #19: Scorecard rounds don't play for money, so holeValue +
+      // stakes are stored as 0 / "Scorecard" — avoids polluting audit
+      // tooling with a "$5/hole" string on a round that never moved money.
+      const persistedHoleValue = selectedFormat === "flip"
+        ? flipBaseBet
+        : selectedFormat === "scorecard"
+          ? 0
+          : holeValue;
+      const persistedStakes = selectedFormat === "scorecard"
+        ? "Scorecard"
+        : `$${holeValue}/hole`;
+
       const roundId = await createRound({
         gameType: selectedFormat,
         course,
         courseDetails: course,
-        stakes: `$${holeValue}/hole`,
-        holeValue: selectedFormat === "flip" ? flipBaseBet : holeValue,
+        stakes: persistedStakes,
+        holeValue: persistedHoleValue,
         players,
         mechanics: enabledMechanics,
         mechanicSettings,
@@ -1417,8 +1433,10 @@ export default function CrybabSetupWizard() {
               </div>
             )}
 
-            {/* Hole Value — hidden in Flip mode (baseBet replaces it). */}
-            {selectedFormat !== "flip" && (
+            {/* Hole Value — hidden in Flip (baseBet replaces it) and in
+                Scorecard (no money). PR #19: scorecard has no wager, so
+                the dollar-per-hole input is suppressed entirely. */}
+            {selectedFormat !== "flip" && selectedFormat !== "scorecard" && (
             <>
             {/* Hole Value */}
             <div style={{
@@ -1479,21 +1497,29 @@ export default function CrybabSetupWizard() {
               />
             )}
 
-            {/* Mechanics */}
-            <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginTop: 4 }}>
-              Game Mechanics
-            </div>
-            {Object.entries(MECHANICS_CONFIG).map(([id, config]) => (
-              <MechanicToggle
-                key={id}
-                id={id}
-                config={config}
-                enabled={enabledMechanics.has(id)}
-                onToggle={toggleMechanic}
-                settings={mechanicSettings[id]}
-                onSettings={updateMechanicSettings}
-              />
-            ))}
+            {/* Mechanics — PR #19: suppressed for Scorecard. Hammer,
+                crybaby, birdie-bonus, pops, carry-over, presses all
+                assume money is on the table; a scorecard round toggling
+                any of them would be UI noise. Scorecard jumps straight
+                from Course (step 2) to Privacy + Review. */}
+            {selectedFormat !== "scorecard" && (
+              <>
+                <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 14, fontWeight: 400, color: "#2D5016", marginTop: 4 }}>
+                  Game Mechanics
+                </div>
+                {Object.entries(MECHANICS_CONFIG).map(([id, config]) => (
+                  <MechanicToggle
+                    key={id}
+                    id={id}
+                    config={config}
+                    enabled={enabledMechanics.has(id)}
+                    onToggle={toggleMechanic}
+                    settings={mechanicSettings[id]}
+                    onSettings={updateMechanicSettings}
+                  />
+                ))}
+              </>
+            )}
 
             {/* Privacy */}
             <div style={{
@@ -1537,11 +1563,19 @@ export default function CrybabSetupWizard() {
             <ReviewSection icon={format ? GAME_ICON[format.id]?.(18) : null} label="Game" value={format?.name} />
             <ReviewSection icon={<Users size={18} strokeWidth={2} />} label="Players" value={players.filter(p => p.name.trim()).map(p => p.name).join(", ")} />
             <ReviewSection icon={<Flag size={18} strokeWidth={2} />} label="Course" value={`${course?.name}${selectedTee ? ` · ${selectedTee} tees` : ""}`} />
-            <ReviewSection icon={<MoneyIcon size={18} />} label="Hole Value" value={`$${holeValue} / hole`} />
-            <ReviewSection icon={<Sliders size={18} strokeWidth={2} />} label="Mechanics" value={[...enabledMechanics].map(m => MECHANICS_CONFIG[m]?.label).join(", ") || "None"} />
+            {/* PR #19: Scorecard has no hole value or mechanics; skip
+                those review rows rather than rendering "$0 / hole" +
+                "Mechanics: None". Keeps the review screen honest. */}
+            {selectedFormat !== "scorecard" && (
+              <>
+                <ReviewSection icon={<MoneyIcon size={18} />} label="Hole Value" value={`$${holeValue} / hole`} />
+                <ReviewSection icon={<Sliders size={18} strokeWidth={2} />} label="Mechanics" value={[...enabledMechanics].map(m => MECHANICS_CONFIG[m]?.label).join(", ") || "None"} />
+              </>
+            )}
             <ReviewSection icon={<Eye size={18} strokeWidth={2} />} label="Visibility" value={privacy.charAt(0).toUpperCase() + privacy.slice(1)} />
 
-            {/* Estimated exposure */}
+            {/* Estimated exposure — hidden for Scorecard (no money). */}
+            {selectedFormat !== "scorecard" && (
             <div style={{
               marginTop: 8, background: "#FEF3C7", borderRadius: 14, padding: "16px 18px",
               textAlign: "center",
@@ -1556,6 +1590,7 @@ export default function CrybabSetupWizard() {
                 {enabledMechanics.has("hammer") ? "With hammers, things can escalate." : "Steady game. No hammers."}
               </div>
             </div>
+            )}
 
             {/* Rules summary */}
             {enabledMechanics.size > 0 && (

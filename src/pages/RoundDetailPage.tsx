@@ -12,6 +12,7 @@ import {
   resolveHandicapPercent,
   shouldShowHandicapPercentLine,
 } from "@/lib/handicap";
+import { getStrokesOnHole } from "@/lib/gameEngines";
 
 // ============================================================
 // RoundDetailPage — /round/:id/summary
@@ -76,6 +77,48 @@ export default function RoundDetailPage(): JSX.Element {
 
   const viewerPnl = bundle?.settlements.find(s => s.user_id === user?.id)?.amount ?? null;
   const isMoneyRound = (bundle?.settlements.length ?? 0) > 0;
+
+  // PR #19 Handicap B — net totals when every player in the round has
+  // a locked handicap in their playerConfig entry. Computed from
+  // `getStrokesOnHole` over the hole handicap ranks + the course's
+  // own handicaps array; the round's `handicap_percent` is already
+  // applied at lock time, so scale=100 here (no double-scaling).
+  //
+  // Falls back to gross-only when ANY player is missing a handicap —
+  // the UX read ("Alice played better relative to skill") is only
+  // meaningful when every player contributes a handicap.
+  const netLeaderboard = useMemo((): Array<{ playerId: string; name: string; gross: number; strokes: number; net: number }> | null => {
+    if (!bundle) return null;
+    const playerConfigs = bundle.round.course_details?.playerConfig ?? [];
+    const handicapRanks = bundle.round.course_details?.handicaps;
+    if (!handicapRanks || handicapRanks.length === 0) return null;
+    if (playerConfigs.length === 0 || playerConfigs.length !== bundle.players.length) return null;
+    // All-or-nothing gate — any null handicap, fall back to gross.
+    const allHaveHcp = playerConfigs.every(pc => typeof pc.handicap === "number" && pc.handicap !== null);
+    if (!allHaveHcp) return null;
+
+    const hcpValues = playerConfigs.map(pc => pc.handicap as number);
+    const lowestHcp = Math.min(...hcpValues);
+    const rounded = (h: number) => h; // strokes calc in getStrokesOnHole handles rounding
+
+    // Map by array index (playerConfig[i] aligns with bundle.players[i]
+    // at round-creation time per db.ts createRound ordering).
+    return bundle.players.map((p, i) => {
+      const pc = playerConfigs[i];
+      const hcp = rounded(pc.handicap as number);
+      const grossScores = normaliseHoleScores(p.hole_scores).slice(0, holes);
+      const gross = sum(grossScores);
+      let strokes = 0;
+      for (let h = 0; h < holes; h++) {
+        strokes += getStrokesOnHole(hcp, lowestHcp, handicapRanks[h], 100);
+      }
+      const net = gross - strokes;
+      const name = p.user_id
+        ? bundle.participant_names[p.user_id] || p.guest_name || "Player"
+        : p.guest_name || "Guest";
+      return { playerId: p.id, name, gross, strokes, net };
+    }).sort((a, b) => a.net - b.net);
+  }, [bundle, holes]);
 
   const settlementRows = useMemo(() => {
     if (!bundle) return [];
@@ -316,6 +359,57 @@ export default function RoundDetailPage(): JSX.Element {
           <GridView pars={pars} players={scorecardPlayers} holes={holes} />
         )}
       </div>
+
+      {/* PR #19 Handicap B — Net leaderboard. Shows only when every
+          player in the round has a locked handicap in their
+          playerConfig entry. Sorted by net ascending (lowest best).
+          Gross is shown alongside for context. */}
+      {netLeaderboard && netLeaderboard.length > 0 && (
+        <div
+          data-testid="round-detail-net-leaderboard"
+          style={{
+            marginTop: 14,
+            padding: "14px 16px",
+            borderRadius: 14,
+            background: "#fff",
+            border: `1px solid ${BRAND_BORDER}`,
+          }}
+        >
+          <div style={{ fontSize: 11, fontWeight: 700, color: BRAND_BROWN, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+            Net Totals
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {netLeaderboard.map((row, i) => (
+              <div
+                key={row.playerId}
+                data-testid={`round-detail-net-row-${i}`}
+                style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}
+              >
+                <span style={{ fontSize: 14, color: "#1E130A" }}>
+                  <span style={{ fontFamily: MONO, fontSize: 11, color: BRAND_BROWN, marginRight: 8 }}>
+                    {i + 1}
+                  </span>
+                  {row.name}
+                </span>
+                <span style={{ fontFamily: MONO, fontSize: 13 }}>
+                  <span
+                    data-testid={`round-detail-net-${i}`}
+                    style={{ fontWeight: 800, color: "#1E130A" }}
+                  >
+                    {row.net}
+                  </span>
+                  <span
+                    data-testid={`round-detail-net-gross-${i}`}
+                    style={{ marginLeft: 6, color: BRAND_BROWN }}
+                  >
+                    ({row.gross} − {row.strokes})
+                  </span>
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Settlement */}
       {isMoneyRound && (
