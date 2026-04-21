@@ -108,6 +108,24 @@ export const GAME_FORMATS: GameFormat[] = [
     requiresCarts: false,
   },
   {
+    // PR #19: Pure score-tracking mode. No money, no teams, no mechanics.
+    // Flows through the same wizard + active-round runtime as every other
+    // multi-player format; a no-op engine helper (calculateScorecardResult)
+    // satisfies the HoleResult interface so CrybabyActiveRound doesn't
+    // need a second rendering path. Net-score display uses the player
+    // handicaps already captured during the Players step when ALL players
+    // have handicaps (Handicap Option B from the PR #19 recon).
+    id: "scorecard",
+    name: "Scorecard",
+    players: { min: 1, max: 6 },
+    description: "Track scores for 1–6 players. No betting, no teams — just the scorecard.",
+    mechanics: [],
+    defaultHoles: 18,
+    teamStructure: "scorecard",
+    requiresCarts: false,
+    hidden: false,
+  },
+  {
     id: "custom",
     name: "Custom Game",
     players: { min: 2, max: 6 },

@@ -27,7 +27,7 @@ import RoundLiveFeed from "@/components/RoundLiveFeed";
 import {
   getStrokesOnHole, getTeamsForHole, getPhaseLabel, getPhaseDisplayLabel, getPhaseColor,
   supportsTeams, supportsHammer, supportsCrybaby,
-  calculateTeamHoleResult, calculateSkinsResult, calculateNassauHoleResult,
+  calculateTeamHoleResult, calculateSkinsResult, calculateScorecardResult, calculateNassauHoleResult,
   calculateNassauSettlement,
   calculateWolfHoleResult, calculateFoldResult as calcFoldResult,
   initWolfState, getWolfForHole, initNassauState,
@@ -293,13 +293,24 @@ function ScoreInput({ player, par, score, strokes, onScoreChange }) {
   );
 }
 
-function Leaderboard({ players, totals, currentCrybaby }) {
-  const sorted = [...players].sort((a, b) => (totals[b.id] || 0) - (totals[a.id] || 0));
+/**
+ * Two-mode leaderboard. In money games ("money"), sorts desc by P&L
+ * and shows ±$X per player. In Scorecard rounds ("strokes"), sorts
+ * asc by total strokes (lowest best) and shows a plain integer
+ * count per player. strokesByPlayer is required in "strokes" mode.
+ */
+function Leaderboard({ players, totals, currentCrybaby, mode = "money", strokesByPlayer = {} }) {
+  const sorted = mode === "strokes"
+    ? [...players].sort((a, b) => (strokesByPlayer[a.id] || 0) - (strokesByPlayer[b.id] || 0))
+    : [...players].sort((a, b) => (totals[b.id] || 0) - (totals[a.id] || 0));
   return (
-    <div style={{
-      background: "#FAF5EC", borderRadius: 16, overflow: "hidden",
-      boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-    }}>
+    <div
+      data-testid={`leaderboard-${mode}`}
+      style={{
+        background: "#FAF5EC", borderRadius: 16, overflow: "hidden",
+        boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+      }}
+    >
       <div style={{
         padding: "12px 16px", background: "#FAF5EC", borderBottom: "1px solid #F3F4F6",
         display: "flex", justifyContent: "space-between", alignItems: "center",
@@ -308,11 +319,12 @@ function Leaderboard({ players, totals, currentCrybaby }) {
           Standings
         </span>
         <span style={{ fontFamily: FONT, fontSize: 11, color: "#A8957B" }}>
-          P&L
+          {mode === "strokes" ? "Strokes" : "P&L"}
         </span>
       </div>
       {sorted.map((player, i) => {
         const amount = totals[player.id] || 0;
+        const strokes = strokesByPlayer[player.id] || 0;
         const isCrybaby = currentCrybaby === player.id;
         return (
           <div key={player.id} style={{
@@ -333,12 +345,21 @@ function Leaderboard({ players, totals, currentCrybaby }) {
               <span style={{ fontFamily: FONT, fontSize: 13, fontWeight: 600, color: "#1E130A" }}>{player.name}</span>
               {isCrybaby && <span style={{ marginLeft: 6, fontSize: 12 }}>🍼</span>}
             </div>
-            <span style={{
-              fontFamily: MONO, fontSize: 15, fontWeight: 800,
-              color: amount > 0 ? "#2D5016" : amount < 0 ? "#DC2626" : "#A8957B",
-            }}>
-              {amount >= 0 ? "+" : ""}${amount}
-            </span>
+            {mode === "strokes" ? (
+              <span style={{
+                fontFamily: MONO, fontSize: 15, fontWeight: 800,
+                color: "#1E130A",
+              }}>
+                {strokes || "—"}
+              </span>
+            ) : (
+              <span style={{
+                fontFamily: MONO, fontSize: 15, fontWeight: 800,
+                color: amount > 0 ? "#2D5016" : amount < 0 ? "#DC2626" : "#A8957B",
+              }}>
+                {amount >= 0 ? "+" : ""}${amount}
+              </span>
+            )}
           </div>
         );
       })}
@@ -1299,6 +1320,15 @@ export default function CrybabActiveRound() {
           }
           return base;
         });
+        // PR #19: Scorecard rounds never write settlement rows — there's
+        // no money to record. Leaving round_settlements empty makes
+        // `isMoneyRound = settlements.length > 0` on the round detail
+        // page return false naturally, which hides every money surface.
+        if (!hasMoneyMode) {
+          setSettlementsSaved(true);
+          completionInFlightRef.current = false;
+          return;
+        }
         const settlementResult = await persist.persistSettlements(roundId, settlementData);
         if (!settlementResult.ok) {
           setCompletionError("settlement");
@@ -1456,6 +1486,12 @@ export default function CrybabActiveRound() {
 
   const phase = getPhaseLabel(round.gameMode, currentHole);
 
+  // PR #19: Suppress every money-UI surface (leaderboard chin, per-hole
+  // result card amounts, settlement write) when the round doesn't play
+  // for money. Scorecard is the only no-money mode today; the flag is
+  // written to match future additions (e.g., a practice-round mode).
+  const hasMoneyMode = round.gameMode !== 'scorecard';
+
   function buildWolfTeams() {
     const wolfId = getWolfForHole(wolfState, currentHole);
     const wolf = players.find(p => p.id === wolfId);
@@ -1577,6 +1613,23 @@ export default function CrybabActiveRound() {
     setShowResult(result);
   };
 
+  // PR #19: Scorecard auto-advance. The HoleResultCard modal is gated
+  // off for scorecard rounds (no money to surface), so when submitHole
+  // sets showResult, we immediately kick advanceHole — which consumes
+  // the state, updates totals/holeResults, and moves to the next hole.
+  // Guard on gameMode to keep other modes' click-to-dismiss UX intact.
+  useEffect(() => {
+    if (!round) return;
+    if (round.gameMode !== 'scorecard') return;
+    if (!showResult) return;
+    advanceHole();
+    // Purposely omit advanceHole from deps: it's a closure recreated
+    // every render, and re-running this effect on closure identity
+    // would cause redundant auto-advance calls. showResult is the
+    // only trigger we care about.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showResult, round?.gameMode]);
+
   const calculateHoleResult = () => {
     const cs = scores[currentHole];
     const gameMode = round.gameMode;
@@ -1631,6 +1684,14 @@ export default function CrybabActiveRound() {
             ? `${twoManTeam.name} takes it. Crybaby's comeback continues.`
             : `The pack wins. ${crybabyState.crybaby === crybabyState.crybaby ? "Crybaby" : ""} holds on by a thread.`,
       };
+    }
+
+    // PR #19: Scorecard — pure score-tracking. No money, no teams.
+    // Engine returns a zero-amount HoleResult that carries nothing,
+    // wins nothing, quips "Scored." The runtime's money-UI surfaces
+    // gate on `hasMoneyMode` (below) so the user never sees $0 chin.
+    if (gameMode === 'scorecard') {
+      return calculateScorecardResult(players);
     }
 
     // Skins — individual scoring
@@ -2779,10 +2840,31 @@ export default function CrybabActiveRound() {
         />
       </div>
 
-      {/* Leaderboard (collapsible) */}
+      {/* Leaderboard (collapsible). PR #19: Scorecard mode swaps the
+          money-sorted P&L column for a strokes-sorted column. strokes
+          are summed live from the `scores` state (keyed by hole →
+          playerId), so the leaderboard updates every hole submission. */}
       {showLeaderboard && (
         <div style={{ padding: "12px 20px 0" }}>
-          <Leaderboard players={players} totals={totals} currentCrybaby={crybabyCandidateId} />
+          <Leaderboard
+            players={players}
+            totals={totals}
+            currentCrybaby={crybabyCandidateId}
+            mode={hasMoneyMode ? "money" : "strokes"}
+            strokesByPlayer={(() => {
+              const out: Record<string, number> = {};
+              for (const p of players) out[p.id] = 0;
+              for (const holeScores of Object.values(scores) as Array<Record<string, number>>) {
+                for (const pid of Object.keys(holeScores)) {
+                  const v = holeScores[pid];
+                  if (typeof v === "number" && Number.isFinite(v)) {
+                    out[pid] = (out[pid] || 0) + v;
+                  }
+                }
+              }
+              return out;
+            })()}
+          />
         </div>
       )}
 
@@ -2985,7 +3067,12 @@ export default function CrybabActiveRound() {
           onFold={handleHammerFold}
         />
       )}
-      {showResult && (
+      {/* PR #19: HoleResultCard renders the "X wins $Y" modal after
+          every hole submission. Scorecard rounds have no money, no
+          winner, no carry — the modal would show "null Win / $0" and
+          the per-player list would render "+$0" across the board.
+          Skip it entirely and auto-advance (below). */}
+      {showResult && hasMoneyMode && (
         <HoleResultCard result={showResult} onDismiss={advanceHole} />
       )}
       {showCrybabSetup && (

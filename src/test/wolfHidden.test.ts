@@ -20,10 +20,11 @@ import type { GameMode } from "@/lib/gameEngines";
  * cover money math for those; this file locks visibility flags.
  */
 
-describe("GAME_FORMATS — visible set (DOC + Flip + Skins + Solo, 2026-04-21)", () => {
-  it("DOC, Flip, Skins, and Solo are visible in the setup picker", () => {
+describe("GAME_FORMATS — visible set (DOC + Flip + Scorecard + Skins + Solo, 2026-04-21)", () => {
+  it("DOC, Flip, Scorecard, Skins, and Solo are visible in the setup picker", () => {
     const visible = GAME_FORMATS.filter(g => !g.hidden).map(g => g.id).sort();
-    expect(visible).toEqual(["drivers_others_carts", "flip", "skins", "solo"]);
+    // Scorecard added in PR #19 — no-betting mode for 1-6 players.
+    expect(visible).toEqual(["drivers_others_carts", "flip", "scorecard", "skins", "solo"]);
   });
 
   it("Nassau, Wolf, and Custom remain hidden", () => {
