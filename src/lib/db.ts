@@ -77,20 +77,40 @@ export async function removePushSubscription(endpoint: string) {
 }
 
 // Create a round in the database and return its ID
-export async function createRound({ gameType, course, courseDetails, stakes, holeValue, players, mechanics, mechanicSettings, privacy, scorekeeperMode, flipConfig }) {
+export async function createRound({ gameType, course, courseDetails, stakes, holeValue, players, mechanics, mechanicSettings, privacy, scorekeeperMode, flipConfig, handicapPercent }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
-  // Build player config to persist setup wizard selections
+  // PR #17 commit 2: Apply the per-round handicap scale factor to each
+  // player's raw profile handicap. The engine reads `handicap` directly
+  // (no percentage-aware lookup), so what we store here is the ADJUSTED
+  // value — computed once at round start, locked, never recomputed.
+  // `rawHandicap` + `handicap_percent` are preserved as audit fields
+  // so the round detail UI can render "10 (80% of 13)".
+  //
+  // Default to 100 when the caller doesn't pass a percent (individual
+  // formats + legacy callers). At 100% the math is a no-op:
+  // floor(raw * 1.0) === raw for any integer-ish handicap.
+  const percent = typeof handicapPercent === "number" ? handicapPercent : 100;
   const playerConfig = players
     .filter(p => p.name.trim())
-    .map(p => ({
-      name: p.name,
-      handicap: p.handicap,
-      cart: p.cart || null,
-      position: p.position || null,
-      userId: p.userId || null,
-    }));
+    .map(p => {
+      const raw: number | null = (typeof p.handicap === "number" && Number.isFinite(p.handicap))
+        ? p.handicap
+        : null;
+      const adjusted: number | null = raw === null
+        ? null
+        : Math.floor((raw * percent) / 100);
+      return {
+        name: p.name,
+        handicap: adjusted,      // engine reads this; it's the scaled value
+        rawHandicap: raw,        // audit: original profile value at lock time
+        handicap_percent: percent, // audit: scale applied
+        cart: p.cart || null,
+        position: p.position || null,
+        userId: p.userId || null,
+      };
+    });
 
   // 1. Create the round
   const autoBroadcast = privacy !== "private";
@@ -126,6 +146,12 @@ export async function createRound({ gameType, course, courseDetails, stakes, hol
       status: "active",
       scorekeeper_mode: scorekeeperMode,
       is_broadcast: autoBroadcast,
+      // PR #17 commit 2: first-class round-level handicap scale factor.
+      // Only persisted for team games (DOC + Flip); individual formats
+      // pass 100 and we still write the value so the column semantics
+      // are consistent (NULL = legacy round predating the column; an
+      // explicit 100 = round created post-migration at full handicap).
+      handicap_percent: percent,
     } as any)
     .select()
     .single();
@@ -1141,6 +1167,75 @@ export async function updateRoundScoresAndSettlements(
   if (insertError) throw insertError;
 }
 
+/**
+ * PR #17 commit 2: Update a round's handicap percentage post-completion.
+ *
+ * Writes two places atomically-as-Supabase-allows:
+ *   1. `rounds.handicap_percent` — the new authoritative column.
+ *   2. `course_details.playerConfig` — regenerates each entry's
+ *      `handicap` (scaled) while preserving `rawHandicap` + stamping
+ *      the new `handicap_percent` audit field.
+ *
+ * The legacy `mechanicSettings.pops.handicapPercent` location is
+ * intentionally left untouched — per spec it becomes dead data (no
+ * longer read) for any round this function has updated.
+ *
+ * Caller should then re-run score-dependent recomputes (settlements,
+ * totals) since stroke allocation may have changed.
+ */
+export async function updateRoundHandicapPercent(
+  roundId: string,
+  newPercent: number,
+  existingCourseDetails: { playerConfig?: Array<{
+    name?: string;
+    handicap?: number | null;
+    rawHandicap?: number | null;
+    handicap_percent?: number;
+    cart?: string | null;
+    position?: string | null;
+    userId?: string | null;
+    color?: string;
+  }> } & Record<string, unknown>,
+): Promise<void> {
+  const existingPC = Array.isArray(existingCourseDetails.playerConfig)
+    ? existingCourseDetails.playerConfig
+    : [];
+
+  // Regenerate adjusted handicaps. When `rawHandicap` is absent (legacy
+  // round being touched for the first time post-column), assume the
+  // existing `handicap` IS the raw value — that's the legacy shape.
+  const regenPlayerConfig = existingPC.map(pc => {
+    const raw: number | null = (typeof pc.rawHandicap === "number" && Number.isFinite(pc.rawHandicap))
+      ? pc.rawHandicap
+      : (typeof pc.handicap === "number" && Number.isFinite(pc.handicap))
+        ? pc.handicap
+        : null;
+    const adjusted: number | null = raw === null
+      ? null
+      : Math.floor((raw * newPercent) / 100);
+    return {
+      ...pc,
+      handicap: adjusted,
+      rawHandicap: raw,
+      handicap_percent: newPercent,
+    };
+  });
+
+  const nextCourseDetails = {
+    ...existingCourseDetails,
+    playerConfig: regenPlayerConfig,
+  };
+
+  const { error } = await supabase
+    .from("rounds")
+    .update({
+      handicap_percent: newPercent,
+      course_details: nextCourseDetails,
+    } as any)
+    .eq("id", roundId);
+  if (error) throw error;
+}
+
 // Add manual adjustment
 export async function addManualAdjustment(roundId: string, amount: number, notes: string) {
   const { data: { user } } = await supabase.auth.getUser();
@@ -1172,12 +1267,26 @@ export interface RoundDetailBundle {
     game_type: string;
     status: string;
     created_at: string;
+    /**
+     * PR #17 commit 2: first-class round-level handicap scale factor.
+     * NULL on legacy rounds (resolve via course_details.mechanicSettings.pops.handicapPercent → 100).
+     */
+    handicap_percent?: number | null;
     course_details: {
       pars?: number[];
       handicaps?: number[];
       selectedTee?: string;
       privacy?: string;
-      playerConfig?: Array<{ name?: string; handicap?: number; color?: string }>;
+      playerConfig?: Array<{
+        name?: string;
+        /** Scaled handicap the engine reads. */
+        handicap?: number | null;
+        /** Audit: raw profile handicap at lock time (PR #17 commit 2). */
+        rawHandicap?: number | null;
+        /** Audit: percent applied at lock time (PR #17 commit 2). */
+        handicap_percent?: number;
+        color?: string;
+      }>;
       [k: string]: unknown;
     } | null;
     [k: string]: unknown;

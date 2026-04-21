@@ -8,6 +8,10 @@ import ScorecardView, { buildScorecardPlayers } from "@/components/round-detail/
 import GridView from "@/components/round-detail/GridView";
 import { normaliseHoleScores, sum } from "@/components/round-detail/scoreDecor";
 import { gameModeLabel, formatCardDate } from "@/components/profile/roundMath";
+import {
+  resolveHandicapPercent,
+  shouldShowHandicapPercentLine,
+} from "@/lib/handicap";
 
 // ============================================================
 // RoundDetailPage — /round/:id/summary
@@ -156,6 +160,70 @@ export default function RoundDetailPage(): JSX.Element {
           {formatCardDate(round.created_at)} · {gameModeLabel(round.game_type)}
           {round.course_details?.selectedTee && <> · {round.course_details.selectedTee} tees</>}
         </div>
+        {(() => {
+          // PR #17 commit 2: surface the per-round handicap scale when it's
+          // non-default. Legacy rounds (null `rounds.handicap_percent`) read
+          // via the fallback chain to `course_details.mechanicSettings.pops.
+          // handicapPercent` → 100. A non-default value earns a summary line
+          // + per-player "adjusted (pct% of raw)" rows; 100% stays hidden
+          // to avoid clutter on full-handicap rounds.
+          const resolved = resolveHandicapPercent(
+            { handicap_percent: round.handicap_percent },
+            round.course_details,
+          );
+          if (!shouldShowHandicapPercentLine(resolved)) return null;
+          const playerConfigs = round.course_details?.playerConfig ?? [];
+          const showPerPlayer = playerConfigs.some(
+            pc => typeof pc.rawHandicap === "number" && pc.rawHandicap !== null,
+          );
+          return (
+            <>
+              <div
+                data-testid="round-detail-handicap-percent"
+                style={{ fontSize: 12, color: BRAND_BROWN, fontStyle: "italic" }}
+              >
+                Playing at {resolved}% handicap
+              </div>
+              {showPerPlayer && (
+                <div
+                  data-testid="round-detail-handicap-per-player"
+                  style={{
+                    marginTop: 6,
+                    padding: "6px 10px",
+                    borderRadius: 8,
+                    background: BRAND_SAND_2,
+                    border: `1px solid ${BRAND_BORDER}`,
+                    display: "flex", flexDirection: "column", gap: 2,
+                  }}
+                >
+                  {playerConfigs.map((pc, i) => {
+                    const raw = typeof pc.rawHandicap === "number" ? pc.rawHandicap : null;
+                    const adjusted = typeof pc.handicap === "number" ? pc.handicap : null;
+                    return (
+                      <div
+                        key={i}
+                        data-testid={`round-detail-handicap-player-${i}`}
+                        style={{
+                          display: "flex", justifyContent: "space-between",
+                          fontSize: 11, color: "#1E130A",
+                        }}
+                      >
+                        <span>{pc.name ?? `Player ${i + 1}`}</span>
+                        <span style={{ fontFamily: MONO, color: BRAND_BROWN }}>
+                          {adjusted === null || raw === null
+                            ? "—"
+                            : resolved === 100
+                              ? String(raw)
+                              : `${adjusted} (${resolved}% of ${raw})`}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          );
+        })()}
         {viewerTotal !== null && (
           <div
             data-testid="round-detail-viewer-row"

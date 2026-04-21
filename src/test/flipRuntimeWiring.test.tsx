@@ -179,7 +179,10 @@ describe("C4B — setup wizard flip-config panel", () => {
       "utf-8",
     );
     expect(src).toMatch(/selectedFormat\s*===\s*"flip"[\s\S]*?\{\s*baseBet:\s*flipBaseBet,\s*carryOverWindow:\s*flipCarryWindow\s*\}/);
-    expect(src).toMatch(/createRound\(\{[\s\S]*?flipConfig,?\s*\}\)/);
+    // PR #17 commit 2 added `handicapPercent` after `flipConfig`, so the
+    // match tolerates trailing args — just assert flipConfig is present
+    // somewhere inside the createRound call object.
+    expect(src).toMatch(/createRound\(\{[\s\S]*?flipConfig,[\s\S]*?\}\)/);
   });
 });
 

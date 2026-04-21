@@ -1,9 +1,19 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { loadRound, loadRoundEvents, updateRoundScoresAndSettlements, updatePlayerScores } from "@/lib/db";
+import {
+  loadRound,
+  loadRoundEvents,
+  updateRoundScoresAndSettlements,
+  updatePlayerScores,
+  updateRoundHandicapPercent,
+} from "@/lib/db";
 import { supabase } from "@/integrations/supabase/client";
 import { replayRound, getTeamsForHole } from "@/lib/gameEngines";
+import {
+  resolveHandicapPercent,
+  HANDICAP_PERCENT_DEFAULT,
+} from "@/lib/handicap";
 
 const FONT = "'DM Sans', system-ui, sans-serif";
 const MONO = "'JetBrains Mono', monospace";
@@ -25,6 +35,14 @@ export default function RoundEditScores() {
   const [editingCell, setEditingCell] = useState(null); // { hole, playerId }
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState(null);
+
+  // PR #17 commit 2: handicap percentage edit state. Initialised to the
+  // round's current value once loaded; the slider writes into
+  // `percentEdit`, and the warning banner + save flow branch on
+  // `percentEdit !== percentOriginal`.
+  const [percentOriginal, setPercentOriginal] = useState(HANDICAP_PERCENT_DEFAULT);
+  const [percentEdit, setPercentEdit] = useState(HANDICAP_PERCENT_DEFAULT);
+  const [percentChangeConfirmed, setPercentChangeConfirmed] = useState(false);
 
   useEffect(() => {
     if (!roundId) return;
@@ -51,6 +69,18 @@ export default function RoundEditScores() {
         });
         setOriginalScores(JSON.parse(JSON.stringify(scores)));
         setEditedScores(JSON.parse(JSON.stringify(scores)));
+
+        // PR #17 commit 2: resolve the round's handicap percentage via the
+        // fallback chain. For legacy rounds `data.round.handicap_percent`
+        // is null and we fall back to the old pops-nested location; new
+        // rounds use the first-class column.
+        const resolvedPct = resolveHandicapPercent(
+          { handicap_percent: data.round?.handicap_percent ?? null },
+          data.round?.course_details,
+        );
+        setPercentOriginal(resolvedPct);
+        setPercentEdit(resolvedPct);
+
         setLoading(false);
       } catch (err) {
         setError(err.message || "Failed to load round");
@@ -165,7 +195,14 @@ export default function RoundEditScores() {
   // Original totals from game_state
   const originalTotals = dbRound?.course_details?.game_state?.totals || {};
 
-  const hasChanges = JSON.stringify(originalScores) !== JSON.stringify(editedScores);
+  const scoresChanged = JSON.stringify(originalScores) !== JSON.stringify(editedScores);
+  const percentChanged = percentEdit !== percentOriginal;
+  const hasChanges = scoresChanged || percentChanged;
+
+  // Slider is only surfaced for team games (DOC + Flip). For other formats
+  // the control stays hidden and the round runs at full handicap — matches
+  // the setup wizard's gating.
+  const showPercentSlider = gameMode === "drivers_others_carts" || gameMode === "flip";
 
   function handleScoreEdit(hole, playerId, newScore) {
     const clamped = Math.max(1, Math.min(15, newScore));
@@ -177,8 +214,24 @@ export default function RoundEditScores() {
 
   async function handleSave() {
     if (!roundId || !dbRound) return;
+    // PR #17 commit 2: any percent change requires explicit confirmation
+    // before we touch the DB — the warning banner surfaces the scorekeeper's
+    // choice and flips `percentChangeConfirmed` on acknowledgement.
+    if (percentChanged && !percentChangeConfirmed) return;
     setSaving(true);
     try {
+      // If percent changed, persist that FIRST so the regenerated
+      // playerConfig is in place before any subsequent score/settlement
+      // writes. Leaves mechanicSettings.pops.handicapPercent untouched
+      // (dead data per spec).
+      if (percentChanged) {
+        await updateRoundHandicapPercent(
+          roundId,
+          percentEdit,
+          dbRound.course_details || {},
+        );
+      }
+
       const newTotals = previewResult?.totals || {};
 
       // Build player updates
@@ -286,20 +339,97 @@ export default function RoundEditScores() {
           <div style={{ fontFamily: "'Pacifico', cursive", fontSize: 18, color: "#1E130A" }}>Edit Scores</div>
           <div style={{ fontSize: 12, color: "#8B7355" }}>{dbRound.course} · {gameMode.replace(/_/g, " ")}</div>
         </div>
-        <button
-          onClick={() => hasChanges ? setShowConfirm(true) : null}
-          disabled={!hasChanges || saving}
-          style={{
-            padding: "8px 16px", borderRadius: 10, border: "none", cursor: hasChanges ? "pointer" : "default",
-            fontFamily: FONT, fontSize: 13, fontWeight: 700,
-            background: hasChanges ? "#2D5016" : "#DDD0BB",
-            color: hasChanges ? "#fff" : "#A8957B",
-            opacity: saving ? 0.6 : 1,
-          }}
-        >
-          {saving ? "Saving..." : "Save"}
-        </button>
+        {(() => {
+          // Save is gated on: scores OR percent changed, AND (if percent
+          // changed) the scorekeeper explicitly confirmed the warning.
+          const saveReady = hasChanges && (!percentChanged || percentChangeConfirmed);
+          return (
+            <button
+              onClick={() => saveReady ? setShowConfirm(true) : null}
+              disabled={!saveReady || saving}
+              data-testid="edit-scores-save-button"
+              style={{
+                padding: "8px 16px", borderRadius: 10, border: "none", cursor: saveReady ? "pointer" : "default",
+                fontFamily: FONT, fontSize: 13, fontWeight: 700,
+                background: saveReady ? "#2D5016" : "#DDD0BB",
+                color: saveReady ? "#fff" : "#A8957B",
+                opacity: saving ? 0.6 : 1,
+              }}
+            >
+              {saving ? "Saving..." : "Save"}
+            </button>
+          );
+        })()}
       </div>
+
+      {/* PR #17 commit 2: Handicap % edit slider + warning banner.
+          Only renders for DOC + Flip (team games). Changing the value
+          re-scales all players' handicaps — the warning below the
+          slider surfaces this + requires an explicit acknowledgement
+          before Save is allowed through. */}
+      {showPercentSlider && (
+        <div
+          data-testid="edit-scores-handicap-percent-section"
+          style={{ margin: "12px 16px", padding: "12px 14px", borderRadius: 12, background: "#FAF5EC", border: "1px solid #DDD0BB" }}
+        >
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 8 }}>
+            <div style={{ fontFamily: FONT, fontSize: 13, fontWeight: 700, color: "#1E130A" }}>
+              Handicap %
+            </div>
+            <div
+              data-testid="edit-scores-handicap-percent-value"
+              style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700, color: "#1E130A" }}
+            >
+              {percentEdit}%
+              {percentChanged && (
+                <span style={{ color: "#8B7355", fontWeight: 400, marginLeft: 6 }}>
+                  (was {percentOriginal}%)
+                </span>
+              )}
+            </div>
+          </div>
+          <input
+            type="range"
+            min={50}
+            max={100}
+            step={5}
+            value={percentEdit}
+            onChange={e => {
+              setPercentEdit(Number(e.target.value));
+              setPercentChangeConfirmed(false);
+            }}
+            data-testid="edit-scores-handicap-percent-slider"
+            aria-label="Handicap percentage"
+            style={{ width: "100%", accentColor: "#2D5016" }}
+          />
+          {percentChanged && (
+            <div
+              data-testid="edit-scores-handicap-percent-warning"
+              role="alert"
+              style={{
+                marginTop: 10, padding: "10px 12px", borderRadius: 10,
+                background: "#FFF4D1", border: "1px solid #F5D77B",
+                fontSize: 12, color: "#8B5E00", lineHeight: 1.4,
+                display: "flex", flexDirection: "column", gap: 8,
+              }}
+            >
+              <div>
+                You're changing the handicap % from <strong>{percentOriginal}%</strong> to <strong>{percentEdit}%</strong>. This will affect settlements.
+              </div>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", userSelect: "none" }}>
+                <input
+                  type="checkbox"
+                  checked={percentChangeConfirmed}
+                  onChange={e => setPercentChangeConfirmed(e.target.checked)}
+                  data-testid="edit-scores-handicap-percent-confirm"
+                  style={{ accentColor: "#2D5016" }}
+                />
+                <span style={{ fontWeight: 700 }}>I understand and want to apply this change.</span>
+              </label>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Wolf/Solo info banner */}
       {isWolf && (

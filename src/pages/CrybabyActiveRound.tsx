@@ -1081,7 +1081,19 @@ export default function CrybabActiveRound() {
       pops: (dbRound.course_details?.mechanics || []).includes("pops"),
       noPopsParThree: false,
       carryOverCap: dbRound.course_details?.mechanicSettings?.carry_overs?.cap ?? "∞",
-      handicapPercent: dbRound.course_details?.mechanicSettings?.pops?.handicapPercent || 100,
+      // PR #17 commit 2: Detect new-world rounds (playerConfig entries
+      // tagged with `handicap_percent` audit field). For those the stored
+      // handicap IS the adjusted value — engine must not scale again
+      // or it double-applies the factor. Legacy rounds keep their raw
+      // handicap in playerConfig and expect the engine to scale via
+      // settings.handicapPercent, resolved through the fallback chain.
+      handicapPercent: (dbRound.course_details?.playerConfig ?? []).some(
+        (pc: { handicap_percent?: unknown }) => typeof pc?.handicap_percent === "number",
+      )
+        ? 100
+        : ((dbRound as { handicap_percent?: number | null }).handicap_percent
+            ?? dbRound.course_details?.mechanicSettings?.pops?.handicapPercent
+            ?? 100),
       presses: (dbRound.course_details?.mechanics || []).includes("presses"),
       pressType: dbRound.course_details?.mechanicSettings?.presses?.autoPress || "Optional (must request)",
     },
