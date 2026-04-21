@@ -106,6 +106,14 @@ export const GAME_FORMATS: GameFormat[] = [
     defaultHoles: 18,
     teamStructure: "solo",
     requiresCarts: false,
+    // Hidden 2026-04-21 via PR #21. Scorecard mode (PR #19) supports
+    // 1 player and is a strict superset of Solo's capabilities —
+    // photo capture, resume, net-score leaderboard, event emission.
+    // Legacy Solo rounds (2 in prod as of un-hide) continue to load +
+    // render through the game-agnostic pipeline; SoloRound.jsx and
+    // the /solo route stay in the tree so any future un-hide is a
+    // one-line flag flip. Recon: see closed PR #20.
+    hidden: true,
   },
   {
     // PR #19: Pure score-tracking mode. No money, no teams, no mechanics.

@@ -9,27 +9,40 @@ import type { GameMode } from "@/lib/gameEngines";
  * hid Nassau, Skins, Flip, and Custom so on-course validation could
  * focus on one mode exercising every mechanic.
  *
- * Un-hide history:
- *   - Flip   — un-hidden 2026-04-20 via PR #16 (5-man 3v2 + crybaby).
- *   - Skins  — un-hidden 2026-04-21 via PR #17 commit 3 (engine had
- *              full coverage via replayEquivalence; this commit adds
- *              direct unit tests at the engine boundary).
+ * Un-hide / hide history:
+ *   - Flip      — un-hidden 2026-04-20 via PR #16 (5-man 3v2 + crybaby).
+ *   - Skins     — un-hidden 2026-04-21 via PR #17 commit 3.
+ *   - Scorecard — added + visible 2026-04-21 via PR #19 (no-money mode).
+ *   - Solo      — HIDDEN 2026-04-21 via PR #21. Scorecard at 1 player
+ *                 is a strict superset of Solo's capabilities; Solo's
+ *                 /solo route + SoloRound.jsx stay in the tree so
+ *                 legacy Solo rounds continue to render and any
+ *                 future un-hide is a one-line flag flip.
  *
- * Legacy rounds in still-hidden modes (Nassau, Wolf, Custom) must
- * continue to load + replay — the engine suite + replayEquivalence
+ * Legacy rounds in still-hidden modes (Solo, Nassau, Wolf, Custom)
+ * must continue to load + replay — the engine suite + replayEquivalence
  * cover money math for those; this file locks visibility flags.
  */
 
-describe("GAME_FORMATS — visible set (DOC + Flip + Scorecard + Skins + Solo, 2026-04-21)", () => {
-  it("DOC, Flip, Scorecard, Skins, and Solo are visible in the setup picker", () => {
+describe("GAME_FORMATS — visible set (DOC + Flip + Scorecard + Skins, 2026-04-21)", () => {
+  it("DOC, Flip, Scorecard, and Skins are visible in the setup picker", () => {
     const visible = GAME_FORMATS.filter(g => !g.hidden).map(g => g.id).sort();
-    // Scorecard added in PR #19 — no-betting mode for 1-6 players.
-    expect(visible).toEqual(["drivers_others_carts", "flip", "scorecard", "skins", "solo"]);
+    // Solo hidden in PR #21 — scorecard-at-1-player supersedes it.
+    expect(visible).toEqual(["drivers_others_carts", "flip", "scorecard", "skins"]);
   });
 
-  it("Nassau, Wolf, and Custom remain hidden", () => {
+  it("Solo, Nassau, Wolf, and Custom remain hidden", () => {
     const hidden = GAME_FORMATS.filter(g => g.hidden === true).map(g => g.id).sort();
-    expect(hidden).toEqual(["custom", "nassau", "wolf"]);
+    expect(hidden).toEqual(["custom", "nassau", "solo", "wolf"]);
+  });
+
+  it("Solo entry still present in the registry (metadata for legacy rounds)", () => {
+    const solo = GAME_FORMATS.find(g => g.id === "solo");
+    expect(solo).toBeDefined();
+    expect(solo?.hidden).toBe(true);
+    // Legacy rounds use this to render the "Just Me" label on round
+    // cards; don't rename or remove.
+    expect(solo?.name).toBe("Just Me");
   });
 
   it("Skins is visible with the un-hide-era description copy", () => {

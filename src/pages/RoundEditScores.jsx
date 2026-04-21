@@ -132,7 +132,18 @@ export default function RoundEditScores() {
   const gameMode = dbRound?.game_type || "skins";
   const isWolf = gameMode === "wolf";
   const isSolo = gameMode === "solo";
-  const canRecalcMoney = !isWolf && !isSolo;
+  // PR #21: Scorecard rounds (PR #19) are no-money mode. The editor must
+  // NOT run the money-recalc path for them:
+  //   - replayRound('scorecard', …) returns all-zero totals; if we
+  //     wrote those to `round_players.total_score` we'd clobber the
+  //     stroke sum the profile + stats pages rely on.
+  //   - insertSettlements would write empty-amount settlement rows on a
+  //     round that's supposed to have zero — breaks `isMoneyRound =
+  //     settlements.length > 0` downstream.
+  // Matches the existing pattern for Wolf (no partner replay) and Solo
+  // (no multi-player money math).
+  const isScorecard = gameMode === "scorecard";
+  const canRecalcMoney = !isWolf && !isSolo && !isScorecard;
 
   // Reconstruct hammer history from game_state or events
   const hammerHistory = useMemo(() => {
@@ -440,6 +451,14 @@ export default function RoundEditScores() {
       {isSolo && (
         <div style={{ margin: "12px 16px", padding: "10px 14px", borderRadius: 12, background: "#FAF5EC", border: "1px solid #DDD0BB", fontSize: 13, color: "#8B7355", lineHeight: 1.4 }}>
           Solo round — updating stroke scores only.
+        </div>
+      )}
+      {isScorecard && (
+        <div
+          data-testid="edit-scores-scorecard-banner"
+          style={{ margin: "12px 16px", padding: "10px 14px", borderRadius: 12, background: "#FAF5EC", border: "1px solid #DDD0BB", fontSize: 13, color: "#8B7355", lineHeight: 1.4 }}
+        >
+          Scorecard round — updating stroke scores only. No money to settle.
         </div>
       )}
 
