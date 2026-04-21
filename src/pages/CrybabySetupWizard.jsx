@@ -393,6 +393,24 @@ function PlayerRow({ player, index, onUpdate, onRemove, showCarts, cartOptions, 
           </div>
         )}
 
+        {/* Empty-state prompt: when a LINKED user (userId set, implies profile
+            was loaded) has no handicap on their profile, surface an explicit
+            nudge to the scorekeeper. Guests don't show this — a null handicap
+            on a guest row is the default starting state, not a gap.
+            Round-specific value does NOT back-save to the profile (per spec). */}
+        {player.userId && (player.handicap === null || player.handicap === undefined) && (
+          <div
+            data-testid={`player-handicap-empty-prompt-${index}`}
+            style={{
+              fontFamily: font, fontSize: 11, color: "#8B7355",
+              background: "#FFF4D1", border: "1px solid #F5D77B",
+              borderRadius: 8, padding: "6px 10px", lineHeight: 1.4,
+            }}
+          >
+            {(player.name || "This player").split(" ")[0] || "This player"} hasn't set a handicap. Enter one for this round?
+          </div>
+        )}
+
         <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
           <input
             type="number"
@@ -402,13 +420,18 @@ function PlayerRow({ player, index, onUpdate, onRemove, showCarts, cartOptions, 
               if (val === "") { onUpdate(index, { ...player, handicap: null }); return; }
               const num = parseFloat(val);
               if (isNaN(num)) return;
-              const clamped = Math.min(54, Math.max(-10, num));
+              // Clamp to the shared handicap bounds (-5 to 54, 0.1 step).
+              // The bounds live in src/lib/handicap.ts; duplicating the numeric
+              // literals here avoids an import into this .jsx file and keeps
+              // the wizard's inline validation fast. Spec 2026-04-20.
+              const clamped = Math.min(54, Math.max(-5, num));
               onUpdate(index, { ...player, handicap: clamped });
             }}
             placeholder="HCP"
-            min="-10"
+            min="-5"
             max="54"
-            step="0.5"
+            step="0.1"
+            data-testid={`player-handicap-input-${index}`}
             style={{
               fontFamily: mono, fontSize: 13, color: "#8B7355",
               border: "1px solid #DDD0BB", borderRadius: 6, padding: "8px 10px",

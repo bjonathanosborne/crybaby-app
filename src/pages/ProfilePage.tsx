@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { validateHandicapInput } from "@/lib/handicap";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { loadProfile, updateProfile, loadMyRounds, loadSettlements, uploadUserAvatar, loadFriends, loadUserProfile } from "@/lib/db";
@@ -106,12 +107,23 @@ export default function ProfilePage() {
     [settlements],
   );
 
+  // Inline handicap validation — recomputed on every keystroke. Drives the
+  // red error line, the aria-invalid attribute, and the save-button guard.
+  const handicapValidation = useMemo(
+    () => validateHandicapInput(editForm.handicap),
+    [editForm.handicap],
+  );
+
   const handleSaveProfile = async () => {
+    if (!handicapValidation.ok) {
+      toast({ title: "Fix handicap first", description: handicapValidation.reason, variant: "destructive" });
+      return;
+    }
     try {
       const isComplete = !!(editForm.first_name?.trim() && editForm.last_name?.trim() && editForm.ghin?.trim());
       await updateProfile({
         display_name: editForm.display_name,
-        handicap: editForm.handicap ? Number(editForm.handicap) : null,
+        handicap: handicapValidation.kind === "valid" ? handicapValidation.value : null,
         home_course: editForm.home_course || null,
         first_name: editForm.first_name || "",
         last_name: editForm.last_name || "",
@@ -124,7 +136,7 @@ export default function ProfilePage() {
       setProfile((prev: any) => ({
         ...prev,
         ...editForm,
-        handicap: editForm.handicap ? Number(editForm.handicap) : null,
+        handicap: handicapValidation.kind === "valid" ? handicapValidation.value : null,
       }));
       setEditingProfile(false);
       toast({ title: "Profile saved!" });
@@ -218,15 +230,50 @@ export default function ProfilePage() {
               </div>
               <input value={editForm.display_name} onChange={e => setEditForm(f => ({ ...f, display_name: e.target.value }))}
                 placeholder="Display Name" style={inputStyle} />
-              <div style={{ display: "flex", gap: 8 }}>
-                <input value={editForm.handicap} onChange={e => setEditForm(f => ({ ...f, handicap: e.target.value }))}
-                  placeholder="Handicap" type="number" style={{ ...inputStyle, flex: 1 }} />
-                <input value={editForm.ghin} onChange={e => setEditForm(f => ({ ...f, ghin: e.target.value.replace(/\D/g, "") }))}
-                  placeholder="GHIN #" maxLength={10} style={{ ...inputStyle, flex: 1 }} />
+
+              {/* Handicap — full-width row. Validation + helper copy live inline
+                  below the input so the user sees format guidance without
+                  having to submit first. */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <input
+                  data-testid="profile-handicap-input"
+                  value={editForm.handicap}
+                  onChange={e => setEditForm(f => ({ ...f, handicap: e.target.value }))}
+                  placeholder="Handicap"
+                  type="number"
+                  inputMode="decimal"
+                  min={-5}
+                  max={54}
+                  step={0.1}
+                  aria-invalid={!handicapValidation.ok}
+                  aria-describedby="profile-handicap-help"
+                  style={{
+                    ...inputStyle,
+                    borderColor: !handicapValidation.ok ? "#DC2626" : (inputStyle.border as string | undefined)?.match(/#[0-9A-Fa-f]{6}/)?.[0] ?? "#DDD0BB",
+                  }}
+                />
+                {!handicapValidation.ok && (
+                  <span
+                    data-testid="profile-handicap-error"
+                    role="alert"
+                    style={{ fontSize: 11, color: "#DC2626", marginTop: 2 }}
+                  >
+                    {handicapValidation.reason}
+                  </span>
+                )}
+                <span
+                  id="profile-handicap-help"
+                  data-testid="profile-handicap-help"
+                  style={{ fontSize: 11, color: "#8B7355", marginTop: 2, lineHeight: 1.4 }}
+                >
+                  Enter your current handicap index. Find yours at ghin.com — automatic GHIN lookup is coming soon.
+                </span>
               </div>
 
-              {/* Handicap privacy toggle — affects passive browsing (friend profiles + leaderboards)
-                  only. Your handicap is always visible to players in a round you're actively in. */}
+              {/* Handicap privacy toggle — surfaced directly under the handicap
+                  input (not buried after GHIN) so "show my handicap" visually
+                  attaches to the handicap it's controlling. Affects passive
+                  browsing only; active-round visibility is always on. */}
               <label
                 data-testid="handicap-visibility-toggle"
                 style={{
@@ -244,7 +291,7 @@ export default function ProfilePage() {
                   aria-describedby="handicap-visibility-help"
                 />
                 <span style={{ fontSize: 13, color: "#1E130A", lineHeight: 1.4 }}>
-                  Show my handicap on friends' profiles
+                  Show my handicap on friends' profiles and leaderboards
                   <span
                     id="handicap-visibility-help"
                     style={{ display: "block", fontSize: 11, color: "#8B7355", marginTop: 2 }}
@@ -253,6 +300,16 @@ export default function ProfilePage() {
                   </span>
                 </span>
               </label>
+
+              {/* GHIN — standalone row. 6-8 digits; non-digits stripped on input. */}
+              <input
+                data-testid="profile-ghin-input"
+                value={editForm.ghin}
+                onChange={e => setEditForm(f => ({ ...f, ghin: e.target.value.replace(/\D/g, "") }))}
+                placeholder="GHIN # (6–8 digits)"
+                maxLength={10}
+                style={inputStyle}
+              />
 
               {/* Rounds privacy toggle — mirrors handicap. Rounds you SHARED with
                   a viewer are always visible to them regardless; this flag only
@@ -338,10 +395,19 @@ export default function ProfilePage() {
               </select>
 
               <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={handleSaveProfile} style={{
-                  flex: 1, padding: 10, borderRadius: 10, border: "none",
-                  background: "#2D5016", color: "#fff", fontWeight: 700, fontFamily: "inherit", cursor: "pointer",
-                }}>Save</button>
+                <button
+                  onClick={handleSaveProfile}
+                  disabled={!handicapValidation.ok}
+                  data-testid="profile-save-button"
+                  style={{
+                    flex: 1, padding: 10, borderRadius: 10, border: "none",
+                    background: handicapValidation.ok ? "#2D5016" : "#A8957B",
+                    color: "#fff", fontWeight: 700, fontFamily: "inherit",
+                    cursor: handicapValidation.ok ? "pointer" : "not-allowed",
+                  }}
+                >
+                  Save
+                </button>
                 <button onClick={() => { setEditingProfile(false); setShowAddCourse(false); }} style={{
                   flex: 1, padding: 10, borderRadius: 10, border: "1px solid #DDD0BB",
                   background: "#FAF5EC", color: "#8B7355", fontWeight: 600, fontFamily: "inherit", cursor: "pointer",
