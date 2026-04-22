@@ -894,10 +894,16 @@ export async function loadActiveRound() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
+  // PR #23 D4-B: SELECT now includes `course_details` so the client-side
+  // stuck-round detector can inspect `game_state.currentHole` to tell
+  // an abandoned-mid-setup round (null currentHole, hours old) from a
+  // legit in-progress one. Needed for the StuckRoundBanner recovery UI.
+  const ROUND_COLS = "id, course, game_type, stakes, created_at, course_details";
+
   // Check rounds created by this user first
   const { data: created } = await supabase
     .from("rounds")
-    .select("id, course, game_type, stakes, created_at")
+    .select(ROUND_COLS)
     .eq("created_by", user.id)
     .eq("status", "active")
     .order("created_at", { ascending: false })
@@ -917,7 +923,7 @@ export async function loadActiveRound() {
   const roundIds = playerRows.map((r: any) => r.round_id);
   const { data: asPlayer } = await supabase
     .from("rounds")
-    .select("id, course, game_type, stakes, created_at")
+    .select(ROUND_COLS)
     .in("id", roundIds)
     .eq("status", "active")
     .order("created_at", { ascending: false })
