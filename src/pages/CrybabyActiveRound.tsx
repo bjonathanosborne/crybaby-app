@@ -16,6 +16,7 @@ import CaptureFlow from "@/components/capture/CaptureFlow";
 import EditHammerModal from "@/components/capture/hammer/EditHammerModal";
 import FinalPhotoGate from "@/components/FinalPhotoGate";
 import FinishRoundConfirm from "@/components/round/FinishRoundConfirm";
+import { resolvePlayerCartPosition } from "@/lib/cartPosition";
 import FlipReel from "@/components/flip/FlipReel";
 import FlipTeamsBadge from "@/components/flip/FlipTeamsBadge";
 import CrybabyTransition from "@/components/flip/CrybabyTransition";
@@ -1115,13 +1116,21 @@ export default function CrybabActiveRound() {
     players: dbPlayers.map((p, i) => {
       const profile = p.user_id ? playerProfiles[p.user_id] : null;
       const config = dbRound.course_details?.playerConfig?.[i] || {};
+      // PR #23 D2: normalise cart + position via resolvePlayerCartPosition.
+      // Handles three input shapes cleanly:
+      //   - new (post-commit-2): { cart: "A"|"B", position: "driver"|"rider" }
+      //   - legacy combined string: { cart: "Cart A — Driver", position: null }
+      //   - missing / partial: deterministic index-based fallback
+      // The engine's getDOCTeams has always expected the canonical shape;
+      // this keeps it untouched while making legacy rounds render correctly.
+      const { cart, position } = resolvePlayerCartPosition(config, i);
       return {
         id: p.id,
         userId: p.user_id || null,
         name: p.guest_name || profile?.display_name || config.name || `Player ${i + 1}`,
         handicap: config.handicap ?? profile?.handicap ?? 12,
-        cart: config.cart || (i < 2 ? "A" : "B"),
-        position: config.position || (i % 2 === 0 ? "driver" : "rider"),
+        cart,
+        position,
         color: PLAYER_COLORS[i % PLAYER_COLORS.length],
       };
     }),

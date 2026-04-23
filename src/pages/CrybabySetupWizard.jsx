@@ -440,22 +440,47 @@ function PlayerRow({ player, index, onUpdate, onRemove, showCarts, cartOptions, 
             }}
           />
           {showCarts && (
-            <select
-              value={player.cart || ""}
-              onChange={e => onUpdate(index, { ...player, cart: e.target.value })}
-              style={{
-                fontFamily: font, fontSize: 12, color: "#8B7355",
-                border: "1px solid #DDD0BB", borderRadius: 6, padding: "8px 10px",
-                background: "#FAF5EC", outline: "none",
-                minHeight: 36, boxSizing: "border-box",
-                flex: 1, minWidth: 80,
-              }}
-            >
-              <option value="">Cart...</option>
-              {(cartOptions || []).map(c => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
+            // PR #23 D2: the combined "Cart A — Driver" picker wrote the
+            // whole label string into `player.cart` and left `player.position`
+            // null, so downstream `getDOCTeams` (which compares `p.cart === 'A'`
+            // and `p.position === 'driver'`) returned empty team rosters for
+            // every DOC round. Split into two independent pickers and store
+            // the letter / role separately — what the engine has always
+            // expected.
+            <>
+              <select
+                value={player.cart || ""}
+                onChange={e => onUpdate(index, { ...player, cart: e.target.value })}
+                data-testid={`player-cart-select-${index}`}
+                style={{
+                  fontFamily: font, fontSize: 12, color: "#8B7355",
+                  border: "1px solid #DDD0BB", borderRadius: 6, padding: "8px 10px",
+                  background: "#FAF5EC", outline: "none",
+                  minHeight: 36, boxSizing: "border-box",
+                  flex: 1, minWidth: 70,
+                }}
+              >
+                <option value="">Cart…</option>
+                <option value="A">Cart A</option>
+                <option value="B">Cart B</option>
+              </select>
+              <select
+                value={player.position || ""}
+                onChange={e => onUpdate(index, { ...player, position: e.target.value })}
+                data-testid={`player-position-select-${index}`}
+                style={{
+                  fontFamily: font, fontSize: 12, color: "#8B7355",
+                  border: "1px solid #DDD0BB", borderRadius: 6, padding: "8px 10px",
+                  background: "#FAF5EC", outline: "none",
+                  minHeight: 36, boxSizing: "border-box",
+                  flex: 1, minWidth: 80,
+                }}
+              >
+                <option value="">Position…</option>
+                <option value="driver">Driver</option>
+                <option value="rider">Rider</option>
+              </select>
+            </>
           )}
         </div>
       </div>
@@ -935,7 +960,22 @@ export default function CrybabSetupWizard() {
   const canProceed = () => {
     switch (step) {
       case 0: return !!selectedFormat;
-      case 1: return players.filter(p => p.name.trim()).length >= (format?.players.min || 2);
+      case 1: {
+        const named = players.filter(p => p.name.trim());
+        if (named.length < (format?.players.min || 2)) return false;
+        // PR #23 D2: when the format requires carts (DOC only today), every
+        // named player must have BOTH a cart AND a position set. Previously
+        // the combined-dropdown picker silently produced null position on
+        // every round — caught here so the scorekeeper can't advance.
+        if (format?.requiresCarts) {
+          const allAssigned = named.every(p =>
+            (p.cart === "A" || p.cart === "B")
+            && (p.position === "driver" || p.position === "rider"),
+          );
+          if (!allAssigned) return false;
+        }
+        return true;
+      }
       case 2: return !!course && (!course.tees?.length || !!selectedTee);
       case 3:
         // Flip requires explicit base-bet + window selection before
