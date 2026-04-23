@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { loadProfile, updateProfile } from "@/lib/db";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { validateProfileNames, nameErrorMessage } from "@/lib/profileNameValidation";
 
 const FONT = "'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 const MONO = "'SF Mono', 'JetBrains Mono', monospace";
@@ -57,7 +58,20 @@ export default function ProfileCompletionPage() {
     }).catch(() => setLoading(false));
   }, [user, navigate]);
 
-  const canSubmit = firstName.trim() && lastName.trim() && state.trim() && ghin.trim();
+  // PR #23 D1: stricter name validation — both first_name and last_name
+  // must be >= 2 chars after trim. Previously the gate accepted single
+  // letters ("T"/"B"), producing profiles that couldn't be found via
+  // player search. Validation shared with ProfilePage edit + AuthPage
+  // signup so all three surfaces enforce the same rule.
+  const nameValidation = useMemo(
+    () => validateProfileNames(firstName, lastName),
+    [firstName, lastName],
+  );
+  // Only surface per-field errors after the user has typed something —
+  // avoids showing "required" the instant the page renders.
+  const showFirstNameError = firstName.length > 0 && nameValidation.firstNameError !== null;
+  const showLastNameError = lastName.length > 0 && nameValidation.lastNameError !== null;
+  const canSubmit = nameValidation.ok && state.trim() && ghin.trim();
 
   const handleSave = async () => {
     if (!canSubmit) return;
@@ -129,8 +143,22 @@ export default function ProfileCompletionPage() {
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
             placeholder="First name"
-            style={inputStyle}
+            data-testid="profile-completion-first-name"
+            aria-invalid={showFirstNameError}
+            style={{
+              ...inputStyle,
+              borderColor: showFirstNameError ? "#DC2626" : "#DDD0BB",
+            }}
           />
+          {showFirstNameError && (
+            <div
+              data-testid="profile-completion-first-name-error"
+              style={{ marginTop: 6, fontFamily: FONT, fontSize: 12, color: "#DC2626" }}
+              role="alert"
+            >
+              {nameErrorMessage(nameValidation.firstNameError)}
+            </div>
+          )}
         </div>
 
         <div>
@@ -144,8 +172,22 @@ export default function ProfileCompletionPage() {
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
             placeholder="Last name"
-            style={inputStyle}
+            data-testid="profile-completion-last-name"
+            aria-invalid={showLastNameError}
+            style={{
+              ...inputStyle,
+              borderColor: showLastNameError ? "#DC2626" : "#DDD0BB",
+            }}
           />
+          {showLastNameError && (
+            <div
+              data-testid="profile-completion-last-name-error"
+              style={{ marginTop: 6, fontFamily: FONT, fontSize: 12, color: "#DC2626" }}
+              role="alert"
+            >
+              {nameErrorMessage(nameValidation.lastNameError)}
+            </div>
+          )}
         </div>
 
         <div>

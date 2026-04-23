@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { validateHandicapInput } from "@/lib/handicap";
+import { validateProfileNames, nameErrorMessage } from "@/lib/profileNameValidation";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { loadProfile, updateProfile, loadMyRounds, loadSettlements, uploadUserAvatar, loadFriends, loadUserProfile } from "@/lib/db";
@@ -114,13 +115,41 @@ export default function ProfilePage() {
     [editForm.handicap],
   );
 
+  // PR #23 D1: shared name-validation so ProfilePage's edit gate matches
+  // ProfileCompletionPage. Names must be >= 2 chars after trim; empty is
+  // allowed and just leaves profile_completed as its current value.
+  const nameValidation = useMemo(
+    () => validateProfileNames(editForm.first_name, editForm.last_name),
+    [editForm.first_name, editForm.last_name],
+  );
+
   const handleSaveProfile = async () => {
     if (!handicapValidation.ok) {
       toast({ title: "Fix handicap first", description: handicapValidation.reason, variant: "destructive" });
       return;
     }
+    // PR #23 D1: explicit name-length gate. Previously any non-empty
+    // name passed profile_completed → profiles with "T"/"B" became
+    // invisible to search. Now single-letter saves are rejected at
+    // the client boundary + the save is blocked.
+    if (editForm.first_name?.trim() || editForm.last_name?.trim()) {
+      // User is trying to set names — enforce the min-length rule.
+      if (!nameValidation.ok) {
+        const firstMsg = nameErrorMessage(nameValidation.firstNameError);
+        const lastMsg = nameErrorMessage(nameValidation.lastNameError);
+        toast({
+          title: "Fix name first",
+          description: firstMsg || lastMsg || "Enter your first and last name.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
     try {
-      const isComplete = !!(editForm.first_name?.trim() && editForm.last_name?.trim() && editForm.ghin?.trim());
+      // Profile_completed requires BOTH names to pass the stricter gate
+      // AND ghin to be present. Partial/single-letter names no longer
+      // flip the flag to true.
+      const isComplete = nameValidation.ok && !!editForm.ghin?.trim();
       await updateProfile({
         display_name: editForm.display_name,
         handicap: handicapValidation.kind === "valid" ? handicapValidation.value : null,
