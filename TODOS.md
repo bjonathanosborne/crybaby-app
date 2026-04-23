@@ -1,7 +1,36 @@
 # TODOS — crybaby-app
 
-Last updated: 2026-04-21 (Skins un-hidden via PR #17 commit 3; remaining un-hide queue is Nassau, Custom, Wolf)
+Last updated: 2026-04-22 (PR #23 post-DOC-bug fixes shipped; D4-A atomic round creation parked below)
 Branch: main
+
+---
+
+## Deferred: atomic round creation (D4-A)
+
+**Problem.** `createRound` in `src/lib/db.ts:80-200` runs two sequential Supabase queries (rounds insert → round_players insert) with no transaction. If anything between step 1 and the successful client-side mount of `/round?id=X` crashes — including React render errors like the 2026-04-22 #310 — the `rounds` row is already committed at `status='active'`, which trips the "one active round" UI gate in `loadActiveRound()` and blocks new round creation.
+
+**Tactical fix SHIPPED** in PR #23 commit 1 (`baa4f67` D4-B): `StuckRoundBanner` on the feed offers a self-service Abandon affordance so users can recover without DB-side intervention. Detects `status='active'` rounds that are past a 10-minute grace window AND have `course_details.game_state.currentHole === null` (never advanced past setup).
+
+**Strategic fix (this TODO) — atomic creation.** Prevent orphans from being created in the first place:
+
+1. Use the existing-but-unused `status = 'setup'` state (the `rounds_status_check` CHECK already allows it) as the create-landing state.
+2. Create a Postgres function `start_round(p_course_details jsonb, p_player_configs jsonb[], …)` that runs both inserts inside a transaction. Rollback on any failure leaves zero rows.
+3. Client calls the RPC via `supabase.rpc('start_round', { … })` instead of two separate `supabase.from(…)` inserts.
+4. Round row stays at `status='setup'` until the client successfully mounts `CrybabyActiveRound` AND saves its first `game_state`. An edge-function or a subsequent `supabase.rpc('activate_round', { round_id })` call flips to `active`.
+5. Server-side sweeper: any `status='setup'` round older than 30 minutes gets auto-canceled. Prevents orphans from the "user closed the tab mid-setup" case.
+
+**Estimated scope:** medium, ~2 days. Touches:
+- New migration: `CREATE FUNCTION start_round(…) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER` + RLS policy updates allowing `status='setup'` reads for the creator
+- `createRound` in `src/lib/db.ts` rewritten to call the RPC
+- CrybabyActiveRound mount-success handler that calls `activate_round`
+- Scheduled Edge Function or pg_cron job for the 30-min sweep
+- Regression: D4-B stays wired as a belt-and-suspenders fallback
+
+**Schedule after:** on-course testing of PR #23 confirms the three commits ship cleanly without new orphan cases. If Jonathan reports zero orphans across a handful of rounds, D4-A becomes a nice-to-have polish item rather than a critical path.
+
+**Related** drive-by findings from the PR #20 recon that REMAIN unaddressed:
+- D-F#2: Solo rounds have no `playerConfig` → no net-score leaderboard (low priority; Solo is hidden as of PR #21)
+- D-F#3: Solo rounds emit no per-hole `round_events` → don't contribute to scoring-distribution pie's birdie/eagle slices (same low priority; architectural consequence of Solo skipping the per-hole runtime)
 
 ---
 

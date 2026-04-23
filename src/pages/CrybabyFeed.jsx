@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { loadFeed, createPost, addComment, toggleReaction, loadProfile, loadBroadcastRounds, followRound, declineRound, loadFollowedRoundEvents, loadActiveRound } from "@/lib/db";
+import { loadFeed, createPost, addComment, toggleReaction, loadProfile, loadBroadcastRounds, followRound, declineRound, loadFollowedRoundEvents, loadActiveRound, cancelRound } from "@/lib/db";
+import StuckRoundBanner from "@/components/round/StuckRoundBanner";
 import CaptureTile from "@/components/feed/CaptureTile";
 import { mergeCaptureEvents } from "@/components/round/events/captureEventTypes";
 import { supabase } from "@/integrations/supabase/client";
@@ -434,6 +435,9 @@ export default function CrybabyFeed() {
   const [broadcastRounds, setBroadcastRounds] = useState([]);
   const [followedEvents, setFollowedEvents] = useState([]);
   const [activeRound, setActiveRound] = useState(null);
+  // PR #23 D4-B: drives the "Abandoning…" state on StuckRoundBanner
+  // while cancelRound() is in-flight so the user can't double-tap.
+  const [abandoningRound, setAbandoningRound] = useState(false);
 
   const refreshFeed = async () => {
     if (!user) return;
@@ -552,20 +556,28 @@ export default function CrybabyFeed() {
         </button>
       </div>
 
-      {/* Active Round Resume Banner */}
+      {/* Active-round banner with Resume + Abandon self-service recovery
+          (PR #23 D4-B). StuckRoundBanner detects crashed-on-mount orphans
+          via round age + game_state.currentHole, and always offers an
+          Abandon path so users can clear a locked state without DB-side
+          intervention. */}
       {activeRound && (
-        <div className="mx-4 mb-1 px-4 py-3 rounded-2xl bg-primary/10 border border-primary/20 flex items-center gap-3">
-          <ParFlagIcon size={22} className="text-primary flex-shrink-0" />
-          <div className="flex-1 min-w-0">
-            <div className="text-[10px] font-bold text-primary uppercase tracking-wider">Round In Progress</div>
-            <div className="text-sm font-semibold text-foreground truncate">{activeRound.course}</div>
-          </div>
-          <button
-            onClick={() => navigate(`/round?id=${activeRound.id}`)}
-            className="px-3 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold border-none cursor-pointer whitespace-nowrap hover:opacity-90">
-            Resume →
-          </button>
-        </div>
+        <StuckRoundBanner
+          round={activeRound}
+          abandoning={abandoningRound}
+          onResume={() => navigate(`/round?id=${activeRound.id}`)}
+          onAbandon={async () => {
+            setAbandoningRound(true);
+            try {
+              await cancelRound(activeRound.id);
+              setActiveRound(null);
+            } catch (err) {
+              console.error("Abandon round failed:", err);
+            } finally {
+              setAbandoningRound(false);
+            }
+          }}
+        />
       )}
 
       {/* Content */}
