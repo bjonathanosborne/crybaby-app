@@ -1405,6 +1405,32 @@ export default function CrybabActiveRound() {
     }
   }, [capture.isOpen, finalPhotoDecision]);
 
+  // PR #24 commit 1: Scorecard auto-advance. The HoleResultCard modal is
+  // gated off for scorecard rounds (no money to surface), so when
+  // submitHole sets showResult, we immediately kick advanceHole — which
+  // consumes the state, updates totals/holeResults, and moves to the next
+  // hole. Guard on gameMode to keep other modes' click-to-dismiss UX
+  // intact.
+  //
+  // Originally introduced in PR #19 BELOW the early returns — a
+  // rules-of-hooks violation that caused React #310 on every round
+  // creation. Moved here above the loading/error guards so the hook
+  // count stays invariant across all renders. See PR #24 recon for the
+  // full archaeology. DO NOT move this effect below the early returns
+  // again — the regression test at src/test/hookPositionInvariant.test.ts
+  // will fail if you do.
+  useEffect(() => {
+    if (!round) return;
+    if (round.gameMode !== 'scorecard') return;
+    if (!showResult) return;
+    advanceHole();
+    // Purposely omit advanceHole from deps: it's a closure recreated
+    // every render, and re-running this effect on closure identity
+    // would cause redundant auto-advance calls. showResult is the
+    // only trigger we care about.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showResult, round?.gameMode]);
+
   // Online/offline wiring is owned by useRoundPersistence.
 
   // --- Early returns (after all hooks) ---
@@ -1622,22 +1648,11 @@ export default function CrybabActiveRound() {
     setShowResult(result);
   };
 
-  // PR #19: Scorecard auto-advance. The HoleResultCard modal is gated
-  // off for scorecard rounds (no money to surface), so when submitHole
-  // sets showResult, we immediately kick advanceHole — which consumes
-  // the state, updates totals/holeResults, and moves to the next hole.
-  // Guard on gameMode to keep other modes' click-to-dismiss UX intact.
-  useEffect(() => {
-    if (!round) return;
-    if (round.gameMode !== 'scorecard') return;
-    if (!showResult) return;
-    advanceHole();
-    // Purposely omit advanceHole from deps: it's a closure recreated
-    // every render, and re-running this effect on closure identity
-    // would cause redundant auto-advance calls. showResult is the
-    // only trigger we care about.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showResult, round?.gameMode]);
+  // PR #24 commit 1: Scorecard auto-advance useEffect MOVED to the
+  // top-of-body hook block above the early returns. See the relocated
+  // copy earlier in this component; leaving this stub comment here as
+  // a marker so a future `grep "PR #19: Scorecard auto-advance"` lands
+  // near the historical position.
 
   const calculateHoleResult = () => {
     const cs = scores[currentHole];

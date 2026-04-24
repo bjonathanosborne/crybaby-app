@@ -7,15 +7,42 @@ import { getTeamsForHole } from "@/lib/gameEngines";
 import type { Player } from "@/lib/gameEngines";
 
 // ============================================================
-// PR #23 D3 verification — post-commit-2.
+// ⚠️ SCOPE CLARIFICATION — read before trusting this file.
 //
-// Hypothesis from the recon: React #310 was either directly
-// caused by D2's malformed cart/position data (empty team
-// rosters feeding a conditional render path) or adjacent to it
-// enough that D2's fix resolves it as a side effect.
+// Originally named `d3VerificationPostD2.test.ts` and claimed to
+// verify that PR #23 resolved React error #310. **That claim
+// was wrong.** This file exercises PURE HELPER FUNCTIONS in
+// isolation:
+//   - `resolvePlayerCartPosition` — data-shape normalisation
+//   - `getTeamsForHole` — engine team-assignment logic
 //
-// This file exercises the exact conditions of Jonathan's orphan
-// round WITH D2's helpers applied and confirms:
+// It never mounts `<CrybabyActiveRound />`, never exercises the
+// React hook chain, and therefore CANNOT catch a hook-count
+// mismatch bug like the one Jonathan hit on 2026-04-22 (DOC)
+// and again on 2026-04-23 (Scorecard 1-player). The real root
+// cause — a `useEffect` positioned below the early-return
+// guards in `CrybabyActiveRound.tsx` — was only found during
+// the PR #24 recon. That bug is fixed in PR #24 commit 1 and
+// guarded by `src/test/hookPositionInvariant.test.ts`.
+//
+// Renamed `dataShapeOrphanRound.test.ts` in PR #24 commit 3 so
+// the next engineer doesn't read a passing status here as
+// evidence that a React crash is fixed.
+//
+// What this file DOES guarantee:
+//   - If someone regresses `resolvePlayerCartPosition` or
+//     `getTeamsForHole` to pre-PR-#23 behaviour, these tests
+//     catch the drift via the exact orphan-round shape.
+//
+// Engineering lesson captured in `docs/ENGINEERING_LESSONS.md`
+// under "Hook-ordering bugs require full mount tests."
+// ============================================================
+
+// ============================================================
+// Data-shape coverage — PR #23 orphan-round playerConfig
+//
+// Exercises the exact conditions of Jonathan's 2026-04-22
+// orphan round with PR #23's D2 helpers applied and confirms:
 //
 //   1. The orphan's playerConfig (malformed cart strings, null
 //      positions, 2 manual-entry players with null userId, one
@@ -25,15 +52,6 @@ import type { Player } from "@/lib/gameEngines";
 //   2. getTeamsForHole returns balanced 2-player rosters for
 //      DOC's three phases (Drivers 1-5, Others 6-10, Carts
 //      11-15) — not the empty rosters the pre-fix data produced.
-//
-// If either assertion had failed under commit 2's logic, we'd
-// know D3 is likely a SEPARATE bug and schedule a targeted fix
-// as commit 2.5. Both pass → D3 resolves as a side-effect of
-// D2 and commit 3 can start.
-//
-// No source-level conditional-hook scan was rendered into code
-// because the re-grep is inline in the test below + documented
-// in the companion PR comment.
 // ============================================================
 
 /**
@@ -78,7 +96,7 @@ const JONATHAN_ORPHAN_PLAYER_CONFIG: Array<{
   },
 ];
 
-describe("D3 verification — malformed orphan data resolves cleanly post-D2", () => {
+describe("Orphan-round data shape — PR #23 helpers handle the 2026-04-22 DOC playerConfig", () => {
   it("resolves every player's cart + position without throwing", () => {
     const resolved = JONATHAN_ORPHAN_PLAYER_CONFIG.map((pc, i) => {
       const { cart, position } = resolvePlayerCartPosition(pc, i);
@@ -191,7 +209,7 @@ describe("D3 verification — malformed orphan data resolves cleanly post-D2", (
 // commit 747ef77's "hooks above early returns" rule still holds.
 // ============================================================
 
-describe("D3 verification — hook-order invariant in CrybabyActiveRound", () => {
+describe("Hook-order source scan (kept but now superseded by hookPositionInvariant.test.ts)", () => {
   const src = fs.readFileSync(
     path.resolve(__dirname, "../../src/pages/CrybabyActiveRound.tsx"),
     "utf-8",
