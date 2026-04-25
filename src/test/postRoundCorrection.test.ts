@@ -196,13 +196,16 @@ describe("Bug 3 — CrybabyActiveRound completed-round CTA", () => {
       path.resolve(__dirname, "../../src/pages/CrybabyActiveRound.tsx"),
       "utf-8",
     );
-    // The completed-round early return at "if (currentHole >= 18 && holeResults.length >= 18)"
-    // must include a {capture.activeCapture && <CaptureFlow ... />}. Look for the
-    // second occurrence of that render line (the first is under the active-scoring return).
+    // Pre-PR-#27, this asserted >= 2 CaptureFlow renders (active-
+    // scoring + completed-round). PR #27 commit 1 removed the active-
+    // scoring render. The completed-round render stays through Commit
+    // 1 so the Fix-scores CTA still opens; Commit 2 removes it
+    // alongside the FinalPhotoGate. Expect exactly 1 here for now;
+    // photoCapturePostRoundRemoved.test.ts will flip this to 0.
     const matches = src.match(
       /\{capture\.activeCapture\s*&&\s*<CaptureFlow\s*\{\.\.\.capture\.activeCapture\}\s*\/>\}/g,
     );
     expect(matches).toBeTruthy();
-    expect((matches || []).length).toBeGreaterThanOrEqual(2);
+    expect((matches || []).length).toBeGreaterThanOrEqual(1);
   });
 });

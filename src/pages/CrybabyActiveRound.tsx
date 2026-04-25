@@ -8,10 +8,16 @@ import { useRoundState } from "@/hooks/useRoundState";
 import { useRoundPersistence } from "@/hooks/useRoundPersistence";
 import { useRoundGameModes } from "@/hooks/useRoundGameModes";
 import { useCapture } from "@/hooks/useCapture";
-import { useCaptureCadence } from "@/hooks/useCaptureCadence";
 import { useAuth } from "@/contexts/AuthContext";
-import CaptureButton from "@/components/capture/CaptureButton";
-import CapturePrompt from "@/components/capture/CapturePrompt";
+// PR #27: Photo capture removed from gameplay UI. CaptureButton (FAB)
+// and CapturePrompt (mid-round photo banner) imports dropped along
+// with their renders. useCaptureCadence + cadenceResult derivations
+// are also gone — the gate they computed (blockedOnPhoto) had only
+// one consumer, the CapturePrompt banner. Edge functions, the
+// round_captures table, and CaptureFlow (still used by the post-
+// round-correction button on the completion screen) stay in place.
+// Components themselves remain in src/components/capture/ so legacy
+// captures keep displaying on round detail; no UI triggers them now.
 import CaptureFlow from "@/components/capture/CaptureFlow";
 import EditHammerModal from "@/components/capture/hammer/EditHammerModal";
 import FinalPhotoGate from "@/components/FinalPhotoGate";
@@ -873,7 +879,10 @@ export default function CrybabActiveRound() {
   // Phase 2 capture: tracks the hole number we most recently applied a
   // capture for. Used to clear the CapturePrompt banner after apply and
   // to re-gate advance on the next hole.
-  const [lastCapturedHole, setLastCapturedHole] = useState<number>(0);
+  // PR #27: `lastCapturedHole` state removed — its only consumer was
+  // the cadence banner gate (`captureAppliedForCurrent`), which is also
+  // gone. The `onApplied` callback below no longer needs to track
+  // which hole was last captured because no UI consumes it.
 
   // Phase 2.5: retro hammer-fix modal state.
   const [showEditHammerModal, setShowEditHammerModal] = useState<boolean>(false);
@@ -898,15 +907,11 @@ export default function CrybabActiveRound() {
   // (Bug 2). Cleared in onApplied after a successful post_round_correction
   // capture.
   const needsFinalPhoto = (dbRound as unknown as { needs_final_photo?: boolean } | null)?.needs_final_photo === true;
-  // Cadence input — ok if round is null, returns { type: "none" }.
-  const captureCadenceInput = dbRound ? {
-    gameType: dbRound.game_type,
-    mechanics: (dbRound.course_details?.mechanics || []) as string[],
-  } : null;
-  // Has a capture been applied covering the current hole already?
-  // (Gate the capture-required banner so it clears after a successful apply.)
-  const captureAppliedForCurrent = lastCapturedHole >= currentHole;
-  const cadenceResult = useCaptureCadence(captureCadenceInput, currentHole, captureAppliedForCurrent);
+  // PR #27: cadence input + cadenceResult removed. The capture-prompt
+  // banner that consumed cadenceResult.blockedOnPhoto no longer renders.
+  // captureCadence.ts module stays in the tree (still used by the
+  // extract-scores edge function), just not consumed by the
+  // active-round client anymore.
 
   // Build the scoresMap shape that CaptureFlow needs: { playerId: { hole: gross } }
   const currentScoresByPlayer: Record<string, Record<number, number>> = {};
@@ -974,7 +979,10 @@ export default function CrybabActiveRound() {
       hammerTeams,
     },
     onApplied: (result, trigger) => {
-      setLastCapturedHole(currentHole);
+      // PR #27: lastCapturedHole tracking removed — the cadence banner
+      // that consumed it is gone. Other onApplied side effects
+      // (retryNonce bump, FinalPhotoGate decision flip,
+      // needs_final_photo clear) are unchanged.
       // Re-fetch would be ideal; for now, the apply-capture server has already
       // persisted changes. The 30s sync useEffect (saveGameState interval) +
       // round_captures realtime subscription will bring the client back in line.
@@ -2519,24 +2527,17 @@ export default function CrybabActiveRound() {
         </>
       )}
 
-      {/* Phase 2 capture prompt — shown when cadence requires a photo
-          and no capture has been applied for the current hole. The
-          prompt is non-dismissible until a capture lands. */}
-      {isScorekeeper && roundIsActiveStatus && cadenceResult.blockedOnPhoto && cadenceResult.reason && (
-        <CapturePrompt
-          reason={cadenceResult.reason}
-          onCapture={() => capture.openGameDriven([currentHole, currentHole])}
-          captureInFlight={capture.isOpen}
-        />
-      )}
-
-      {/* Phase 2 ad-hoc capture FAB — scorekeeper-only, active rounds only. */}
-      {isScorekeeper && roundIsActiveStatus && !capture.isOpen && (
-        <CaptureButton onOpen={capture.openAdHoc} />
-      )}
-
-      {/* Phase 2 capture flow modal — shared by ad-hoc + game-driven paths via useCapture. */}
-      {capture.activeCapture && <CaptureFlow {...capture.activeCapture} />}
+      {/* PR #27: Mid-round photo UI removed. The "Photo needed to
+          continue" CapturePrompt banner, the ad-hoc CaptureButton FAB,
+          and the active-round CaptureFlow modal trigger are all gone.
+          Scorekeeper is the authority — no photo required for any
+          mid-round flow. The completion-screen "Fix scores" CTA + its
+          CaptureFlow modal stay until Commit 2 lands. Components
+          themselves (src/components/capture/CapturePrompt.tsx,
+          CaptureButton.tsx, CaptureFlow.tsx) remain in the tree so
+          legacy capture data still renders via CaptureTile +
+          CaptureAppliedCard in feed + LiveStandings — and so the
+          feature can be resurrected later if needed. */}
 
       {/* Bug 2: pre-completion final-photo gate.
           Rendered ONLY for the scorekeeper (only they can capture) when
