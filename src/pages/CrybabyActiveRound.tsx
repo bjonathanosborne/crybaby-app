@@ -7,20 +7,20 @@ import { ToastAction } from "@/components/ui/toast";
 import { useRoundState } from "@/hooks/useRoundState";
 import { useRoundPersistence } from "@/hooks/useRoundPersistence";
 import { useRoundGameModes } from "@/hooks/useRoundGameModes";
-import { useCapture } from "@/hooks/useCapture";
 import { useAuth } from "@/contexts/AuthContext";
-// PR #27: Photo capture removed from gameplay UI. CaptureButton (FAB)
-// and CapturePrompt (mid-round photo banner) imports dropped along
-// with their renders. useCaptureCadence + cadenceResult derivations
-// are also gone — the gate they computed (blockedOnPhoto) had only
-// one consumer, the CapturePrompt banner. Edge functions, the
-// round_captures table, and CaptureFlow (still used by the post-
-// round-correction button on the completion screen) stay in place.
-// Components themselves remain in src/components/capture/ so legacy
-// captures keep displaying on round detail; no UI triggers them now.
-import CaptureFlow from "@/components/capture/CaptureFlow";
+// PR #27: Photo capture removed from gameplay UI.
+// Commit 1 dropped CaptureButton (FAB) + CapturePrompt (mid-round
+// banner) + useCaptureCadence (the gate-computing hook).
+// Commit 2 (this) drops the rest: FinalPhotoGate (the post-completion
+// "Take Photo / Skip" modal), the completion-screen "Fix scores / add
+// photo" CTA, the second CaptureFlow render that backed it, and the
+// useCapture hook call itself (no UI consumers left). Edge functions
+// (apply-capture, extract-scores), the round_captures table, the
+// scorecards storage bucket, and component files in
+// src/components/capture/ all remain — legacy captures keep displaying
+// in feed/standings via CaptureTile + CaptureAppliedCard, and the
+// feature can be resurrected later if needed.
 import EditHammerModal from "@/components/capture/hammer/EditHammerModal";
-import FinalPhotoGate from "@/components/FinalPhotoGate";
 import FinishRoundConfirm from "@/components/round/FinishRoundConfirm";
 import { resolvePlayerCartPosition } from "@/lib/cartPosition";
 import FlipReel from "@/components/flip/FlipReel";
@@ -834,25 +834,19 @@ export default function CrybabActiveRound() {
   const [settlementsSaved, setSettlementsSaved] = useState(false);
   const [totalsInitialized, setTotalsInitialized] = useState(false);
 
-  // Bug 2: pre-completion final-photo gate.
-  //   pending  — hole 18 scored, waiting on user decision (gate is visible)
-  //   captured — user took a scorecard photo from the gate, apply succeeded
-  //   skipped  — user tapped Skip; needs_final_photo has been set in DB
-  //
-  // The settlements-save useEffect is blocked until decision !== "pending".
-  // gateCaptureInFlight tracks when a capture was launched from the gate so
-  // onApplied can distinguish it from an earlier ad-hoc capture.
-  const [finalPhotoDecision, setFinalPhotoDecision] = useState<"pending" | "captured" | "skipped">("pending");
-  const [skipInFlight, setSkipInFlight] = useState(false);
-  const gateCaptureInFlightRef = useRef<boolean>(false);
+  // PR #27 commit 2: finalPhotoDecision / skipInFlight / gateCaptureInFlightRef
+  // removed along with FinalPhotoGate. The completion useEffect no longer
+  // gates on a photo decision; settlements save the moment finishConfirmed
+  // flips. The needs_final_photo column on rounds is now dead data — kept
+  // in the schema but no UI reads or writes it.
 
   // PR #18: Explicit scorekeeper confirmation BEFORE auto-finish fires.
   // The round auto-enters completion state when hole 18 is scored, but
-  // we now gate the FinalPhotoGate + settlement write on a deliberate
-  // "Finish Round" tap. Cancel path leaves the round scored-but-
-  // unlocked so the scorekeeper can edit a score or swap the handicap
-  // % before committing. `finishConfirmed` is the latch: once true the
-  // finish chain runs, never auto-resets.
+  // we now gate the settlement write on a deliberate "Finish Round" tap.
+  // Cancel path leaves the round scored-but-unlocked so the scorekeeper
+  // can edit a score or swap the handicap % before committing.
+  // `finishConfirmed` is the latch: once true the finish chain runs,
+  // never auto-resets.
   const [finishConfirmed, setFinishConfirmed] = useState<boolean>(false);
   // Dialog open state — user-controlled so Cancel truly closes it.
   // Auto-opened ONCE when hole 18 completes (see effect below); after
@@ -902,12 +896,10 @@ export default function CrybabActiveRound() {
   // a player on this round (spectator / admin viewing someone else's round).
   const currentUserPlayerId = dbPlayers.find(p => p.user_id === currentUser?.id)?.id ?? null;
   const roundIsActiveStatus = dbRound?.status === "active";
-  // Bug 3: drives the "Add scorecard photo" prominence on the completed-round
-  // view. True only when the scorekeeper skipped the pre-completion gate
-  // (Bug 2). Cleared in onApplied after a successful post_round_correction
-  // capture.
-  const needsFinalPhoto = (dbRound as unknown as { needs_final_photo?: boolean } | null)?.needs_final_photo === true;
-  // PR #27: cadence input + cadenceResult removed. The capture-prompt
+  // PR #27 commit 2: needsFinalPhoto derivation removed. With the
+  // post-completion CTA gone, the dbRound.needs_final_photo column
+  // is no longer read — it stays in the schema as dead data.
+  // PR #27 commit 1: cadence input + cadenceResult removed. The capture-prompt
   // banner that consumed cadenceResult.blockedOnPhoto no longer renders.
   // captureCadence.ts module stays in the tree (still used by the
   // extract-scores edge function), just not consumed by the
@@ -967,45 +959,14 @@ export default function CrybabActiveRound() {
       })()
     : undefined;
 
-  const capture = useCapture({
-    base: {
-      roundId: roundId || "",
-      players: capturePlayers,
-      pars: dbRound?.course_details?.pars || Array(18).fill(4),
-      handicaps: dbRound?.course_details?.handicaps || Array.from({ length: 18 }, (_, i) => i + 1),
-      currentScores: currentScoresByPlayer,
-      roundPrivacy: (dbRound?.course_details?.privacy === "private") ? "private" : "public",
-      mechanics: mechanicsList,
-      hammerTeams,
-    },
-    onApplied: (result, trigger) => {
-      // PR #27: lastCapturedHole tracking removed — the cadence banner
-      // that consumed it is gone. Other onApplied side effects
-      // (retryNonce bump, FinalPhotoGate decision flip,
-      // needs_final_photo clear) are unchanged.
-      // Re-fetch would be ideal; for now, the apply-capture server has already
-      // persisted changes. The 30s sync useEffect (saveGameState interval) +
-      // round_captures realtime subscription will bring the client back in line.
-      if (!result.noop) {
-        // Force a reload of the round so totals/hole_scores match the server.
-        setRetryNonce(n => n + 1);
-      }
-      // Bug 2: if this apply was launched from the final-photo gate, mark
-      // the gate decision as "captured" so the settlements effect proceeds.
-      if (gateCaptureInFlightRef.current) {
-        gateCaptureInFlightRef.current = false;
-        setFinalPhotoDecision("captured");
-      }
-      // Bug 3: a post_round_correction capture by definition supplies a
-      // scorecard photo for the completed round, so clear the pending
-      // needs_final_photo flag. Fire-and-forget is fine — the flag is
-      // cosmetic (drives the "Add scorecard photo" CTA styling) and the
-      // next successful apply will clear it again if this write fails.
-      if (trigger === "post_round_correction" && roundId && result.applied && !result.noop) {
-        void persist.persistNeedsFinalPhoto(roundId, false);
-      }
-    },
-  });
+  // PR #27 commit 2: useCapture hook call removed — no UI consumer left
+  // after FinalPhotoGate, the post-round-correction CTA, and both
+  // CaptureFlow renders were dropped. The hook itself stays in
+  // src/hooks/useCapture.ts (preserved infrastructure, gets a TODO
+  // marker in commit 3). The scoreboard refresh that onApplied used
+  // to trigger via setRetryNonce is no longer needed because nothing
+  // mutates round state out-of-band on the client now; in-band score
+  // edits already bump retryNonce through the hole-submit path.
 
   // PR #18: Auto-open the Finish Round confirmation ONCE when the
   // scorekeeper crosses into the completed state (hole 18 scored).
@@ -1021,11 +982,10 @@ export default function CrybabActiveRound() {
     if (!(currentHole >= 18 && holeResults.length >= 18)) return;
     if (settlementsSaved) return;          // already-finalised round: no dialog
     if (finishConfirmed) return;           // post-refresh with latch somehow set
-    if (capture.isOpen) return;            // don't stack over capture flow
     if (showCancelConfirm) return;         // don't stack over cancel dialog
     finishAutoOpenedRef.current = true;
     setShowFinishConfirm(true);
-  }, [isScorekeeper, currentHole, holeResults.length, settlementsSaved, finishConfirmed, capture.isOpen, showCancelConfirm]);
+  }, [isScorekeeper, currentHole, holeResults.length, settlementsSaved, finishConfirmed, showCancelConfirm]);
 
   // Guard back-button navigation while round is active
   useEffect(() => {
@@ -1259,10 +1219,11 @@ export default function CrybabActiveRound() {
   // succeed. On failure, completionError is set and the effect's guard
   // early-returns until the user taps Retry (which bumps retryCompletionNonce).
   //
-  // Bug 2 gate: blocked while finalPhotoDecision === "pending". The
-  // FinalPhotoGate modal renders when hole 18 is done and the decision is
-  // still pending; the user MUST choose Take Photo or Skip before this
-  // effect can save settlements / complete the round.
+  // PR #27 commit 2: finalPhotoDecision gate removed. The completion
+  // chain runs as soon as the scorekeeper taps Finish Round in the
+  // confirmation dialog — no photo gate stands between hole 18 and
+  // settlement write. PR #18's finishConfirmed latch is still the
+  // single deliberate trigger that locks money.
   useEffect(() => {
     if (!round) return;
     const isComplete = currentHole >= 18 && holeResults.length >= 18;
@@ -1272,7 +1233,6 @@ export default function CrybabActiveRound() {
     // auto-fired the save chain — now the dialog gates it so a
     // misread score can still be corrected before money locks.
     if (!finishConfirmed) return;
-    if (finalPhotoDecision === "pending") return;
     // After a failure, wait for the user to tap Retry before trying again.
     // This prevents a render-loop (persist + totals are fresh references on
     // every render) from hammering the server.
@@ -1368,50 +1328,13 @@ export default function CrybabActiveRound() {
       }
     };
     saveRoundSettlements();
-  }, [currentHole, holeResults.length, settlementsSaved, roundId, persist, round, totals, finalPhotoDecision, completionError, retryCompletionNonce, retryCompletion, finishConfirmed]);
+  }, [currentHole, holeResults.length, settlementsSaved, roundId, persist, round, totals, completionError, retryCompletionNonce, retryCompletion, finishConfirmed]);
 
-  // Bug 2: final-photo gate handlers.
-  //
-  // Take Photo: launch CaptureFlow ad-hoc on holeRange [1, 18]. We set the
-  // ref before opening so onApplied (above) knows this capture came from
-  // the gate and can flip decision → "captured". If the user cancels the
-  // flow mid-way, the ref is cleared by onCancel (handled below) and the
-  // gate re-renders.
-  const handleTakeFinalPhoto = useCallback(() => {
-    gateCaptureInFlightRef.current = true;
-    capture.openAdHoc();
-  }, [capture]);
-
-  // Skip: persist needs_final_photo=true, then flip decision → "skipped"
-  // so the settlements effect proceeds. On failure we keep the gate open
-  // and toast — the completion flow intentionally does NOT proceed without
-  // either a photo or the skip-flag recorded.
-  const handleSkipFinalPhoto = useCallback(async () => {
-    if (!roundId) return;
-    setSkipInFlight(true);
-    const result = await persist.persistNeedsFinalPhoto(roundId, true);
-    setSkipInFlight(false);
-    if (!result.ok) {
-      toast({
-        title: "Couldn't save your choice",
-        description: "Check your connection and try again.",
-        variant: "destructive",
-      });
-      return;
-    }
-    setFinalPhotoDecision("skipped");
-  }, [roundId, persist]);
-
-  // If the user cancels the capture flow mid-way after launching it from
-  // the gate, clear the ref so they land back on the gate with no state
-  // change. (capture.activeCapture goes null on cancel; watch the open
-  // state and reset the ref when the flow closes without having flipped
-  // the decision.)
-  useEffect(() => {
-    if (!capture.isOpen && gateCaptureInFlightRef.current && finalPhotoDecision === "pending") {
-      gateCaptureInFlightRef.current = false;
-    }
-  }, [capture.isOpen, finalPhotoDecision]);
+  // PR #27 commit 2: handleTakeFinalPhoto / handleSkipFinalPhoto / the
+  // capture-flow cancel-cleanup useEffect were all FinalPhotoGate
+  // wiring. With the gate removed they have no callers — the
+  // settlement-write useEffect above runs the moment the scorekeeper
+  // taps Finish Round, no intermediate "photo or skip" decision.
 
   // PR #24 commit 1: Scorecard auto-advance. The HoleResultCard modal is
   // gated off for scorecard rounds (no money to surface), so when
@@ -2340,43 +2263,16 @@ export default function CrybabActiveRound() {
             📸 Round photos and full results will post to your feed
           </div>
 
-          {/* Bug 3: post-completion capture CTA.
-              Scorekeeper-only. Always available on completed rounds.
-              Two visual states:
-                - needs_final_photo: amber, primary-prominence ("Add
-                  scorecard photo"). The user skipped the pre-completion
-                  gate and we're nudging them to add it.
-                - otherwise: subtle secondary button ("Fix scores / add
-                  photo"). Always available so the scorekeeper can
-                  correct later.
-              Launches the post_round_correction capture flow which
-              apply-capture handles by rewriting non-manual settlements. */}
-          {isScorekeeper && (
-            <button
-              onClick={capture.openPostRoundCorrection}
-              data-testid="post-round-correction-cta"
-              style={needsFinalPhoto
-                ? {
-                    width: "100%", padding: "14px", borderRadius: 14, border: "none",
-                    fontFamily: FONT, fontSize: 15, fontWeight: 700,
-                    background: "#D4AF37", color: "#1E130A", cursor: "pointer",
-                    marginTop: 4,
-                    boxShadow: "0 4px 16px rgba(212,175,55,0.35)",
-                    display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                  }
-                : {
-                    width: "100%", padding: "12px", borderRadius: 12,
-                    border: "1px solid #DDD0BB",
-                    fontFamily: FONT, fontSize: 13, fontWeight: 600,
-                    background: "#FAF5EC", color: "#8B7355", cursor: "pointer",
-                    marginTop: 4,
-                    display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                  }
-              }
-            >
-              📸 {needsFinalPhoto ? "Add scorecard photo" : "Fix scores / add photo"}
-            </button>
-          )}
+          {/* PR #27 commit 2: Post-completion capture CTA removed. The
+              button opened a CaptureFlow modal with
+              trigger="post_round_correction", which apply-capture
+              handled by rewriting non-manual settlements from the new
+              photo. With photo capture pulled from the gameplay UI,
+              that path no longer has a mechanism to fire — and there's
+              no UI-only score correction flow on completed rounds in
+              this codebase, so the CTA is removed outright rather than
+              rewired. apply-capture itself stays live for legacy
+              capture replays. */}
 
           <button onClick={() => navigate("/feed")} style={{
             width: "100%", padding: "16px", borderRadius: 14, border: "none",
@@ -2388,11 +2284,10 @@ export default function CrybabActiveRound() {
           </button>
         </div>
 
-        {/* Phase 2 capture flow modal — shared by ad-hoc / game-driven /
-            post_round_correction via useCapture. Rendered here (not only
-            under the active-scoring return) so the Fix-scores CTA above
-            can actually show the flow. */}
-        {capture.activeCapture && <CaptureFlow {...capture.activeCapture} />}
+        {/* PR #27 commit 2: Completion-screen CaptureFlow render removed
+            along with the Fix-scores CTA that triggered it. CaptureFlow
+            component itself stays in src/components/capture/ as
+            preserved infrastructure. */}
       </div>
     );
   }
@@ -2527,40 +2422,21 @@ export default function CrybabActiveRound() {
         </>
       )}
 
-      {/* PR #27: Mid-round photo UI removed. The "Photo needed to
-          continue" CapturePrompt banner, the ad-hoc CaptureButton FAB,
-          and the active-round CaptureFlow modal trigger are all gone.
-          Scorekeeper is the authority — no photo required for any
-          mid-round flow. The completion-screen "Fix scores" CTA + its
-          CaptureFlow modal stay until Commit 2 lands. Components
-          themselves (src/components/capture/CapturePrompt.tsx,
-          CaptureButton.tsx, CaptureFlow.tsx) remain in the tree so
-          legacy capture data still renders via CaptureTile +
-          CaptureAppliedCard in feed + LiveStandings — and so the
-          feature can be resurrected later if needed. */}
-
-      {/* Bug 2: pre-completion final-photo gate.
-          Rendered ONLY for the scorekeeper (only they can capture) when
-          hole 18 is scored, no capture flow is currently open, and the
-          gate decision is still pending. This is the single entry point
-          for launching a [1,18] capture that blocks completeRound. */}
-      <FinalPhotoGate
-        open={
-          isScorekeeper &&
-          !capture.isOpen &&
-          currentHole >= 18 &&
-          holeResults.length >= 18 &&
-          finalPhotoDecision === "pending" &&
-          !settlementsSaved &&
-          // PR #18: FinalPhotoGate is part of the finish chain — wait
-          // for the scorekeeper's confirm before it renders, so cancel
-          // on the confirm dialog keeps the round's completion UI clean.
-          finishConfirmed
-        }
-        onTakePhoto={handleTakeFinalPhoto}
-        onSkip={handleSkipFinalPhoto}
-        skipping={skipInFlight}
-      />
+      {/* PR #27: Photo capture removed from gameplay UI.
+          Commit 1: mid-round photo UI gone (CapturePrompt banner,
+          CaptureButton FAB, active-round CaptureFlow modal trigger,
+          useCaptureCadence + cadenceResult derivations).
+          Commit 2 (this): post-round photo UI gone (FinalPhotoGate
+          modal, finalPhotoDecision state + handlers, completion-screen
+          score-correction CTA, second CaptureFlow render, useCapture
+          hook call).
+          Components in src/components/capture/ + the FinalPhotoGate
+          file in src/components/ remain in the tree so legacy capture
+          data still renders via CaptureTile + CaptureAppliedCard in
+          feed + LiveStandings — and so the feature can be resurrected
+          later if needed. apply-capture / extract-scores edge functions,
+          round_captures table, and the scorecards storage bucket are
+          all untouched. */}
 
       {/* PR #18: Finish-round confirmation gate. Auto-opens ONCE when
           the scorekeeper submits hole 18; after that the scorekeeper
@@ -2568,7 +2444,7 @@ export default function CrybabActiveRound() {
           below. Cancel truly closes — the user can navigate, edit a
           hole, swap the handicap %, and return to tap the button
           again. Confirm flips finishConfirmed → true, which unblocks
-          the FinalPhotoGate + settlement-write useEffect above. */}
+          the settlement-write useEffect above. */}
       <FinishRoundConfirm
         open={showFinishConfirm}
         confirming={false}
@@ -2590,7 +2466,6 @@ export default function CrybabActiveRound() {
         && !finishConfirmed
         && !settlementsSaved
         && !showFinishConfirm
-        && !capture.isOpen
         && !showCancelConfirm && (
         <div
           data-testid="finish-round-cta-container"

@@ -5,21 +5,27 @@ import type { CaptureFlowProps } from "@/components/capture/types";
 import type { Player } from "@/lib/gameEngines";
 
 /**
- * Bug 3 — post-completion capture path.
+ * Bug 3 — post-completion capture path (now infrastructure-only).
+ *
+ * After PR #27 commit 2 the CrybabyActiveRound CTA + onApplied wiring
+ * for post_round_correction were removed (no UI consumer). The hook
+ * API + types + CaptureConfirmGrid behaviour are preserved so the
+ * feature can be resurrected without re-deriving the wire format.
  *
  * Locks in:
  *   - useCapture.openPostRoundCorrection sets trigger="post_round_correction"
  *     and holeRange=[1,18] (always the full scorecard).
- *   - The onApplied callback receives the trigger label so the page can
- *     branch on it (clear needs_final_photo, for example).
- *   - CrybabyActiveRound renders the "Fix scores / add photo" CTA on the
- *     completed-round view for the scorekeeper, with amber styling when
- *     needs_final_photo is true and subtle styling otherwise.
- *   - The onApplied handler clears needs_final_photo via
- *     persistNeedsFinalPhoto(roundId, false) on a successful
- *     post_round_correction apply.
+ *   - The onApplied callback receives the trigger label so a future
+ *     page-level consumer can branch on it.
  *   - CaptureConfirmGrid treats post_round_correction like game_driven
  *     for share-toggle visibility (hidden on both).
+ *
+ * Removed coverage (was UI-level, now absent):
+ *   - CrybabyActiveRound CTA render — the "Fix scores / add photo"
+ *     button is gone (asserted absent in
+ *     src/test/photoCapturePostRoundRemoved.test.ts).
+ *   - onApplied → persistNeedsFinalPhoto branch — no caller; the
+ *     needs_final_photo column on rounds is now dead data.
  */
 
 describe("useCapture — openPostRoundCorrection", () => {
@@ -138,74 +144,8 @@ describe("Bug 3 — CaptureFlowProps type union includes post_round_correction",
   });
 });
 
-describe("Bug 3 — CrybabyActiveRound completed-round CTA", () => {
-  it("renders 'Fix scores / add photo' button for scorekeeper only", async () => {
-    const fs = await import("fs");
-    const path = await import("path");
-    const src = fs.readFileSync(
-      path.resolve(__dirname, "../../src/pages/CrybabyActiveRound.tsx"),
-      "utf-8",
-    );
-    // Button must be inside the completed-round return and gated on isScorekeeper.
-    const ctaMatch = src.match(
-      /\{isScorekeeper\s*&&\s*\([\s\S]*?data-testid="post-round-correction-cta"[\s\S]*?\)\}/,
-    );
-    expect(ctaMatch).toBeTruthy();
-    const cta = ctaMatch?.[0] ?? "";
-    expect(cta).toMatch(/capture\.openPostRoundCorrection/);
-  });
-
-  it("CTA copy reflects needs_final_photo state", async () => {
-    const fs = await import("fs");
-    const path = await import("path");
-    const src = fs.readFileSync(
-      path.resolve(__dirname, "../../src/pages/CrybabyActiveRound.tsx"),
-      "utf-8",
-    );
-    // Both copies must exist — one for the amber (skipped-gate) state,
-    // one for the subtle (default) state.
-    expect(src).toMatch(/Add scorecard photo/);
-    expect(src).toMatch(/Fix scores \/ add photo/);
-    // Derived flag must exist and key off dbRound.needs_final_photo.
-    expect(src).toMatch(/needs_final_photo[\s\S]*?===\s*true/);
-  });
-
-  it("onApplied clears needs_final_photo after a post_round_correction apply", async () => {
-    const fs = await import("fs");
-    const path = await import("path");
-    const src = fs.readFileSync(
-      path.resolve(__dirname, "../../src/pages/CrybabyActiveRound.tsx"),
-      "utf-8",
-    );
-    // onApplied must take `trigger` as its second arg and branch on it.
-    expect(src).toMatch(/onApplied:\s*\(\s*result,\s*trigger\s*\)\s*=>/);
-    // Branch: trigger === "post_round_correction" AND result.applied → clear flag.
-    expect(src).toMatch(
-      /trigger\s*===\s*"post_round_correction"[\s\S]*?persist\.persistNeedsFinalPhoto\(roundId,\s*false\)/,
-    );
-    // The noop case must be excluded (no-op captures don't imply a new photo).
-    expect(src).toMatch(
-      /trigger\s*===\s*"post_round_correction"[\s\S]*?!result\.noop/,
-    );
-  });
-
-  it("CaptureFlow modal is rendered inside the completed-round return so the CTA can open it", async () => {
-    const fs = await import("fs");
-    const path = await import("path");
-    const src = fs.readFileSync(
-      path.resolve(__dirname, "../../src/pages/CrybabyActiveRound.tsx"),
-      "utf-8",
-    );
-    // Pre-PR-#27, this asserted >= 2 CaptureFlow renders (active-
-    // scoring + completed-round). PR #27 commit 1 removed the active-
-    // scoring render. The completed-round render stays through Commit
-    // 1 so the Fix-scores CTA still opens; Commit 2 removes it
-    // alongside the FinalPhotoGate. Expect exactly 1 here for now;
-    // photoCapturePostRoundRemoved.test.ts will flip this to 0.
-    const matches = src.match(
-      /\{capture\.activeCapture\s*&&\s*<CaptureFlow\s*\{\.\.\.capture\.activeCapture\}\s*\/>\}/g,
-    );
-    expect(matches).toBeTruthy();
-    expect((matches || []).length).toBeGreaterThanOrEqual(1);
-  });
-});
+// PR #27 commit 2: "CrybabyActiveRound completed-round CTA" describe
+// block removed. The CTA + its CaptureFlow render were dropped along
+// with FinalPhotoGate. Absence assertions live in
+// src/test/photoCapturePostRoundRemoved.test.ts so the regression
+// guard is co-located with the rest of the post-round removal proofs.

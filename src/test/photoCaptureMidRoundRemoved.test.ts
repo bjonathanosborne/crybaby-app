@@ -42,12 +42,10 @@ describe("CrybabyActiveRound — mid-round photo imports gone (PR #27 commit 1)"
     expect(SRC).not.toMatch(/import\s*\{\s*useCaptureCadence\s*\}\s*from/);
   });
 
-  it("STILL imports CaptureFlow (used by the completion-screen Fix-scores button until Commit 2)", () => {
-    // CaptureFlow stays through Commit 1 because the completion-screen
-    // <CaptureFlow {...capture.activeCapture} /> render still depends
-    // on it. Commit 2 removes that, then this assertion can flip.
-    expect(SRC).toMatch(/import\s+CaptureFlow\s+from\s+["']@\/components\/capture\/CaptureFlow["']/);
-  });
+  // PR #27 commit 2: CaptureFlow import is now also gone (the
+  // completion-screen render that needed it was removed alongside
+  // FinalPhotoGate). The "import gone" assertion now lives in
+  // photoCapturePostRoundRemoved.test.ts.
 });
 
 describe("CrybabyActiveRound — cadence derivations gone (PR #27 commit 1)", () => {
@@ -92,43 +90,34 @@ describe("CrybabyActiveRound — mid-round renders gone (PR #27 commit 1)", () =
   });
 
   it("does NOT render the active-round <CaptureFlow> sibling next to CapturePrompt/CaptureButton", () => {
-    // Specifically the active-round rendering — search for the comment
-    // that anchors the deletion site.
-    expect(SRC).toMatch(/PR #27: Mid-round photo UI removed/);
+    // PR #27 commit 2 collapsed the commit-1 "Mid-round photo UI
+    // removed" marker into a single render-site marker that
+    // documents both removals. Anchor on the umbrella marker phrase.
+    expect(SRC).toMatch(/PR #27:\s*Photo capture removed from gameplay UI/);
     // Should NOT find the old "Phase 2 capture flow modal" sibling
-    // comment that lived next to the active-round flow modal at line 2546.
+    // comment that lived next to the active-round flow modal.
     expect(SRC).not.toMatch(/Phase 2 capture flow modal — shared by ad-hoc \+ game-driven/);
   });
 });
 
-describe("CrybabyActiveRound — onApplied no longer tracks last hole captured (PR #27 commit 1)", () => {
-  it("onApplied callback is preserved (still triggered by post-round-correction CaptureFlow)", () => {
-    // The callback shape stays — it still fires on apply-capture replays.
-    // Just doesn't track lastCapturedHole anymore.
-    expect(SRC).toMatch(/onApplied:\s*\(result,\s*trigger\)\s*=>\s*\{/);
-  });
-
-  it("onApplied still bumps retryNonce when result is not noop", () => {
-    expect(SRC).toMatch(/setRetryNonce\(n\s*=>\s*n\s*\+\s*1\)/);
-  });
-});
+// PR #27 commit 2: onApplied callback is gone with the useCapture
+// hook call. The retryNonce bump it used to do is no longer needed
+// because nothing mutates round state out-of-band on the client.
+// In-band score edits already drive retryNonce via the hole-submit
+// path. Absence of `onApplied` is locked in by
+// photoCapturePostRoundRemoved.test.ts (see "does NOT call useCapture").
 
 describe("CrybabyActiveRound — preservation markers (PR #27 commit 1)", () => {
   it("import-block has a PR #27 comment explaining what was removed", () => {
     expect(SRC).toMatch(/PR #27:\s*Photo capture removed from gameplay UI/);
   });
 
-  it("removed-render site has a PR #27 marker comment for next reviewer", () => {
-    expect(SRC).toMatch(/PR #27: Mid-round photo UI removed/);
-  });
-
-  it("preservation rationale is documented (legacy display kept, components stay)", () => {
-    // Comments are line-broken with `// ` prefixes — the substring
-    // appears across two lines in the source. Search for both halves
-    // independently.
+  it("preservation rationale documents the legacy-display path", () => {
+    // Comments are line-broken with `// ` prefixes — match the key
+    // phrases independently to survive reformatting.
     expect(SRC).toMatch(/legacy/);
-    expect(SRC).toMatch(/captures keep displaying/);
-    expect(SRC).toMatch(/Components themselves[\s\S]{0,40}remain/);
+    expect(SRC).toMatch(/CaptureTile/);
+    expect(SRC).toMatch(/CaptureAppliedCard/);
   });
 });
 
