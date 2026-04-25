@@ -88,3 +88,103 @@ returns, the review checklist is:
 - TODOS.md — "Deferred: atomic round creation (D4-A)" — the
   structural fix that would have prevented orphan-round creation
   regardless of WHICH component bug was responsible
+
+---
+
+## 2026-04-24 — When ripping a feature, preserve the data tier
+
+### What happened
+
+Photo capture shipped over Phases 1–3 (Apr 7–18) as a four-surface
+feature: a mid-round CapturePrompt banner, a CaptureButton FAB, a
+pre-completion FinalPhotoGate modal, and a post-completion
+"Fix scores / add photo" CTA. By Apr 24 the product call landed: the
+scorekeeper is the authority, photos add friction without
+proportional value, rip the gameplay UI.
+
+PR #27 did the rip in three commits. The decision that mattered most
+wasn't what to remove — it was what to keep.
+
+**Removed** (gameplay UI only): four render-sites in
+`CrybabyActiveRound.tsx`, plus the supporting state, derivations,
+handlers, and useEffect gates. ~600 lines of UI logic.
+
+**Kept** (everything below the UI layer): `apply-capture` and
+`extract-scores` edge functions, the `round_captures` table, the
+`scorecards` storage bucket, and every component file in
+`src/components/capture/` + `src/components/FinalPhotoGate.tsx` +
+`src/hooks/useCapture.ts` + `src/hooks/useCaptureCadence.ts`. The
+files carry `// PR #27` marker comments explaining they're
+deliberate dead code.
+
+### Lesson
+
+**Removing a feature has two distinct phases. Conflate them and you
+either break legacy data or carry forever-debt.**
+
+Phase 1 — UI removal. Stop creating new instances of the feature.
+Delete renders, handlers, state. This is a high-velocity edit; the
+diff lives in one or two component files.
+
+Phase 2 — data tier removal. Delete the storage, the edge functions,
+the tables, the migrations. This is irreversible and has to wait
+until you're certain no historical data needs to render.
+
+For Crybaby's photo capture, **legacy rounds with `round_captures`
+rows still need to display** via `CaptureTile` + `CaptureAppliedCard`
++ `LiveStandings` event subscription. If we'd dropped the edge
+functions or the storage bucket along with the UI, every completed
+round-with-photos in users' history would render broken thumbnails
+or missing event cards. The data tier has to outlive the UI.
+
+The dead-code shims (`CapturePrompt.tsx` etc.) are the same
+principle one layer up: they don't render in the runtime today, but
+they're cheap to keep, they document the wire format if the feature
+is resurrected, and the alternative is a future PR that has to
+reconstruct the UX from git history.
+
+**Set a calendar reminder** to revisit dead code 60–90 days after
+removal. By then either the feature has been resurrected (in which
+case the shims paid for themselves) or it hasn't (in which case
+delete with confidence). The shims should not be permanent — they
+should be a finite-duration bet on resurrection.
+
+### What's in place now
+
+- Marker comments at the top of every dead-code file pointing back
+  to PR #27 and explaining the resurrection-vs-delete tradeoff.
+- `docs/PHOTO_CAPTURE_RECON.md` carries a top-of-file deprecation
+  note so a future engineer reading it knows the feature is gone
+  but the doc is preserved as a reference.
+- `docs/ON_COURSE_TEST_CHECKLIST.md` Sections 2 and P6.2–P6.5
+  marked obsolete with a redirect to the still-relevant tests.
+- `src/test/photoCaptureMidRoundRemoved.test.ts` +
+  `src/test/photoCapturePostRoundRemoved.test.ts` — absence
+  assertions guarding against accidental re-introduction.
+
+### What would have caught this earlier
+
+Nothing was broken — this is a process lesson, not a bug. But the
+checklist for future feature removals:
+
+1. **Inventory before cutting.** What components, hooks, edge
+   functions, tables, migrations, storage buckets, and tests
+   compose this feature? (PR #27's `/tmp/recon27.md` did this.)
+2. **Classify each by removal phase.** UI now (Phase 1) vs. data
+   tier later (Phase 2) vs. preserved infrastructure (resurrect-able
+   shims).
+3. **Write absence tests with the removal commit.** Not a
+   nice-to-have — they're how you prevent the next reviewer from
+   merging a "cleanup" PR that re-introduces a broken render-site.
+4. **Schedule the cleanup follow-up.** Calendar item, TODOs.md
+   entry, or a dated marker comment ("revisit 2026-07-24").
+
+### Related
+
+- PR #27 — the photo-capture removal (3 commits)
+- `docs/PHOTO_CAPTURE_RECON.md` — original feature-recon document,
+  preserved with a deprecation note
+- `src/test/photoCaptureMidRoundRemoved.test.ts` — Commit 1 absence
+  guard
+- `src/test/photoCapturePostRoundRemoved.test.ts` — Commit 2 absence
+  guard

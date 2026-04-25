@@ -13,9 +13,11 @@ import FinishRoundConfirm from "@/components/round/FinishRoundConfirm";
 //   (b) Cancel / Confirm paths fire the right callbacks
 //   (c) Confirming-state lockout
 //   (d) SoloRound wiring: button opens dialog, doesn't save directly
-//   (e) CrybabyActiveRound wiring: completion useEffect + FinalPhotoGate
-//       gated on finishConfirmed; auto-open effect fires on hole 18;
-//       sticky Finish Round CTA renders when appropriate.
+//   (e) CrybabyActiveRound wiring: completion useEffect gated on
+//       finishConfirmed; auto-open effect fires on hole 18; sticky
+//       Finish Round CTA renders when appropriate. (PR #27 commit 2
+//       removed the FinalPhotoGate-open-predicate assertion that
+//       used to live in this group — the gate is gone.)
 // ============================================================
 
 beforeEach(() => cleanup());
@@ -153,9 +155,9 @@ describe("CrybabyActiveRound — auto-finish gated on finishConfirmed", () => {
     expect(window).toMatch(/if \(!finishConfirmed\) return;/);
   });
 
-  it("FinalPhotoGate open-predicate includes finishConfirmed", () => {
-    expect(src).toMatch(/FinalPhotoGate[\s\S]*?open=\{[\s\S]*?finishConfirmed[\s\S]*?\}/);
-  });
+  // PR #27 commit 2: FinalPhotoGate render removed — the open-predicate
+  // assertion is gone with it. finishConfirmed still gates the
+  // settlement-write useEffect (covered by the test above).
 
   it("auto-open effect flips showFinishConfirm to true on hole 18 (with ref guard)", () => {
     expect(src).toMatch(/finishAutoOpenedRef\.current\s*=\s*true/);

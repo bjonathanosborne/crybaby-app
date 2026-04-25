@@ -1,3 +1,11 @@
+// PR #27: Photo capture removed from gameplay UI. This hook is no
+// longer called anywhere in the runtime. The file is kept so the
+// cadence rules (requiredCadence / isPhotoRequiredForHole / cadenceReason
+// in src/lib/captureCadence.ts) — which are also used by the
+// extract-scores edge function — keep a thin client-side wrapper
+// available, and so the CapturePrompt banner has something to consume
+// if the feature is resurrected. No active call sites; safe to
+// delete after a few months of dead-code monitoring.
 import { useMemo } from "react";
 import {
   requiredCadence,
