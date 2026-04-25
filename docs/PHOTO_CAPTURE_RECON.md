@@ -1,5 +1,20 @@
 # Photo-Capture Scoring Feature — Codebase Recon
 
+> **PR #27 (2026-04-24): Photo capture removed from gameplay UI.**
+> The mid-round CapturePrompt banner + CaptureButton FAB, the
+> post-completion FinalPhotoGate, the "Fix scores / add photo" CTA,
+> and both CaptureFlow render-sites in CrybabyActiveRound are all
+> gone. Edge functions (apply-capture, extract-scores), the
+> round_captures table, the scorecards storage bucket, and the
+> component files in `src/components/capture/` remain — legacy
+> captures keep displaying via CaptureTile + CaptureAppliedCard, and
+> the feature can be resurrected later.
+>
+> This document is preserved as the canonical reference for the
+> shape of the original feature. If you're looking for the current
+> state, search `PR #27` in the codebase — every dead-code shim
+> carries a marker comment pointing back here.
+
 **Date:** 2026-04-18
 **Branch:** `main` (HEAD: `f3dd37d`)
 **Mode:** Read-only reconnaissance

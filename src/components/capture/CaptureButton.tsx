@@ -8,6 +8,13 @@
  *
  * The button itself is purely presentational — the parent decides when
  * to render it.
+ *
+ * PR #27: Photo capture removed from gameplay UI. This component is
+ * no longer rendered anywhere in the runtime. The file is kept so
+ * existing round_captures rows + scorecards storage entries keep
+ * displaying via CaptureTile + CaptureAppliedCard, and so the
+ * feature can be resurrected later. No active call sites; safe to
+ * delete after a few months of dead-code monitoring.
  */
 
 interface CaptureButtonProps {

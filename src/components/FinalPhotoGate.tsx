@@ -19,6 +19,13 @@ import { Camera, SkipForward } from "lucide-react";
 //                 (Bug 3).
 //
 // The gate never dismisses without a decision — there's no X.
+//
+// PR #27 commit 2: Photo capture removed from gameplay UI. This
+// component is no longer rendered anywhere in the runtime. The
+// file is kept so the photo-capture pipeline can be resurrected
+// without re-deriving the gate UX, and so any historical references
+// in docs/PHOTO_CAPTURE_RECON.md stay live. No active call sites;
+// safe to delete after a few months of dead-code monitoring.
 // ============================================================
 
 export interface FinalPhotoGateProps {

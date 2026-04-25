@@ -4,6 +4,29 @@ Everything you need to validate Phase 2 → Phase 3 on a real round. One documen
 
 **Deploy status as of 2026-04-19:** crybaby.golf is serving `main` (verified via JS bundle fingerprint — Cincinnati transition, Fix hammers button, and DOC-only picker are all live). No further deploy action needed.
 
+> **PR #27 (2026-04-24): Photo capture removed from gameplay UI.**
+> The following sections are **obsolete** and can be skipped on
+> on-course testing — there is no longer a camera FAB, no capture
+> prompt banner, no FinalPhotoGate, and no "Fix scores / add photo"
+> CTA in the runtime:
+>
+> - **Section 2** (P2.1–P2.5) — Phase 2 capture core. The capture
+>   pipeline (extract-scores + apply-capture edge functions) is
+>   still live for legacy data but no UI triggers it anymore.
+> - **P6.2–P6.5** — pre-completion photo gate + post-completion
+>   photo CTAs.
+>
+> Section 3 (Phase 2.5 hammer scenarios) **stays relevant** —
+> hammers are now corrected via the **🔨 Fix hammers** button in
+> the bottom-left of the active round (which still uses
+> apply-capture under the hood with `trigger='hammer_correction'`).
+> Wherever the old steps say "Tap Submit + capture via FAB", do
+> "Tap Submit + tap **🔨 Fix hammers** → Edit on the relevant hole"
+> instead.
+>
+> Section 5 (Cincinnati transition) and Section 7 / Section 8
+> (profile rounds, Flip mode) are unaffected.
+
 ---
 
 ## Section 1 — Pre-round setup

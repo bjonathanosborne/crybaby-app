@@ -13,6 +13,15 @@ import type { CaptureFlowProps, CaptureResult } from "@/components/capture/types
  * When the flow resolves, `onComplete` or `onCancel` fire through this
  * hook's callbacks, which close the modal and forward the result to
  * the page so it can bump `captureApplied` on useAdvanceHole.
+ *
+ * PR #27: Photo capture removed from gameplay UI. This hook is no
+ * longer called anywhere in the runtime. The file is kept so the
+ * wire format (CaptureTrigger union, UseCaptureArgs shape) remains
+ * the canonical source of truth if the feature is resurrected, and
+ * so the API tests in src/test/postRoundCorrection.test.ts that
+ * lock in openPostRoundCorrection's contract still have a target.
+ * No active call sites; safe to delete after a few months of
+ * dead-code monitoring.
  */
 
 export type CaptureTrigger = "game_driven" | "ad_hoc" | "post_round_correction";
