@@ -2256,18 +2256,18 @@ export default function CrybabActiveRound() {
             </div>
           </div>
 
-          <div style={{
-            padding: "10px 14px", background: "#FEF3C7", borderRadius: 12,
-            fontFamily: FONT, fontSize: 12, color: "#92400E", textAlign: "center",
-          }}>
-            📸 Round photos and full results will post to your feed
-          </div>
+          {/* PR #28: "Round photos and full results will post to your
+              feed" banner removed. The banner was a vestige from the
+              photo-capture UI — it advertised an outcome that the
+              gameplay flow no longer produces. Full results still post
+              to the feed via the normal completion path; only the
+              photo half of the promise was a lie after PR #27. */}
 
           {/* PR #27 commit 2: Post-completion capture CTA removed. The
               button opened a CaptureFlow modal with
               trigger="post_round_correction", which apply-capture
               handled by rewriting non-manual settlements from the new
-              photo. With photo capture pulled from the gameplay UI,
+              capture. With photo capture pulled from the gameplay UI,
               that path no longer has a mechanism to fire — and there's
               no UI-only score correction flow on completed rounds in
               this codebase, so the CTA is removed outright rather than
