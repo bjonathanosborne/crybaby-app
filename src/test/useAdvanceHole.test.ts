@@ -2,7 +2,6 @@ import { describe, it, expect, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import {
   useAdvanceHole,
-  CaptureRequiredError,
   PersistFailureError,
   type UseAdvanceHoleArgs,
 } from "@/hooks/useAdvanceHole";
@@ -15,16 +14,17 @@ import type {
 } from "@/hooks/useRoundPersistence";
 import { useRoundState } from "@/hooks/useRoundState";
 import { initNassauState, type Player, type HoleResult, type TeamInfo } from "@/lib/gameEngines";
-import type { CaptureCadence } from "@/lib/captureCadence";
 
 /**
  * Unit tests for the useAdvanceHole composite hook.
  *
- * Covers the four scenarios in the 2f spec:
- *   1. Clean advance (no capture required) — snapshot returned, state committed.
- *   2. Advance blocked when cadence requires photo and none applied.
- *   3. Advance unblocks after a successful capture apply (captureApplied=true).
- *   4. Persistence failure surfaces as PersistFailureError, no crash, state not committed.
+ * Originally (PR 2f) had four scenarios including a capture-gate
+ * blocked path. PR #28 removed the capture gate from the hook (it
+ * had no live caller after PR #27 stripped the page-level wiring),
+ * so the surviving scenarios are:
+ *   1. Clean advance — snapshot returned, state committed.
+ *   2. Persistence failure surfaces as PersistFailureError, no crash, state not committed.
+ *   3. roundId=null (unsaved round) skips persistence entirely.
  */
 
 // ---- test fixtures --------------------------------------------------------
@@ -85,14 +85,12 @@ function skinsHoleResult(winnerId: string, names: Record<string, string>): HoleR
 /**
  * Render the composite. We pair useRoundState (real) with useAdvanceHole
  * and a mocked useRoundPersistence. That's enough to exercise the
- * capture gate + compute + persist path without a live DB.
+ * compute + persist path without a live DB.
  */
 function renderComposite(opts: {
-  captureApplied: boolean;
-  cadence: CaptureCadence;
   persistence?: UseRoundPersistenceReturn;
   roundId?: string;
-}) {
+} = {}) {
   const ps = players4();
   const teams: TeamInfo | null = null;
   return renderHook(() => {
@@ -107,9 +105,6 @@ function renderComposite(opts: {
       nassauTeams: null,
       state,
       persist,
-      cadence: opts.cadence,
-      captureApplied: opts.captureApplied,
-      cadenceReason: opts.captureApplied ? null : "Photo required",
     };
     const advance = useAdvanceHole(args);
     return { state, persist, advance };
@@ -120,7 +115,7 @@ function renderComposite(opts: {
 
 describe("useAdvanceHole — clean advance", () => {
   it("returns ok snapshot, commits totals + currentHole to state, calls persistence", async () => {
-    const r = renderComposite({ captureApplied: false, cadence: { type: "none" } });
+    const r = renderComposite();
     const { advance, persist, state: _state } = r.result.current;
 
     const result = await act(async () => {
@@ -145,73 +140,18 @@ describe("useAdvanceHole — clean advance", () => {
   });
 });
 
-describe("useAdvanceHole — capture gate blocks advance", () => {
-  it("rejects with CaptureRequiredError when cadence requires photo and none applied", async () => {
-    const r = renderComposite({ captureApplied: false, cadence: { type: "every_hole" } });
-    expect(r.result.current.advance.isBlockedOnPhoto).toBe(true);
-
-    const result = await act(async () => {
-      return r.result.current.advance.advanceHole(
-        skinsHoleResult("a", { a: "Alice", b: "Bob", c: "Carol", d: "Dave" }),
-      );
-    });
-
-    expect(result.ok).toBe(false);
-    if (result.ok) throw new Error("unreachable");
-    expect(result.error).toBeInstanceOf(CaptureRequiredError);
-    if (!(result.error instanceof CaptureRequiredError)) throw new Error("unreachable");
-    expect(result.error.kind).toBe("capture_required");
-    expect(result.error.hole).toBe(1);
-    expect(result.error.reason).toBe("Photo required");
-
-    // State NOT committed
-    expect(r.result.current.state.currentHole).toBe(1);
-    expect(r.result.current.state.totals).toEqual({});
-    // Persistence NOT called
-    expect(r.result.current.persist.persistPlayerScores).not.toHaveBeenCalled();
-  });
-
-  it("holes cadence only blocks on the listed holes", async () => {
-    // Cadence = [9, 18]. Hole 1 should NOT be blocked.
-    const r = renderComposite({ captureApplied: false, cadence: { type: "holes", holes: [9, 18] } });
-    expect(r.result.current.advance.isBlockedOnPhoto).toBe(false);
-
-    const result = await act(async () => {
-      return r.result.current.advance.advanceHole(
-        skinsHoleResult("a", { a: "Alice", b: "Bob", c: "Carol", d: "Dave" }),
-      );
-    });
-    expect(result.ok).toBe(true);
-  });
-});
-
-describe("useAdvanceHole — unblocks after capture applies", () => {
-  it("captureApplied=true unblocks advance even when cadence requires photo", async () => {
-    const r = renderComposite({ captureApplied: true, cadence: { type: "every_hole" } });
-    expect(r.result.current.advance.isBlockedOnPhoto).toBe(false);
-
-    const result = await act(async () => {
-      return r.result.current.advance.advanceHole(
-        skinsHoleResult("a", { a: "Alice", b: "Bob", c: "Carol", d: "Dave" }),
-      );
-    });
-
-    expect(result.ok).toBe(true);
-    if (!result.ok) throw new Error("unreachable");
-    expect(result.snapshot.currentHole).toBe(2);
-  });
-});
+// PR #28: "capture gate blocks advance" + "unblocks after capture applies"
+// describe blocks removed. Capture gate no longer exists in this hook.
+// CaptureRequiredError class is gone; AdvanceResult only carries
+// PersistFailureError now. The shape-level guard that the gate is
+// gone lives in src/test/unifiedScoreState.test.ts.
 
 describe("useAdvanceHole — persistence failure", () => {
   it("surfaces PersistFailureError without crashing or committing state", async () => {
     const persist = mockPersistence({
       persistGameState: vi.fn(async (_rid: string, _s: GameStateSnapshot) => networkFail<void>()),
     });
-    const r = renderComposite({
-      captureApplied: false,
-      cadence: { type: "none" },
-      persistence: persist,
-    });
+    const r = renderComposite({ persistence: persist });
 
     const result = await act(async () => {
       return r.result.current.advance.advanceHole(
@@ -237,11 +177,7 @@ describe("useAdvanceHole — persistence failure", () => {
       persistPlayerScores: vi.fn(async () => networkFail<void>()),
       persistGameState: vi.fn(async () => networkFail<void>()),
     });
-    const r = renderComposite({
-      captureApplied: false,
-      cadence: { type: "none" },
-      persistence: persist,
-    });
+    const r = renderComposite({ persistence: persist });
 
     const result = await act(async () => {
       return r.result.current.advance.advanceHole(
@@ -261,12 +197,7 @@ describe("useAdvanceHole — persistence failure", () => {
 describe("useAdvanceHole — roundId null (unsaved round)", () => {
   it("skips persistence entirely when roundId is null", async () => {
     const persist = mockPersistence();
-    const r = renderComposite({
-      captureApplied: false,
-      cadence: { type: "none" },
-      persistence: persist,
-      roundId: undefined, // via default? We want null explicitly; adjust:
-    });
+    const r = renderComposite({ persistence: persist });
     // Actually the renderComposite has roundId default; overwrite:
     const r2 = renderHook(() => {
       const state = useRoundState();
@@ -279,9 +210,6 @@ describe("useAdvanceHole — roundId null (unsaved round)", () => {
         nassauTeams: null,
         state,
         persist,
-        cadence: { type: "none" },
-        captureApplied: false,
-        cadenceReason: null,
       };
       return { state, advance: useAdvanceHole(args) };
     });
