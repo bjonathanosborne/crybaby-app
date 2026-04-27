@@ -1,6 +1,6 @@
 # Photo-Capture Scoring Feature — Codebase Recon
 
-> **PR #27 (2026-04-24): Photo capture removed from gameplay UI.**
+> **PR #27 (2026-04-25): Photo capture removed from gameplay UI.**
 > The mid-round CapturePrompt banner + CaptureButton FAB, the
 > post-completion FinalPhotoGate, the "Fix scores / add photo" CTA,
 > and both CaptureFlow render-sites in CrybabyActiveRound are all
@@ -14,6 +14,42 @@
 > shape of the original feature. If you're looking for the current
 > state, search `PR #27` in the codebase — every dead-code shim
 > carries a marker comment pointing back here.
+
+> **PR #28 (2026-04-27): Score-state unification + finish photo
+> rip-out.** Triggered by an on-course UX failure at Sea Island —
+> OCR misread strokes AND the captured scores were perceived as
+> harder to edit than manual ones. Recon confirmed there is **no
+> captured-vs-manual state distinction in the codebase**:
+> `round_players.hole_scores` is a plain `Record<string, number>`
+> JSONB blob, apply-capture writes the same shape as manual entry,
+> and `RoundEditScores` edits scores via +/- buttons without
+> checking origin. The UX issue was workflow friction (round flips
+> to `completed` after capture → corrections route through the
+> grid UI rather than mid-round inline +/- buttons), not a bug.
+>
+> PR #28 cleaned up the residue:
+>
+> - Stripped `CaptureRequiredError` class + cadence-blocked branch
+>   from `src/hooks/useAdvanceHole.ts` (zero runtime callers; PR
+>   #27 stripped page-level wiring but missed this hook).
+> - Removed the `📸 Round photos and full results will post to
+>   your feed` banner from the active-round completion screen
+>   (vestige PR #27 missed).
+> - Locked the no-source-distinction property with three new test
+>   files: `src/test/unifiedScoreState.test.ts` (19 tests, source +
+>   schema-level guards), `src/test/postRoundEditUnified.test.ts`
+>   (20 tests, photo-affordance absence on every post-round page),
+>   and `src/test/jonathanSeaIslandRegression.test.ts` (14 tests,
+>   the explicit regression guard for Jonathan's reported bug —
+>   +/- buttons take a plain numeric value with no source argument,
+>   score reads pull plain numbers with no `.value` / `.source` /
+>   `.captured` property access, write paths in apply-capture and
+>   db.ts produce identical hole_scores shapes).
+>
+> If a future refactor re-introduces a `{ value, source }` wrapper
+> or a `captured: true` flag on score storage, those tests will
+> fail and the on-course UX bug will be caught in CI rather than at
+> the next on-course session.
 
 **Date:** 2026-04-18
 **Branch:** `main` (HEAD: `f3dd37d`)
