@@ -11,7 +11,15 @@ export const CRYBABY_LOGO_PLACEHOLDER = true; // Set to false when real logo is 
 export const FONT = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 export const MONO = "'SF Mono', 'JetBrains Mono', monospace";
 
-// Full Austin-area course database (Beta: Austin, TX only)
+// Course presets database. Originally Austin-only ("Beta: Austin, TX")
+// — now also seeded with the three Sea Island Resort courses
+// (St. Simons Island, GA) per PR adding Seaside, Plantation, Retreat.
+// Variable name kept for API stability (CourseSearch.tsx, the wizard,
+// and several tests import AUSTIN_COURSES); rename is a separate
+// concern. Keep the existing rule: every course is { id, name, city,
+// type, pars, handicaps, tees: [{ name, slope, rating, yardage }] }
+// with `pars.length === handicaps.length === 18` (or 9 for the one
+// 9-hole entry, marked with `holes: 9`).
 export const AUSTIN_COURSES = [
   // === CITY OF AUSTIN MUNICIPAL (Golf ATX) ===
   { id: "lions", name: "Lions Municipal Golf Course", nickname: "Muny", city: "Austin", type: "municipal", pars: [4,4,3,4,5,4,3,5,4,4,4,4,3,4,5,4,3,5], handicaps: [5,3,15,9,1,11,17,7,13,6,2,14,16,10,4,8,18,12], tees: [{ name: "Blue", slope: 121, rating: 69.1, yardage: 6001 }, { name: "White", slope: 118, rating: 67.8, yardage: 5689 }] },
@@ -57,6 +65,20 @@ export const AUSTIN_COURSES = [
   { id: "vaaler_creek", name: "Vaaler Creek Golf Club", nickname: "", city: "Pflugerville", type: "public", pars: [4,4,3,5,4,3,4,5,4,4,5,3,4,4,4,3,5,4], handicaps: [9,5,15,1,7,17,11,3,13,8,2,18,6,10,12,16,4,14], tees: [{ name: "Blue", slope: 129, rating: 71.0, yardage: 6630 }, { name: "White", slope: 123, rating: 68.8, yardage: 6100 }] },
   { id: "riverside", name: "Riverside Golf Course", nickname: "", city: "Austin", type: "public", pars: [5,4,3,4,4,4,3,5,4,4,5,4,3,4,4,5,3,4], handicaps: [3,7,15,5,1,9,17,11,13,8,2,10,18,4,6,12,16,14], tees: [{ name: "Blue", slope: 124, rating: 69.8, yardage: 6308 }, { name: "White", slope: 119, rating: 67.9, yardage: 5880 }] },
   { id: "colovista", name: "ColoVista Country Club", nickname: "", city: "Bastrop", type: "semi-private", pars: [4,5,4,3,4,3,5,4,4,4,3,5,4,4,3,4,5,4], handicaps: [7,1,9,15,5,17,3,11,13,10,18,2,8,6,16,12,4,14], tees: [{ name: "Blue", slope: 134, rating: 72.3, yardage: 6886 }, { name: "White", slope: 128, rating: 70.0, yardage: 6350 }] },
+
+  // === SEA ISLAND RESORT (St. Simons Island, GA) ===
+  // Tee names follow BlueGolf's published scorecard naming (Red /
+  // Blue / White / Green) so the slope + rating + handicap data stay
+  // internally consistent. seaisland.com's marketing pages use a
+  // different label set (Blue / White / Green / Black / Gold) but
+  // do not publish slope or rating per label — using BlueGolf's
+  // labels keeps the per-tee numbers verifiable. Pars + per-hole
+  // handicap stroke indexes verified against seaisland.com (pars
+  // match exactly).
+  // Source: course.bluegolf.com (accessed 2026-04-27).
+  { id: "sea_island_seaside", name: "Sea Island — Seaside Course", nickname: "Seaside", city: "St. Simons Island", type: "resort", pars: [4,4,3,4,4,3,5,4,4,4,4,3,4,4,5,4,3,4], handicaps: [7,3,9,1,11,17,15,13,5,6,10,12,2,16,14,8,18,4], tees: [{ name: "Red", slope: 138, rating: 73.8, yardage: 6883 }, { name: "Blue", slope: 139, rating: 72.4, yardage: 6568 }, { name: "White", slope: 135, rating: 70.9, yardage: 6277 }, { name: "Green", slope: 128, rating: 69.2, yardage: 5895 }] },
+  { id: "sea_island_plantation", name: "Sea Island — Plantation Course", nickname: "Plantation", city: "St. Simons Island", type: "resort", pars: [4,4,3,5,4,4,3,5,4,4,3,4,4,5,4,3,4,5], handicaps: [15,5,11,9,1,7,13,17,3,18,8,4,2,10,14,16,6,12], tees: [{ name: "Red", slope: 129, rating: 74.0, yardage: 6999 }, { name: "Blue", slope: 124, rating: 72.3, yardage: 6640 }, { name: "White", slope: 120, rating: 70.5, yardage: 6183 }, { name: "Green", slope: 116, rating: 69.1, yardage: 5818 }] },
+  { id: "sea_island_retreat", name: "Sea Island — Retreat Course", nickname: "Retreat", city: "St. Simons Island", type: "resort", pars: [5,4,3,4,4,4,3,5,4,5,4,3,4,4,4,3,5,4], handicaps: [13,5,11,1,7,17,15,9,3,16,6,14,8,2,10,18,12,4], tees: [{ name: "Red", slope: 133, rating: 73.9, yardage: 7110 }, { name: "Blue", slope: 131, rating: 72.6, yardage: 6723 }, { name: "White", slope: 128, rating: 70.8, yardage: 6350 }, { name: "Green", slope: 124, rating: 68.6, yardage: 5876 }] },
 ];
 
 // Group courses by type for dropdown

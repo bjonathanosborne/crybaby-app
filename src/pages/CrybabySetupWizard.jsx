@@ -69,6 +69,13 @@ const AUSTIN_COURSES = [
   { id: "kissing_tree", name: "Kissing Tree Golf Club", city: "San Marcos", type: "public", pars: [4,3,5,4,4,3,4,5,4,5,4,3,4,4,3,4,5,4], handicaps: [5,15,1,9,7,17,11,3,13,2,8,18,6,10,16,12,4,14], tees: [{ name: "Blue", slope: 132, rating: 71.8, yardage: 6842 }, { name: "White", slope: 126, rating: 69.5, yardage: 6310 }] },
   { id: "riverside", name: "Riverside Golf Course", city: "Austin", type: "public", pars: [5,4,3,4,4,4,3,5,4,4,5,4,3,4,4,5,3,4], handicaps: [3,7,15,5,1,9,17,11,13,8,2,10,18,4,6,12,16,14], tees: [{ name: "Blue", slope: 124, rating: 69.8, yardage: 6308 }, { name: "White", slope: 119, rating: 67.9, yardage: 5880 }] },
   { id: "colovista", name: "ColoVista Country Club", city: "Bastrop", type: "semi-private", pars: [4,5,4,3,4,3,5,4,4,4,3,5,4,4,3,4,5,4], handicaps: [7,1,9,15,5,17,3,11,13,10,18,2,8,6,16,12,4,14], tees: [{ name: "Blue", slope: 134, rating: 72.3, yardage: 6886 }, { name: "White", slope: 128, rating: 70.0, yardage: 6350 }] },
+  // === SEA ISLAND RESORT (St. Simons Island, GA) ===
+  // Mirror of the constants.js entries — kept in sync per the
+  // "Dedupe AUSTIN_COURSES" TODO. See src/data/constants.js for
+  // sources + tee-naming rationale.
+  { id: "sea_island_seaside", name: "Sea Island — Seaside Course", city: "St. Simons Island", type: "resort", pars: [4,4,3,4,4,3,5,4,4,4,4,3,4,4,5,4,3,4], handicaps: [7,3,9,1,11,17,15,13,5,6,10,12,2,16,14,8,18,4], tees: [{ name: "Red", slope: 138, rating: 73.8, yardage: 6883 }, { name: "Blue", slope: 139, rating: 72.4, yardage: 6568 }, { name: "White", slope: 135, rating: 70.9, yardage: 6277 }, { name: "Green", slope: 128, rating: 69.2, yardage: 5895 }] },
+  { id: "sea_island_plantation", name: "Sea Island — Plantation Course", city: "St. Simons Island", type: "resort", pars: [4,4,3,5,4,4,3,5,4,4,3,4,4,5,4,3,4,5], handicaps: [15,5,11,9,1,7,13,17,3,18,8,4,2,10,14,16,6,12], tees: [{ name: "Red", slope: 129, rating: 74.0, yardage: 6999 }, { name: "Blue", slope: 124, rating: 72.3, yardage: 6640 }, { name: "White", slope: 120, rating: 70.5, yardage: 6183 }, { name: "Green", slope: 116, rating: 69.1, yardage: 5818 }] },
+  { id: "sea_island_retreat", name: "Sea Island — Retreat Course", city: "St. Simons Island", type: "resort", pars: [5,4,3,4,4,4,3,5,4,5,4,3,4,4,4,3,5,4], handicaps: [13,5,11,1,7,17,15,9,3,16,6,14,8,2,10,18,12,4], tees: [{ name: "Red", slope: 133, rating: 73.9, yardage: 7110 }, { name: "Blue", slope: 131, rating: 72.6, yardage: 6723 }, { name: "White", slope: 128, rating: 70.8, yardage: 6350 }, { name: "Green", slope: 124, rating: 68.6, yardage: 5876 }] },
 ];
 
 const COURSE_GROUPS = [
