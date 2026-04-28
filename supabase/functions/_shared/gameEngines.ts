@@ -308,33 +308,86 @@ export function getTeamsForHole(
   }
 }
 
-function getDOCTeams(holeNumber: number, players: Player[]): TeamInfo | null {
-  const drivers = players.filter(p => p.position === 'driver');
-  const riders = players.filter(p => p.position === 'rider');
-  const cartA = players.filter(p => p.cart === 'A');
-  const cartB = players.filter(p => p.cart === 'B');
+// DOC roster slots, exactly one per cart/position combination.
+// `getDOCTeams` returns these slot identities so the four phase
+// pairings (Drivers, Others, Carts, Crybaby) all key off the same
+// roster shape — no per-phase recomputation, no `.find()` hazard.
+interface DOCRoster {
+  driverA: Player;
+  riderA: Player;
+  driverB: Player;
+  riderB: Player;
+}
 
+function resolveDOCRoster(players: Player[]): DOCRoster {
+  // PR #28+: DOC is locked to exactly 4 players (gameFormats.ts:37
+  // `players: { min: 4, max: 4 }`). The setup wizard enforces this
+  // for new rounds. If the engine sees anything other than 4, throw
+  // — guessing semantics for a 5-player DOC roster (which only ever
+  // existed as a buggy interim state, never as a product spec) is
+  // worse than a clear error.
+  if (players.length !== 4) {
+    throw new Error(
+      `DOC requires exactly 4 players (got ${players.length}). ` +
+      `5-player DOC was never a product-supported configuration; ` +
+      `the engine no longer guesses at the rotation rule.`,
+    );
+  }
+  const driverA = players.find(p => p.cart === 'A' && p.position === 'driver');
+  const riderA  = players.find(p => p.cart === 'A' && p.position === 'rider');
+  const driverB = players.find(p => p.cart === 'B' && p.position === 'driver');
+  const riderB  = players.find(p => p.cart === 'B' && p.position === 'rider');
+  if (!driverA || !riderA || !driverB || !riderB) {
+    const present = players.map(p =>
+      `${p.id}(${p.cart ?? '?'}/${p.position ?? '?'})`,
+    ).join(', ');
+    throw new Error(
+      `DOC roster must have exactly one player per cart/position slot ` +
+      `(driverA, riderA, driverB, riderB). Got: ${present}.`,
+    );
+  }
+  return { driverA, riderA, driverB, riderB };
+}
+
+function getDOCTeams(holeNumber: number, players: Player[]): TeamInfo | null {
+  // Crybaby phase (16-18) is handled by the caller via skins fallback;
+  // the team-rotation function returns null and skips the roster check.
+  if (holeNumber > 15) {
+    return null;
+  }
+  const { driverA, riderA, driverB, riderB } = resolveDOCRoster(players);
+
+  // Drivers phase (1-5): position-based split.
+  //   Team A = both drivers; Team B = both riders.
   if (holeNumber <= 5) {
     return {
-      teamA: { name: 'Drivers', players: drivers, color: '#16A34A' },
-      teamB: { name: 'Riders', players: riders, color: '#8B5CF6' },
-    };
-  } else if (holeNumber <= 10) {
-    // Others phase: teams split by cart assignment so all players are included.
-    // Previous find()-based approach excluded duplicate cart+position combos (Bug 2).
-    const othersA = players.filter(p => p.cart === 'A');
-    const othersB = players.filter(p => p.cart === 'B');
-    return {
-      teamA: { name: 'Others 1', players: othersA, color: '#F59E0B' },
-      teamB: { name: 'Others 2', players: othersB, color: '#EC4899' },
-    };
-  } else if (holeNumber <= 15) {
-    return {
-      teamA: { name: 'Cart A', players: cartA, color: '#3B82F6' },
-      teamB: { name: 'Cart B', players: cartB, color: '#DC2626' },
+      teamA: { name: 'Drivers', players: [driverA, driverB], color: '#16A34A' },
+      teamB: { name: 'Riders',  players: [riderA,  riderB ], color: '#8B5CF6' },
     };
   }
-  return null; // Crybaby holes
+
+  // Others phase (6-10): cross-cart pairing — the canonical DOC
+  // rotation rule. Driver from cart A pairs with rider from cart B,
+  // and vice versa. This is the phase that visibly changes from
+  // the Drivers split (it's not driver-vs-rider anymore) but isn't
+  // yet the same-cart pairing of the Carts phase.
+  //
+  // PR #30: prior to this commit, Others returned the same Cart A
+  // vs Cart B split as the Carts phase, so holes 6-15 produced
+  // identical teams. See the PR description for the bug timeline.
+  if (holeNumber <= 10) {
+    return {
+      teamA: { name: 'Others 1', players: [driverA, riderB ], color: '#F59E0B' },
+      teamB: { name: 'Others 2', players: [driverB, riderA ], color: '#EC4899' },
+    };
+  }
+
+  // Carts phase (11-15): same-cart pairing.
+  //   Team A = Cart A pair; Team B = Cart B pair.
+  return {
+    teamA: { name: 'Cart A', players: [driverA, riderA], color: '#3B82F6' },
+    teamB: { name: 'Cart B', players: [driverB, riderB], color: '#DC2626' },
+  };
 }
 
 // --- FLIP TEAMS (random coin flip) ---
