@@ -207,7 +207,7 @@ export default function CourseSearch({
             overflowY: "auto",
           }}
         >
-          {/* Austin-area presets */}
+          {/* Local presets (Austin-area + Sea Island, etc.) */}
           {localResults.length > 0 && (
             <>
               <div
@@ -221,7 +221,7 @@ export default function CourseSearch({
                   fontFamily: FONT,
                 }}
               >
-                Austin Area
+                Featured Courses
               </div>
               {localResults.map((course) => (
                 <CourseRow
@@ -302,7 +302,7 @@ export default function CourseSearch({
             fontFamily: FONT,
           }}
         >
-          Searching Austin-area courses ·{" "}
+          Searching featured courses ·{" "}
           <a
             href="https://golfcourseapi.com"
             target="_blank"
