@@ -77,6 +77,9 @@ function freshSnapshot(players: Player[]): RoundStateSnapshot {
     hammerHistory: [],
     hammerPending: false,
     lastHammerBy: null,
+    // PR #31: hammer-resolved + conceded-winner per-hole state.
+    hammerResolved: false,
+    concededHammerWinnerTeamId: null,
     carryOver: 0,
     flipTeams: null,
     wolfState: { wolfOrder: [], currentWolfIndex: 0, partnerSelected: null, isLoneWolf: false },
@@ -441,19 +444,22 @@ describe("replayRound — hammer scenarios (Phase 2.5 release gate)", () => {
     expect(result.totals.d).toBe(-8);
   });
 
-  it("losing (folding) team had a gross birdie: no birdie bonus on fold value", () => {
-    // Riders had birdie (b=3) but laid down at depth 2. Drivers win fold.
-    // Since it's a fold (calculateFoldResult), birdie bonus does NOT apply
-    // — birdie multiplier only activates in calculateTeamHoleResult.
-    // translateToLegacy: laid_down at depth 2 by B thrower was A at 2 →
-    // folded by B → wait: laid down by Team A responder means A conceded.
-    // Last event depth 2 thrower=B response=laid_down. Actually let me
-    // re-read: "laid down by B" means B conceded, so A wins.
-    // For this test: B (riders) threw hammer at depth 2, A (drivers)
-    // laid down. A is the folder, B wins. Riders had b=3 birdie.
-    // translateToLegacy: events end laid_down at depth 2 by B thrower
-    // means thrower at final depth is B; resolveHammerOutcome says winner
-    // is thrower = B. legacy: hammerDepth=D-1=1, folded=true, winner='B'.
+  it("losing (folding) team had a gross birdie: birdie multiplier STACKS on fold (PR #31)", () => {
+    // PR #31: birdie multiplier now stacks on top of the locked
+    // hammer multiplier when a hole is conceded. Pre-PR-#31 the
+    // legacy `calculateFoldResult` helper produced a flat stake
+    // (no birdie); the test below documented that buggy behavior.
+    //
+    // Post-PR-#31 the replay routes folded holes through
+    // `calculateTeamHoleResult`'s new conceded-hammer branch:
+    //   stake = (holeValue × 2^hammerDepth + carryOver) × birdieMultiplier
+    //
+    // Setup: B (riders) threw a depth-1 hammer; A (drivers) laid
+    // down. B is the locked winner. Riders made a gross birdie
+    // (b=3 at par 4) — multiplier 2× still applies on top of the
+    // 2× hammer.
+    //
+    // Stake per player: $2 × 2^1 × 2 = $8.
     const settingsWithBirdie = makeSettings({ hammer: true, birdieBonus: true, birdieMultiplier: 2 });
     const holes: ReplayHoleInput[] = Array.from({ length: 18 }, (_, i) => ({
       holeNumber: i + 1,
@@ -471,11 +477,12 @@ describe("replayRound — hammer scenarios (Phase 2.5 release gate)", () => {
       settingsWithBirdie,
       holes,
     );
-    // Fold value = 2 * 2^1 = $4 per player. Birdie bonus NOT applied on folds.
-    expect(result.totals.b).toBe(4);
-    expect(result.totals.d).toBe(4);
-    expect(result.totals.a).toBe(-4);
-    expect(result.totals.c).toBe(-4);
+    // Fold value × birdie = $2 × 2 (hammer) × 2 (birdie) = $8 per player.
+    // B players (winners): +$8 each. A players (losers): −$8 each.
+    expect(result.totals.b).toBe(8);
+    expect(result.totals.d).toBe(8);
+    expect(result.totals.a).toBe(-8);
+    expect(result.totals.c).toBe(-8);
   });
 
   it("no hammers across all 18 holes produces standard 1× payouts (regression check)", () => {
