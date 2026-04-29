@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import crybabyLogo from "@/assets/crybaby-logo.png";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { loadRound, updatePlayerScores, completeRound, cancelRound, createPost, saveAICommentary, insertSettlements, createRoundEvent, toggleBroadcast, saveGameState, RoundLoadError } from "@/lib/db";
+import { loadRound, updatePlayerScores, completeRound, cancelRound, createPost, saveAICommentary, insertSettlements, createRoundEvent, toggleBroadcast, saveGameState, activateRound, RoundLoadError } from "@/lib/db";
 import { toast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { useRoundState } from "@/hooks/useRoundState";
@@ -854,6 +854,15 @@ export default function CrybabActiveRound() {
   const [showFinishConfirm, setShowFinishConfirm] = useState<boolean>(false);
   const finishAutoOpenedRef = useRef<boolean>(false);
 
+  // PR #30 commit 3 (D4-A): mount-success activation latch. Round
+  // creation lands at status='setup'; this ref + effect below fire
+  // `activate_round` exactly once per mount (after the round loads
+  // successfully), flipping status to 'active'. Idempotent on the
+  // server (already-'active' rounds stay 'active'), fire-and-forget
+  // on the client (failure is silent — the next feed visit's
+  // sweeper will eventually clean up any stuck setup round).
+  const activateFiredRef = useRef<boolean>(false);
+
   // Bug 1 carry-over: user-triggered retry for the completion/settlement
   // write. Previously a failure left settlementsSaved=false with the effect
   // auto-re-firing every render (persist + totals are fresh refs each pass),
@@ -1191,6 +1200,19 @@ export default function CrybabActiveRound() {
       }
     }
   }, [round, totalsInitialized]);
+
+  // PR #30 commit 3 (D4-A): mount-success activation. Once the round
+  // is loaded (round + roundId both truthy), fire activate_round
+  // exactly once per mount. The RPC flips 'setup' → 'active'; it's
+  // idempotent for 'active'/'completed'/'canceled' rounds (those
+  // are no-ops). Fire-and-forget — failure is silent and the
+  // CrybabyFeed sweeper will clean up any orphaned setup round.
+  useEffect(() => {
+    if (round && roundId && !activateFiredRef.current) {
+      activateFiredRef.current = true;
+      void activateRound(roundId);
+    }
+  }, [round, roundId]);
 
   // Show wolf modal at the start of each hole for wolf game.
   // wolfModalShownForHole tracks whether we've already shown it this hole,

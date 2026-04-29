@@ -1,41 +1,51 @@
 // ============================================================
-// Stuck-round detection (PR #23 D4-B).
+// Stuck-round detection (PR #23 D4-B + PR #30 D4-A).
 //
 // A round is "stuck" when it was created but the scorekeeper never
-// reached the first-hole-submit state. This happens most commonly
-// when CrybabyActiveRound crashes on mount (e.g., the React #310
-// hook violation on 2026-04-22): the `rounds` row is already
-// committed at status='active', but `game_state.currentHole` was
-// never written because `saveGameState` never ran.
+// reached the first-hole-submit state. Two failure modes:
 //
-// The predicate here is UI-facing — used by StuckRoundBanner on
-// the feed to offer an Abandon affordance when the user has a
-// round that looks crash-born rather than in-progress. False
-// positives are survivable (the user can still Resume); false
-// negatives would leave users stuck.
+// 1. PR #23 D4-B path — round at status='active' with
+//    `game_state.currentHole` still null/0 + age >= 10 min.
+//    Created when CrybabyActiveRound crashed on mount (the React
+//    #310 hook violation from 2026-04-22). The rounds row was
+//    already committed at status='active', but saveGameState never
+//    ran so currentHole stayed null.
 //
-// Heuristic:
-//   - `status` is always "active" (caller pre-filters)
-//   - `game_state.currentHole` is null OR 0 (game never advanced)
-//   - AND the round is older than STUCK_GRACE_MINUTES
+// 2. PR #30 D4-A path — round at status='setup' + age >= 5 min.
+//    Created when the new atomic-creation path's mount-success
+//    `activate_round` never fired (network failure, user closed
+//    the tab mid-setup, etc.). The 5-minute window is shorter than
+//    the legacy active-stuck window because setup-state should
+//    flip to 'active' immediately on mount; anything still in
+//    setup is suspect quickly. The 30-minute server sweeper
+//    (cleanup_stuck_setup_rounds) handles long-tail cleanup; this
+//    predicate gives the scorekeeper a manual abandon affordance
+//    in the in-window space (5-30 min).
 //
-// The grace window gives the scorekeeper time to complete setup +
-// score hole 1 before we flag their round as stuck. Tuned to 10
-// minutes — generous enough that a real in-progress setup won't
-// hit it, tight enough that a crashed round surfaces before the
-// user has to ask why new-round is blocked.
+// False positives are survivable (the user can still Resume);
+// false negatives would leave users stuck.
 // ============================================================
 
 export const STUCK_GRACE_MINUTES = 10;
+// PR #30 D4-A: tighter grace for setup-state stuck rounds.
+// Setup → active should be near-instant on mount, so 5 min is
+// enough rope without false-flagging legitimate slow setups.
+export const STUCK_SETUP_GRACE_MINUTES = 5;
 
 /**
  * The minimum round shape the detector reads. Intentionally loose so
  * callers can pass `loadActiveRound()` output directly without type
  * gymnastics.
+ *
+ * PR #30 D4-A: `status` is now consulted by the predicate so we can
+ * distinguish 'active'-with-no-progress (PR #23 path) from 'setup'-
+ * stuck (PR #30 path). Optional so callers passing the legacy shape
+ * still work — they're treated as 'active' by default.
  */
 export interface StuckRoundCandidate {
   id: string;
   created_at: string;
+  status?: string | null;
   course_details?: {
     game_state?: {
       currentHole?: number | null;
@@ -45,7 +55,10 @@ export interface StuckRoundCandidate {
 
 /**
  * True iff the round shows every mark of a crashed-on-mount orphan.
- * Caller has already filtered to `status === 'active'`.
+ * Two predicates ORed together:
+ *
+ *   - PR #23 path: status='active' + currentHole null/0 + age >= 10 min
+ *   - PR #30 path: status='setup' + age >= 5 min
  *
  * `now` is injectable so unit tests can deterministically cross the
  * grace window without mocking Date.
@@ -54,14 +67,22 @@ export function isRoundStuck(
   round: StuckRoundCandidate,
   now: Date = new Date(),
 ): boolean {
-  const currentHole = round.course_details?.game_state?.currentHole ?? null;
-  // A non-null, non-zero currentHole means the scorekeeper at least
-  // advanced past hole 1 → definitely not stuck.
-  if (typeof currentHole === "number" && currentHole > 0) return false;
-
   const createdAtMs = Date.parse(round.created_at);
   if (!Number.isFinite(createdAtMs)) return false;
   const ageMinutes = (now.getTime() - createdAtMs) / 60_000;
+
+  // PR #30 D4-A: status='setup' + age >= 5 min is the new stuck
+  // predicate. Setup-state rounds whose mount-success activate
+  // never fired; the user gets an in-window abandon affordance
+  // before the 30-min server sweeper catches it.
+  if (round.status === "setup") {
+    return ageMinutes >= STUCK_SETUP_GRACE_MINUTES;
+  }
+
+  // PR #23 D4-B path: status='active' (or unspecified-defaulted-to-
+  // active) AND currentHole is null/0 AND age >= 10 min.
+  const currentHole = round.course_details?.game_state?.currentHole ?? null;
+  if (typeof currentHole === "number" && currentHole > 0) return false;
   return ageMinutes >= STUCK_GRACE_MINUTES;
 }
 

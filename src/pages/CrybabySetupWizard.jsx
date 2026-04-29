@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { createRound, loadActiveRound, loadProfile } from "@/lib/db";
+import { startRound, loadActiveRound, loadProfile } from "@/lib/db";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -1032,7 +1032,12 @@ export default function CrybabSetupWizard() {
         ? "Scorecard"
         : `$${holeValue}/hole`;
 
-      const roundId = await createRound({
+      // PR #30 commit 3 (D4-A): atomic round creation via the
+      // `start_round` RPC. Returns PersistResult<string> so failures
+      // surface as a typed error instead of throwing — handled below.
+      // Round lands at status='setup'; CrybabyActiveRound's mount-
+      // success effect flips it to 'active' once the page renders.
+      const result = await startRound({
         gameType: selectedFormat,
         course,
         courseDetails: course,
@@ -1046,7 +1051,21 @@ export default function CrybabSetupWizard() {
         flipConfig,
         handicapPercent: roundHandicapPercent,
       });
-      window.location.href = `/round?id=${roundId}`;
+      if (!result.ok) {
+        console.error("Failed to create round:", result.error);
+        toast({
+          title: "Failed to start round",
+          description: result.error.kind === "auth"
+            ? "Please sign in again."
+            : result.error.kind === "network"
+              ? "Check your connection and try again."
+              : "Please try again.",
+          variant: "destructive",
+        });
+        setSaving(false);
+        return;
+      }
+      window.location.href = `/round?id=${result.data}`;
     } catch (err) {
       console.error("Failed to create round:", err);
       toast({ title: "Failed to start round", description: "Please try again.", variant: "destructive" });
