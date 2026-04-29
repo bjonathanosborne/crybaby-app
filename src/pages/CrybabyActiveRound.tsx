@@ -793,6 +793,10 @@ export default function CrybabActiveRound() {
   const { hammerHistory, setHammerHistory } = rs;
   const { hammerPending, setHammerPending } = rs;
   const { lastHammerBy, setLastHammerBy } = rs;
+  // PR #31: hammer terminal-state + conceded-winner. See useRoundState
+  // for the contract; both reset on hole advance.
+  const { hammerResolved, setHammerResolved } = rs;
+  const { concededHammerWinnerTeamId, setConcededHammerWinnerTeamId } = rs;
   const { carryOver, setCarryOver } = rs;
   const { flipTeams, setFlipTeams } = rs;
   // C4B: Flip base-game per-hole state + scorekeeper setup config.
@@ -1560,17 +1564,31 @@ export default function CrybabActiveRound() {
     }
   };
 
+  // PR #31: concession resolves the multiplier, NOT the hole.
+  //
+  // Pre-PR #31, `handleHammerFold` short-circuited via setShowResult
+  // (with a hardcoded stake from the now-deleted `makeFoldResult`).
+  // That ended the hole before scores were entered, which meant a
+  // gross birdie made later had no chance to apply.
+  //
+  // The fix: lock the hammer state (depth + winner) and let score
+  // entry continue normally. When the user submits all 4 scores,
+  // `calculateHoleResult` reads `concededHammerWinnerTeamId` from
+  // round-state, hands it to `calculateTeamHoleResult`, and the
+  // engine's conceded-hammer branch computes the correct stacked
+  // stake (base × 2^depth × birdieMultiplier).
+  //
+  // The previous `makeFoldResult` helper is deleted — no callers
+  // post-fix.
   const handleHammerFold = () => {
     if (!hammerPending) {
       setShowHammer(false);
       return;
     }
-    const foldValue = round.holeValue * Math.pow(2, hammerDepth) + carryOver;
-    const throwingTeamId = lastHammerBy;
-    const result = makeFoldResult(foldValue, throwingTeamId);
     setShowHammer(false);
     setHammerPending(false);
-    setShowResult(result);
+    setHammerResolved(true);
+    setConcededHammerWinnerTeamId(lastHammerBy);
   };
 
   const handleHammerBack = () => {
@@ -1578,29 +1596,6 @@ export default function CrybabActiveRound() {
     setLastHammerBy(newThrower);
     setHammerPending(true);
     setShowHammer(true);
-  };
-
-  const makeFoldResult = (value, winnerTeamId) => {
-    if (!teams) return null;
-    const winTeam = winnerTeamId === "A" ? teams.teamA : teams.teamB;
-    const loseTeam = winnerTeamId === "A" ? teams.teamB : teams.teamA;
-    const playerResults = players.map(p => {
-      const isWinner = winTeam.players.some(tp => tp.id === p.id);
-      return {
-        id: p.id,
-        name: p.name,
-        amount: isWinner ? value : -value,
-      };
-    });
-    return {
-      push: false,
-      winnerName: winTeam.name,
-      amount: value,
-      carryOver: 0,
-      playerResults,
-      quip: getQuip("hammer_folded", { team: loseTeam.name }),
-      folded: true,
-    };
   };
 
   const submitHole = () => {
@@ -1727,11 +1722,44 @@ export default function CrybabActiveRound() {
       const teamAHasNetBirdie = teams.teamA.players.some(p => netScores[p.id] < par);
       const teamBHasNetBirdie = teams.teamB.players.some(p => netScores[p.id] < par);
 
-      if ((grossBirdieTeamA && teamBHasNetBirdie) || (grossBirdieTeamB && teamAHasNetBirdie)) {
+      // PR #31: birdie-forced-push only applies in the non-conceded
+      // path. Concession locks the winner — net-birdie cancellation
+      // can't push out of a fold.
+      if (
+        concededHammerWinnerTeamId === null &&
+        ((grossBirdieTeamA && teamBHasNetBirdie) || (grossBirdieTeamB && teamAHasNetBirdie))
+      ) {
         birdieForcedPush = true;
       } else {
         birdieMultiplier = settings.birdieMultiplier;
       }
+    }
+
+    // PR #31: conceded-hammer branch — winner locked, birdie still
+    // stacks. Mirrors `calculateTeamHoleResult`'s conceded branch in
+    // supabase/functions/_shared/gameEngines.ts so live and replay
+    // paths produce identical settlements.
+    if (concededHammerWinnerTeamId !== null) {
+      const stake = (round.holeValue * Math.pow(2, hammerDepth) + carryOver) * birdieMultiplier;
+      const winTeam = concededHammerWinnerTeamId === "A" ? teams.teamA : teams.teamB;
+      const loseTeam = concededHammerWinnerTeamId === "A" ? teams.teamB : teams.teamA;
+      const winnerIds = winTeam.players.map(p => p.id);
+      return {
+        push: false,
+        winnerName: winTeam.name,
+        amount: stake,
+        carryOver: 0,
+        playerResults: players.map(p => ({
+          id: p.id,
+          name: p.name,
+          amount: winnerIds.includes(p.id) ? stake : -stake,
+        })),
+        quip: hasGrossBirdie && birdieMultiplier > 1
+          ? `${loseTeam.name} folded — but ${bestGrossPlayer?.name}'s gross birdie still stacks. ${winTeam.name} cashes $${stake}. 💰🔨`
+          : getQuip("hammer_folded", { team: loseTeam.name }),
+        folded: true,
+        winnerIds,
+      };
     }
 
     if (birdieForcedPush) {
@@ -2869,8 +2897,38 @@ export default function CrybabActiveRound() {
             C6.1: during Flip crybaby phase (holes 16-18 with a designated
             crybaby + per-hole setup confirmed), depth-0 initiation is gated
             to the 2-man team (crybaby + partner). Hammer-BACKs at depth >= 1
-            are unchanged — alternation rules handle them at the engine level. */}
-        {settings.hammer && teams && !allScored && (() => {
+            are unchanged — alternation rules handle them at the engine level.
+
+            PR #31: visibility decoupled from score-entry state. Pre-PR-#31
+            this was gated on `!allScored` — once any score landed, the
+            button vanished, blocking late-hole hammer throws. Now gated on
+            `!hammerResolved`: visible from hole start until a hammer is
+            *resolved* (currently only on concession; an accepted hammer
+            keeps the button live as "Hammer Back" until the hole advances).
+            On resolution the button shows a disabled placeholder with
+            "Already hammered this hole." */}
+        {settings.hammer && teams && (() => {
+          // PR #31: post-resolution disabled placeholder.
+          if (hammerResolved) {
+            return (
+              <button
+                type="button"
+                disabled
+                data-testid="hammer-resolved"
+                aria-disabled="true"
+                title="Already hammered this hole."
+                style={{
+                  flex: 1, padding: "14px", borderRadius: 14, border: "none",
+                  cursor: "not-allowed",
+                  fontFamily: FONT, fontSize: 14, fontWeight: 700,
+                  background: "#DDD0BB", color: "#8B7355",
+                  opacity: 0.7,
+                }}
+              >
+                🔨 Already hammered this hole
+              </button>
+            );
+          }
           const canInitiate = canInitiateCrybabyHammer({
             gameMode: round.gameMode,
             currentHole,

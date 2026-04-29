@@ -1237,6 +1237,16 @@ export function calculateTeamHoleResult(
   lowestHandicap: number,
   holeHandicapRank: number,
   carryOverCap: string,
+  // PR #31: when non-null, the hole's hammer was conceded — winner is
+  // locked to this team ('A' or 'B'), the team-best score comparison is
+  // skipped, and birdie-forced-push is suppressed (a concession can't be
+  // undone by a net-birdie cancellation). Birdie multiplier still stacks
+  // multiplicatively on top of the locked hammer multiplier per the
+  // PR #31 spec.
+  //
+  // Null on accepted-and-played-out hammers (existing behaviour: winner
+  // from team-best score; birdie-forced-push logic still applies).
+  concededHammerWinnerTeamId: string | null = null,
 ): HoleResult {
   const netScores: Record<string, number> = {};
   players.forEach(p => {
@@ -1262,11 +1272,54 @@ export function calculateTeamHoleResult(
     const teamAHasNetBirdie = teams.teamA.players.some(p => netScores[p.id] < par);
     const teamBHasNetBirdie = teams.teamB.players.some(p => netScores[p.id] < par);
 
-    if ((grossBirdieTeamA && teamBHasNetBirdie) || (grossBirdieTeamB && teamAHasNetBirdie)) {
+    // PR #31: birdie-forced-push only applies in the non-conceded path.
+    // A concession locks the winner — even a net-birdie cancel can't
+    // turn it back into a push.
+    if (
+      concededHammerWinnerTeamId === null &&
+      ((grossBirdieTeamA && teamBHasNetBirdie) || (grossBirdieTeamB && teamAHasNetBirdie))
+    ) {
       birdieForcedPush = true;
     } else {
       birdieMultiplier = settings.birdieMultiplier;
     }
+  }
+
+  // PR #31: conceded-hammer branch.
+  //
+  // When a hammer was conceded mid-hole, the winner is locked (the
+  // team that threw the depth-N hammer that the other team folded
+  // on). Score entry continued so birdie can still apply, but the
+  // team-best score comparison is bypassed — even if the conceding
+  // team's player ends up with the lowest net score, the conceded
+  // outcome stands.
+  //
+  // Multiplier formula matches the existing accepted-and-played path:
+  //   (holeValue × 2^hammerDepth + carryOver) × birdieMultiplier
+  //
+  // No carry-over emission: the locked-winner branch always settles
+  // the pot to the conceding team's loss; nothing rolls forward.
+  if (concededHammerWinnerTeamId !== null) {
+    const stake = (holeValue * Math.pow(2, hammerDepth) + carryOver) * birdieMultiplier;
+    const winTeam = concededHammerWinnerTeamId === 'A' ? teams.teamA : teams.teamB;
+    const loseTeam = concededHammerWinnerTeamId === 'A' ? teams.teamB : teams.teamA;
+    const winnerIds = winTeam.players.map(p => p.id);
+    return {
+      push: false,
+      winnerName: winTeam.name,
+      amount: stake,
+      carryOver: 0,
+      playerResults: players.map(p => ({
+        id: p.id,
+        name: p.name,
+        amount: winnerIds.includes(p.id) ? stake : -stake,
+      })),
+      quip: hasGrossBirdie && birdieMultiplier > 1
+        ? `${loseTeam.name} folded — but ${bestGrossPlayer?.name}'s gross birdie still stacks. ${winTeam.name} cashes $${stake}. 💰🔨`
+        : `${loseTeam.name} folded the hammer. ${winTeam.name} takes $${stake}. 🔨`,
+      folded: true,
+      winnerIds,
+    };
   }
 
   if (birdieForcedPush) {
@@ -1446,10 +1499,18 @@ export function replayRound(
     let result: HoleResult;
 
     if (folded && teams && foldWinnerTeamId) {
-      // Folded hole — score-independent, amount = pot at fold time
-      const foldValue = holeValue * Math.pow(2, hammerDepth) + carryOver;
-      result = calculateFoldResult(players, teams, foldValue, foldWinnerTeamId);
-      result.carryOver = 0;
+      // PR #31: route folded holes through calculateTeamHoleResult's
+      // new conceded-hammer branch so birdie multiplier stacks on top
+      // of the locked hammer multiplier (live ≡ replay equivalence).
+      // The standalone `calculateFoldResult` helper is preserved
+      // for direct callers (none in current codebase) and tests; it
+      // stays at the no-birdie semantics for backward-compat with any
+      // legacy unit tests that exercise it directly.
+      result = calculateTeamHoleResult(
+        players, teams, scores, par, holeValue, carryOver, hammerDepth,
+        settings, lowestHandicap, holeHandicapRank, carryOverCap,
+        foldWinnerTeamId,
+      );
     } else if (gameMode === 'scorecard') {
       // PR #19: No-money mode. Engine returns zero-amount payout; any
       // apply-capture replay triggered by a post-round score correction

@@ -48,6 +48,43 @@ export interface RoundStateSnapshot {
   }>;
   hammerPending: boolean;
   lastHammerBy: string | null;
+  /**
+   * PR #31: explicit terminal-state flag for the current hole's hammer.
+   *
+   * True once a hammer thrown on this hole reaches a resolved state via
+   * either:
+   *   - concession  (the conceding team folded; multiplier locks at the
+   *                  current depth, winner = lastHammerBy)
+   *   - acceptance  (the responding team chose "play it out"; multiplier
+   *                  locks at the current depth, winner is determined by
+   *                  scores via the normal engine path)
+   *
+   * Decoupled from `hammerPending` because pending = "modal open, response
+   * needed", whereas resolved = "no more throws this hole." The two are
+   * independent: `pending=false` doesn't imply resolved (could mean "no
+   * hammer yet"), and resolved doesn't preclude further state mutation
+   * (concession can happen mid-hole; scores still get entered after).
+   *
+   * Drives the hammer button's disabled-with-tooltip state. Also gates
+   * the engine's conceded-hammer branch via `concededHammerWinnerTeamId`
+   * (see below).
+   *
+   * Reset to false on every hole advance.
+   */
+  hammerResolved: boolean;
+  /**
+   * PR #31: non-null only on concession. Tells the engine the winner is
+   * locked to this team (overrides the team-best score comparison) AND
+   * that the stake should bypass the birdie-forced-push logic (a
+   * concession can't be undone by a net-birdie cancellation).
+   *
+   * For accepted-and-played-out hammers, stays null — the engine's
+   * normal path determines the winner from scores. Birdie multiplier
+   * still stacks on top in both cases.
+   *
+   * Reset to null on every hole advance.
+   */
+  concededHammerWinnerTeamId: string | null;
   carryOver: number;
   /**
    * Legacy flipTeams (static per-round). Kept for backward compat with
@@ -177,6 +214,11 @@ export function computeAdvanceHole(
     hammerDepth: 0,
     hammerPending: false,
     lastHammerBy: null,
+    // PR #31: hammer-resolved + conceded-winner reset alongside the
+    // existing per-hole hammer state. Both fields are scoped to the
+    // current hole only.
+    hammerResolved: false,
+    concededHammerWinnerTeamId: null,
     hammerHistory: [
       ...prev.hammerHistory,
       {
@@ -215,6 +257,13 @@ export interface UseRoundStateReturn {
   setHammerPending: React.Dispatch<React.SetStateAction<boolean>>;
   lastHammerBy: string | null;
   setLastHammerBy: React.Dispatch<React.SetStateAction<string | null>>;
+  // PR #31: hammer terminal-state + conceded-winner state (per-hole;
+  // reset by computeAdvanceHole). See RoundStateSnapshot for the full
+  // contract.
+  hammerResolved: boolean;
+  setHammerResolved: React.Dispatch<React.SetStateAction<boolean>>;
+  concededHammerWinnerTeamId: string | null;
+  setConcededHammerWinnerTeamId: React.Dispatch<React.SetStateAction<string | null>>;
 
   // Bet state
   carryOver: number;
@@ -262,6 +311,9 @@ export function useRoundState(): UseRoundStateReturn {
   const [hammerHistory, setHammerHistory] = useState<RoundStateSnapshot["hammerHistory"]>([]);
   const [hammerPending, setHammerPending] = useState(false);
   const [lastHammerBy, setLastHammerBy] = useState<string | null>(null);
+  // PR #31: hammer terminal-state + conceded-winner. See snapshot doc.
+  const [hammerResolved, setHammerResolved] = useState(false);
+  const [concededHammerWinnerTeamId, setConcededHammerWinnerTeamId] = useState<string | null>(null);
   const [carryOver, setCarryOver] = useState(0);
   const [flipTeams, setFlipTeams] = useState<TeamInfo | null>(null);
   const [flipState, setFlipState] = useState<FlipState>(() => initFlipState());
@@ -298,6 +350,8 @@ export function useRoundState(): UseRoundStateReturn {
     hammerHistory,
     hammerPending,
     lastHammerBy,
+    hammerResolved,
+    concededHammerWinnerTeamId,
     carryOver,
     flipTeams,
     flipState,
@@ -309,7 +363,8 @@ export function useRoundState(): UseRoundStateReturn {
     nassauPresses,
   }), [
     currentHole, scores, totals, holeResults, hammerDepth, hammerHistory,
-    hammerPending, lastHammerBy, carryOver, flipTeams, flipState, flipConfig,
+    hammerPending, lastHammerBy, hammerResolved, concededHammerWinnerTeamId,
+    carryOver, flipTeams, flipState, flipConfig,
     rollingCarryWindow, crybabyState, wolfState, nassauState, nassauPresses,
   ]);
 
@@ -322,6 +377,8 @@ export function useRoundState(): UseRoundStateReturn {
     hammerHistory, setHammerHistory,
     hammerPending, setHammerPending,
     lastHammerBy, setLastHammerBy,
+    hammerResolved, setHammerResolved,
+    concededHammerWinnerTeamId, setConcededHammerWinnerTeamId,
     carryOver, setCarryOver,
     flipTeams, setFlipTeams,
     flipState, setFlipState,
