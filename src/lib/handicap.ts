@@ -99,30 +99,25 @@ export const HANDICAP_PERCENT_MAX = 100;
 export const HANDICAP_PERCENT_STEP = 5;
 export const HANDICAP_PERCENT_DEFAULT = 100;
 
-/**
- * Scale a raw handicap by a percentage. Uses `Math.floor` so a
- * 13-index at 80% becomes 10 (not 11) — the stricter-for-the-field
- * rounding matches standard team-game practice. Always-round-down
- * also yields consistent integer strokes without the pops engine
- * having to re-round.
- *
- * Negative handicaps (plus players) also floor-toward-negative-
- * infinity, so a -2 at 80% becomes -2 (floor(-1.6) = -2), preserving
- * the "fewer strokes given" sign.
- *
- * When `rawHandicap` is null/NaN we return null — callers must
- * propagate the absence rather than substitute a default, so round
- * setup can flag the missing-profile-handicap case explicitly.
- */
-export function computeAdjustedHandicap(
-  rawHandicap: number | null | undefined,
-  percent: number,
-): number | null {
-  if (rawHandicap === null || rawHandicap === undefined) return null;
-  if (!Number.isFinite(rawHandicap)) return null;
-  const scaled = (rawHandicap * percent) / 100;
-  return Math.floor(scaled);
-}
+// PR #33 (post-PR-#32 cleanup): `computeAdjustedHandicap` removed.
+//
+// The helper was added in PR #17 commit 2 alongside the per-round
+// handicap-percentage slider but was never wired into production
+// code paths. The actual round-start scaling lives inline in
+// `db.ts` (startRound + the deprecated createRound), and the engine's
+// `getStrokesOnHole` already handles the percent-aware lookup.
+//
+// Pre-removal, the helper used `Math.floor` — a stranded copy of the
+// same bug PR #32 just fixed in db.ts. With no callers AND the wrong
+// rounding rule, deletion was the cleanest move (over flipping it to
+// `Math.round`, which would have preserved an unused symbol that a
+// future PR could wire in without realizing it had its own audit
+// trail of buggy assumptions). The matching test block in
+// `handicapPercentSlider.test.tsx` was deleted alongside.
+//
+// If a future round-start scaling refactor needs a shared helper,
+// extract it from db.ts at that time — using the canonical
+// `Math.round((raw * percent) / 100)` rule established by PR #32.
 
 /**
  * Shape of the minimum data this helper reads from a round row.

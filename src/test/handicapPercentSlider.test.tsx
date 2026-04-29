@@ -4,7 +4,6 @@ import * as fs from "fs";
 import * as path from "path";
 
 import {
-  computeAdjustedHandicap,
   resolveHandicapPercent,
   shouldShowHandicapPercentLine,
   isHandicapPercentValid,
@@ -23,10 +22,15 @@ import type {
 // ============================================================
 // PR #17 commit 2 — per-round handicap percentage slider.
 //
+// PR #33 cleanup: the `computeAdjustedHandicap` helper this file
+// originally tested has been deleted as dead code. The actual
+// round-start scaling lives inline in db.ts (PR #32 corrected it
+// to Math.round). Block (a) below now covers only the surviving
+// helpers.
+//
 // Coverage:
-//   (a) Pure helpers: computeAdjustedHandicap + resolveHandicapPercent
-//       + isHandicapPercentValid + shouldShowHandicapPercentLine
-//       + constants.
+//   (a) Pure helpers: resolveHandicapPercent + isHandicapPercentValid
+//       + shouldShowHandicapPercentLine + constants.
 //   (b) Setup wizard source-level: slider component exists, renders
 //       for DOC/Flip only, defaults to 100, removes legacy button tabs.
 //   (c) db.ts source-level: createRound accepts handicapPercent, writes
@@ -48,36 +52,11 @@ beforeEach(() => cleanup());
 
 // ---------- (a) pure helpers ----------
 
-describe("computeAdjustedHandicap", () => {
-  it("at 100%, raw = adjusted", () => {
-    expect(computeAdjustedHandicap(13, 100)).toBe(13);
-    expect(computeAdjustedHandicap(0, 100)).toBe(0);
-    expect(computeAdjustedHandicap(-2, 100)).toBe(-2);
-  });
-  it("at 80%, 13 floors to 10", () => {
-    expect(computeAdjustedHandicap(13, 80)).toBe(10);
-  });
-  it("at 75%, 13 floors to 9", () => {
-    expect(computeAdjustedHandicap(13, 75)).toBe(9);
-  });
-  it("at 50%, even values halve cleanly", () => {
-    expect(computeAdjustedHandicap(20, 50)).toBe(10);
-  });
-  it("zero handicap stays zero at any percent", () => {
-    expect(computeAdjustedHandicap(0, 80)).toBe(0);
-    expect(computeAdjustedHandicap(0, 50)).toBe(0);
-  });
-  it("negative handicap: -2 at 80% → -2 (floor of -1.6)", () => {
-    expect(computeAdjustedHandicap(-2, 80)).toBe(-2);
-  });
-  it("null / undefined raw → null (no substitution)", () => {
-    expect(computeAdjustedHandicap(null, 80)).toBeNull();
-    expect(computeAdjustedHandicap(undefined, 80)).toBeNull();
-  });
-  it("NaN raw → null (defensive)", () => {
-    expect(computeAdjustedHandicap(NaN, 80)).toBeNull();
-  });
-});
+// PR #33: `describe("computeAdjustedHandicap", ...)` block removed.
+// The helper was deleted as dead code (no production callers) and
+// its tests went with it. The actual round-start scaling lives in
+// db.ts; src/test/jonathanDOCPopMath.test.ts is the canonical
+// regression suite for that path's rounding rule.
 
 describe("resolveHandicapPercent — fallback hierarchy", () => {
   it("1. round.handicap_percent wins when present", () => {
