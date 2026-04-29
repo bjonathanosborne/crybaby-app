@@ -188,3 +188,116 @@ checklist for future feature removals:
   guard
 - `src/test/photoCapturePostRoundRemoved.test.ts` — Commit 2 absence
   guard
+
+---
+
+## 2026-04-29 — Dead exports preserve their assumptions, not their irrelevance
+
+### What happened
+
+PR #32 fixed an on-course pop-math bug: `db.ts`'s round-start
+handicap scaling used `Math.floor((raw * percent) / 100)`, which
+truncated 7.8 → 7 and 17.9 → 17, fabricating 1-stroke gaps where
+the raw values were essentially tied. Jonathan's 2026-04-29 DOC
+round caught it — Michael (raw 8.0) got a phantom pop because Todd
+(raw 7.8) floored to 7. Fix was a single function call swap to
+`Math.round` at both `db.ts` call sites (`startRound` and the
+deprecated `createRound`).
+
+Live deploy verification through Claude in Chrome's `javascript_tool`
+fetched the bundle and counted `Math.round((var * var) / 100)`
+matches: **3 hits where I expected 2.** The third was an unrelated
+codepath I hadn't touched. Searched the source: `Math.floor` was
+still present at `src/lib/handicap.ts:117-125` in a function called
+`computeAdjustedHandicap`. Same bug shape — same broken rounding
+rule — sitting in a parallel module.
+
+But the helper had **zero production callers.** Only its own test
+file imported it. Tree-shaking didn't drop it because it was an
+exported symbol. The deployed bundle was carrying:
+- The CORRECT rounding at the live `db.ts` sites.
+- The INCORRECT rounding in a stranded helper that nothing called.
+
+The helper's docstring even justified the floor — "stricter-for-the-
+field rounding matches standard team-game practice" — a confidently
+wrong audit trail of stranded assumptions. A future engineer
+refactoring the round-start path could plausibly grep for "scale
+handicap" or similar, find this helper, wire it up, and re-introduce
+the exact bug PR #32 had just removed. Without realizing it had its
+own tests proving the wrong values were correct.
+
+PR #33 deleted the helper, its tests, and its import. 2 files
+changed, -8 tests (all from the dead block), zero behaviour change
+in production.
+
+### Lesson
+
+**Unused exports are not zero-risk. They are latent risk.**
+
+Tree-shaking can drop unused functions IF they're not exported. The
+moment you `export` a helper, you've created a public API surface
+the next refactor can wire into — carrying whatever assumptions
+were baked in when the helper was written. If those assumptions are
+wrong, deletion is the cleanest move. Flipping the rule preserves
+a symbol nobody asked for; deleting it forces the next caller to
+think clearly about which canonical helper to use (or to extract
+a new one with the right rule).
+
+The helper's audit trail is the giveaway. A docstring like
+"stricter-for-the-field" justifying a deliberate choice — when no
+production code actually exercises that choice — is **stranded
+intent**. Nobody validated that the choice was right, because
+nobody used it. The comment looks authoritative; the code is
+unverified.
+
+This is distinct from PR #27's "preserve the data tier" lesson,
+which is about KEEPING dead code (component shims) so legacy data
+keeps rendering. The difference:
+
+- PR #27 dead code: required for legacy DATA paths; deletion would
+  break historical rounds. Preserve with explicit dead-code
+  markers.
+- PR #33 dead code: was never required for any path. Deletion has
+  zero blast radius and removes future-bug surface area.
+
+**Triage rule:** unused export → check if anything depends on it
+SHIPPING (legacy data, replay paths, type re-exports). If nothing
+depends on it shipping, delete. The autonomous policy already
+authorizes this; PR #33 just exercised it.
+
+### What's in place now
+
+- `src/lib/handicap.ts` retains a PR-#33 marker comment where
+  `computeAdjustedHandicap` used to live. The marker explains what
+  was removed AND why — so a future engineer doing similar recon
+  finds the deletion rationale before re-introducing the same shape.
+- `src/test/jonathanDOCPopMath.test.ts` (PR #32) is the canonical
+  regression suite for round-start handicap rounding. Cross-
+  referenced from the test file that used to host the deleted
+  block.
+- The autonomous policy (locked in 2026-04-29) explicitly covers
+  this case: "Helper function cleanup (delete vs deprecate): if no
+  callers exist after a refactor, delete. Don't ask."
+
+### What would have caught this earlier
+
+Two checks during the original PR #32 fix would have surfaced the
+parallel stranded helper:
+
+1. **Grep for the buggy pattern, not just the changed file.**
+   `grep -rE "Math\.floor.*\* *[a-zA-Z]+ *\/ *100"` would have
+   landed on both `db.ts` AND `handicap.ts`. I only edited `db.ts`
+   because that was the call site forensics pointed at.
+2. **Bundle inspection counts as evidence.** The deploy-verify
+   script that surfaced the unexpected `Math.floor` hit was a
+   second pass that should be standard procedure when fixing a
+   rounding/scaling bug — there's almost always more than one
+   place the same conversion gets done.
+
+### Related
+
+- PR #32 — the round-to-nearest fix at `db.ts` (the production sites)
+- PR #33 — the dead-helper deletion (this lesson's source)
+- `src/test/jonathanDOCPopMath.test.ts` — canonical regression suite
+- `src/lib/handicap.ts` — PR-#33 marker comment in place of the
+  deleted helper
