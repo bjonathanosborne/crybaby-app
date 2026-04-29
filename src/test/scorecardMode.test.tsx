@@ -241,7 +241,7 @@ describe("replayRound — scorecard dispatch (engine integration)", () => {
       crybaby: false, crybabHoles: 3, crybabHammerRule: "allowed",
       birdieBonus: false, birdieMultiplier: 2,
       pops: false, noPopsParThree: true,
-      carryOverCap: "∞", handicapPercent: 100,
+      carryOverEnabled: false, carryOverCap: "∞", handicapPercent: 100,
       presses: false, pressType: "auto",
     } as const;
     const holes = [

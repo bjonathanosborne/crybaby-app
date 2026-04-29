@@ -367,6 +367,7 @@ function makeSettings(overrides: Partial<GameSettings> = {}): GameSettings {
     birdieMultiplier: 2,
     pops: true,                 // enable pops for the handicap scaling path
     noPopsParThree: true,
+    carryOverEnabled: true,     // PR #30 commit 2: explicit toggle (existing tests assume always-on)
     carryOverCap: "∞",
     handicapPercent: 100,
     presses: false,

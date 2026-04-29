@@ -49,6 +49,16 @@ export interface GameSettings {
   birdieMultiplier: number;
   pops: boolean;
   noPopsParThree: boolean;
+  // PR #30 commit 2: explicit toggle for the carry-over mechanic.
+  // Pre-PR-#30 the engine had only `carryOverCap: string` and treated
+  // a tied hole as "carry forward" unconditionally — the cap was the
+  // only kill switch (string "None" zeroed it). The setup wizard's
+  // off toggle wrote nothing to settings, so the engine still rolled
+  // pots forward silently. This boolean is now sourced from
+  // `mechanics.includes('carry_overs')` and is the single source of
+  // truth for whether ties carry. Legacy rounds with the field absent
+  // get `false` (carry-over off) per the user's spec.
+  carryOverEnabled: boolean;
   carryOverCap: string;
   handicapPercent: number;
   presses: boolean;
@@ -1260,8 +1270,15 @@ export function calculateTeamHoleResult(
   }
 
   if (birdieForcedPush) {
+    // PR #30 commit 2: pushes only carry forward when the carry-over
+    // mechanic is enabled. With it off (default), every push resets
+    // to a clean slate — the cap-string "None" path was the only
+    // kill switch before, which the wizard's off toggle didn't
+    // actually flip.
     const rawCarry = holeValue * Math.pow(2, hammerDepth) + carryOver;
-    const cappedCarry = capCarryOver(rawCarry, holeValue, carryOverCap);
+    const cappedCarry = settings.carryOverEnabled
+      ? capCarryOver(rawCarry, holeValue, carryOverCap)
+      : 0;
     return {
       push: true,
       winnerName: null,
@@ -1276,8 +1293,11 @@ export function calculateTeamHoleResult(
   const holeVal = (holeValue * Math.pow(2, hammerDepth) + carryOver) * birdieMultiplier;
 
   if (teamABest === teamBBest) {
+    // PR #30 commit 2: gated on settings.carryOverEnabled. See above.
     const rawCarry = holeValue * Math.pow(2, hammerDepth) * birdieMultiplier + carryOver;
-    const cappedCarry = capCarryOver(rawCarry, holeValue, carryOverCap);
+    const cappedCarry = settings.carryOverEnabled
+      ? capCarryOver(rawCarry, holeValue, carryOverCap)
+      : 0;
     return {
       push: true,
       winnerName: null,

@@ -47,6 +47,9 @@ function makeSettings(overrides: Partial<GameSettings> = {}): GameSettings {
     birdieMultiplier: 2,
     pops: false,
     noPopsParThree: true,
+    // PR #30 commit 2: explicit carry-over toggle. See gameEngines.test.ts
+    // for the rationale on defaulting to `true` in test helpers.
+    carryOverEnabled: true,
     carryOverCap: "∞",
     handicapPercent: 100,
     presses: false,

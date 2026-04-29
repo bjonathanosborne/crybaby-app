@@ -22,6 +22,11 @@ function makeSettings(overrides: Partial<GameSettings> = {}): GameSettings {
     birdieMultiplier: 2,
     pops: false,
     noPopsParThree: true,
+    // PR #30 commit 2: explicit carry-over toggle. Default `true`
+    // here so existing tests authored under the always-on assumption
+    // still exercise the carry path. New tests targeting the toggle's
+    // off-state pass `carryOverEnabled: false` via overrides.
+    carryOverEnabled: true,
     carryOverCap: "∞",
     handicapPercent: 100,
     presses: false,
