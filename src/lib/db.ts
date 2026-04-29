@@ -169,7 +169,17 @@ export async function startRound(args: StartRoundArgs): Promise<PersistResult<st
       .map(p => {
         const raw: number | null = (typeof p.handicap === "number" && Number.isFinite(p.handicap))
           ? p.handicap : null;
-        const adjusted: number | null = raw === null ? null : Math.floor((raw * percent) / 100);
+        // PR #32: standard rounding (round-to-nearest), not Math.floor.
+        // The pre-fix Math.floor turned 7.8 → 7 and 17.9 → 17, creating
+        // artificial 1-stroke gaps where the raw values were essentially
+        // tied. The engine's getStrokesOnHole uses Math.round; using floor
+        // here AND round there was an internal inconsistency. Forensics
+        // on Jonathan's 2026-04-29 DOC round (raw 13.6/8.0/7.8/17.9 →
+        // floored 13/8/7/17) confirmed the bug: Michael at 8.0 got 1 pop
+        // because Todd at 7.8 was floored to 7, fabricating a 1-stroke
+        // gap from a 0.2-stroke real difference. Post-fix: 14/8/8/18
+        // with Michael & Todd tied for lowest, both at 0 pops.
+        const adjusted: number | null = raw === null ? null : Math.round((raw * percent) / 100);
         return {
           name: p.name,
           handicap: adjusted,
@@ -293,8 +303,10 @@ export async function createRound({ gameType, course, courseDetails, stakes, hol
   // so the round detail UI can render "10 (80% of 13)".
   //
   // Default to 100 when the caller doesn't pass a percent (individual
-  // formats + legacy callers). At 100% the math is a no-op:
-  // floor(raw * 1.0) === raw for any integer-ish handicap.
+  // formats + legacy callers).
+  //
+  // PR #32: Math.round (round-to-nearest), not Math.floor. See the
+  // matching fix in startRound above for the on-course evidence.
   const percent = typeof handicapPercent === "number" ? handicapPercent : 100;
   const playerConfig = players
     .filter(p => p.name.trim())
@@ -304,7 +316,7 @@ export async function createRound({ gameType, course, courseDetails, stakes, hol
         : null;
       const adjusted: number | null = raw === null
         ? null
-        : Math.floor((raw * percent) / 100);
+        : Math.round((raw * percent) / 100);
       return {
         name: p.name,
         handicap: adjusted,      // engine reads this; it's the scaled value

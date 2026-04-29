@@ -238,8 +238,15 @@ describe("db.ts — createRound persistence (source-level)", () => {
     expect(src).toMatch(/handicap_percent:\s*percent/);
   });
 
-  it("adjusted handicap uses floor semantics", () => {
-    expect(src).toMatch(/Math\.floor\(\(raw \* percent\) \/ 100\)/);
+  it("adjusted handicap uses round-to-nearest semantics (PR #32)", () => {
+    // PR #32 flipped the round-start scaling from Math.floor to
+    // Math.round to align with the engine's getStrokesOnHole rule.
+    // The on-course bug: raw 7.8 floored to 7 created an artificial
+    // 1-stroke gap with a player at raw 8.0. See
+    // src/test/jonathanDOCPopMath.test.ts for the regression suite.
+    expect(src).toMatch(/Math\.round\(\(raw \* percent\) \/ 100\)/);
+    // No Math.floor at the round-start scaling site.
+    expect(src).not.toMatch(/Math\.floor\(\(raw \* percent\) \/ 100\)/);
   });
 
   it("percent defaults to 100 when caller omits it", () => {
