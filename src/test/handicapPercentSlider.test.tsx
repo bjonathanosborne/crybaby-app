@@ -209,8 +209,11 @@ describe("CrybabySetupWizard — handicap percentage slider (source-level)", () 
     expect(src).toMatch(/100%\s*=\s*full handicap/);
   });
 
-  it("createRound receives the top-level handicapPercent", () => {
-    expect(src).toMatch(/createRound\(\s*\{[\s\S]*?handicapPercent:\s*roundHandicapPercent/);
+  it("the round-create call receives the top-level handicapPercent", () => {
+    // PR #30 D4-A: wizard now calls `startRound` (the atomic RPC
+    // path); legacy `createRound` is still exported for now but
+    // no longer the wizard's call site. Match either name.
+    expect(src).toMatch(/(startRound|createRound)\(\s*\{[\s\S]*?handicapPercent:\s*roundHandicapPercent/);
     // Non-team formats force 100. Regex tolerates wrapping / parens / newlines.
     expect(src).toMatch(/selectedFormat\s*===\s*["']drivers_others_carts["']\s*\|\|\s*selectedFormat\s*===\s*["']flip["']\)?\s*[\s\S]{0,10}\?\s*handicapPercent\s*[\s\S]{0,10}:\s*100/);
   });
@@ -367,6 +370,7 @@ function makeSettings(overrides: Partial<GameSettings> = {}): GameSettings {
     birdieMultiplier: 2,
     pops: true,                 // enable pops for the handicap scaling path
     noPopsParThree: true,
+    carryOverEnabled: true,     // PR #30 commit 2: explicit toggle (existing tests assume always-on)
     carryOverCap: "∞",
     handicapPercent: 100,
     presses: false,

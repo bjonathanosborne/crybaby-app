@@ -209,35 +209,46 @@ describe("Sea Island courses — present in catalog with correct totals", () => 
 });
 
 // ------------------------------------------------------------
-// Block 3 — Wizard <-> constants.js dedup invariant.
-// The wizard has its own inline AUSTIN_COURSES at
-// src/pages/CrybabySetupWizard.jsx. Per the "Dedupe AUSTIN_COURSES"
-// TODO, the two copies must agree at least on the ids + key fields
-// for any course that exists in both. We assert each Sea Island id
-// is present in the wizard source and carries identical par
-// + handicap arrays + at least one tee with matching slope/rating.
+// Block 3 — Single source of truth for AUSTIN_COURSES.
+//
+// PR #30 commit 4: the wizard's inline copy of AUSTIN_COURSES
+// (which had drifted from constants.js — see TODOS.md for the
+// Westlake Blue/White vs. Black/Gold/Silver/Violet drift incident)
+// has been removed. The wizard now imports from `@/data/constants`
+// directly. These tests guard the dedup so a future refactor
+// can't reintroduce the inline copy without failing CI.
+//
+// Pre-PR-#30 this block asserted "wizard's inline pars match
+// constants.js pars". Now it asserts the simpler invariant:
+// the wizard imports from constants.js and contains no inline
+// AUSTIN_COURSES declaration.
 // ------------------------------------------------------------
 
-describe("Wizard inline AUSTIN_COURSES — Sea Island entries match constants.js", () => {
+describe("AUSTIN_COURSES — single source of truth (PR #30 commit 4)", () => {
   const wizardSrc = readFile("src/pages/CrybabySetupWizard.jsx");
 
-  for (const id of SEA_ISLAND_IDS) {
-    it(`${id} is present in wizard's inline AUSTIN_COURSES`, () => {
-      expect(wizardSrc).toMatch(new RegExp(`id:\\s*"${id}"`));
-    });
+  it("wizard imports AUSTIN_COURSES from @/data/constants (canonical source)", () => {
+    expect(wizardSrc).toMatch(
+      /import\s*\{\s*AUSTIN_COURSES\s*\}\s*from\s*["']@\/data\/constants["']/,
+    );
+  });
 
-    it(`${id} carries the same pars array in the wizard as in constants.js`, () => {
-      const c = COURSES.find(x => x.id === id)!;
-      const parsLiteral = `pars: [${c.pars.join(",")}]`;
-      expect(wizardSrc).toContain(parsLiteral);
-    });
+  it("wizard does NOT redeclare AUSTIN_COURSES inline (no `const AUSTIN_COURSES = [`)", () => {
+    // Catches the resurrection scenario: someone re-introduces an
+    // inline copy. The regex requires `const AUSTIN_COURSES =` at
+    // the start of a line (after whitespace), so the import line
+    // doesn't false-match.
+    expect(wizardSrc).not.toMatch(/^\s*const\s+AUSTIN_COURSES\s*=/m);
+  });
 
-    it(`${id} carries the same handicaps array in the wizard as in constants.js`, () => {
-      const c = COURSES.find(x => x.id === id)!;
-      const hcpLiteral = `handicaps: [${c.handicaps.join(",")}]`;
-      expect(wizardSrc).toContain(hcpLiteral);
-    });
-  }
+  it("each Sea Island course id is reachable through the import (presence check)", () => {
+    // Sanity: the imported array contains all three ids. If the
+    // import is broken or constants.js drops one, this fails.
+    for (const id of SEA_ISLAND_IDS) {
+      const course = COURSES.find(c => c.id === id);
+      expect(course, `${id} reachable via the imported AUSTIN_COURSES`).toBeDefined();
+    }
+  });
 });
 
 // ------------------------------------------------------------

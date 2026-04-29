@@ -1,9 +1,47 @@
 import { supabase } from "@/integrations/supabase/client";
 import { RoundLoadError, classifyRoundLoadError } from "@/lib/roundErrors";
+import type { PersistResult } from "@/hooks/useRoundPersistence";
 
 // Re-export typed errors so existing callers keep importing from "@/lib/db"
 export { RoundLoadError, classifyRoundLoadError };
 export type { RoundLoadErrorKind } from "@/lib/roundErrors";
+
+// PR #30 commit 3 (D4-A): atomic round creation helpers.
+// Wraps the three RPCs added in
+// supabase/migrations/20260429010000_d4a_atomic_round_creation.sql.
+// All three return PersistResult<T> so callers handle network /
+// auth / unknown failures uniformly without throwing.
+
+interface PersistError {
+  kind: "auth" | "network" | "conflict" | "unknown";
+  message: string;
+  cause: unknown;
+}
+
+function classifyDbError(err: unknown): PersistError {
+  const message = err instanceof Error ? err.message : String(err);
+  const maybeCoded = err as { code?: string; status?: number } | undefined;
+  const code = maybeCoded?.code ?? maybeCoded?.status;
+  if (code === "PGRST301" || code === 401 || /jwt|unauthor/i.test(message)) {
+    return { kind: "auth", message, cause: err };
+  }
+  if (code === "23505" || code === "40001" || /conflict|version/i.test(message)) {
+    return { kind: "conflict", message, cause: err };
+  }
+  if (/network|fetch|timeout|offline|abort/i.test(message)) {
+    return { kind: "network", message, cause: err };
+  }
+  return { kind: "unknown", message, cause: err };
+}
+
+async function runPersist<T>(fn: () => Promise<T>): Promise<PersistResult<T>> {
+  try {
+    const data = await fn();
+    return { ok: true, data };
+  } catch (err) {
+    return { ok: false, error: classifyDbError(err) };
+  }
+}
 
 // ─── Notifications ───
 
@@ -76,10 +114,173 @@ export async function removePushSubscription(endpoint: string) {
     .eq("endpoint", endpoint);
 }
 
+// Shared shape used by both startRound (the new D4-A atomic path)
+// and createRound (the deprecated two-insert path). Kept as a single
+// type so the wizard's call site doesn't need to change shape when
+// migrating between the two.
+//
+// PR #30 commit 3 (D4-A): startRound is the canonical path now.
+// createRound is `@deprecated` and kept for one PR cycle so any
+// in-flight callers don't break during the rollout.
+interface StartRoundArgs {
+  gameType: string;
+  course: { id: string; name: string; pars: number[]; handicaps: number[]; tees?: unknown };
+  courseDetails?: Record<string, unknown>;
+  stakes?: string;
+  holeValue: number;
+  players: Array<{
+    name: string;
+    handicap?: number | null;
+    cart?: string | null;
+    position?: string | null;
+    userId?: string | null;
+  }>;
+  mechanics: Set<string> | string[];
+  mechanicSettings: Record<string, unknown>;
+  privacy: "public" | "private" | string;
+  scorekeeperMode: boolean;
+  flipConfig?: { baseBet: number; carryOverWindow: number | "all" };
+  handicapPercent?: number | null;
+}
+
+/**
+ * PR #30 commit 3 (D4-A): atomic round creation.
+ *
+ * Calls the `start_round` RPC, which inserts both the round and its
+ * round_players rows inside a single transaction. The round lands
+ * at `status='setup'`; CrybabyActiveRound's mount-success effect
+ * flips it to `'active'` via `activateRound`. Stuck-in-setup rounds
+ * are swept by `cleanup_stuck_setup_rounds` from the feed.
+ *
+ * Returns `PersistResult<string>` where `data` is the new round id.
+ * Callers handle auth / network / conflict / unknown errors via
+ * the discriminated union — no throws past this boundary.
+ */
+export async function startRound(args: StartRoundArgs): Promise<PersistResult<string>> {
+  return runPersist(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Not authenticated");
+
+    // PR #17 commit 2: handicap-percent scaling. Same logic as the
+    // legacy createRound path (kept verbatim so behavior is identical).
+    const percent = typeof args.handicapPercent === "number" ? args.handicapPercent : 100;
+    const playerConfig = args.players
+      .filter(p => p.name.trim())
+      .map(p => {
+        const raw: number | null = (typeof p.handicap === "number" && Number.isFinite(p.handicap))
+          ? p.handicap : null;
+        const adjusted: number | null = raw === null ? null : Math.floor((raw * percent) / 100);
+        return {
+          name: p.name,
+          handicap: adjusted,
+          rawHandicap: raw,
+          handicap_percent: percent,
+          cart: p.cart || null,
+          position: p.position || null,
+          userId: p.userId || null,
+        };
+      });
+
+    const autoBroadcast = args.privacy !== "private";
+    const courseDetails = {
+      courseId: args.course.id,
+      pars: args.course.pars,
+      handicaps: args.course.handicaps,
+      tees: args.course.tees,
+      holeValue: args.holeValue,
+      mechanics: Array.isArray(args.mechanics) ? args.mechanics : Array.from(args.mechanics),
+      mechanicSettings: args.mechanicSettings,
+      privacy: args.privacy,
+      playerConfig,
+      ...(args.flipConfig && {
+        game_state: {
+          flipConfig: args.flipConfig,
+          flipState: { teamsByHole: {}, currentHole: 0 },
+        },
+      }),
+      ...(args.courseDetails ?? {}),
+    };
+
+    // round_players-shaped configs (snake_case) — the RPC reads
+    // `user_id`, `guest_name`, `is_scorekeeper` from each element.
+    const playerConfigs = args.players
+      .filter(p => p.name.trim())
+      .map((p, i) => ({
+        user_id: p.userId || (i === 0 ? user.id : null),
+        guest_name: (p.userId || i === 0) ? null : p.name,
+        is_scorekeeper: i === 0,
+      }));
+
+    const { data, error } = await supabase.rpc("start_round", {
+      p_game_type: args.gameType,
+      p_course: args.course.name,
+      p_course_details: courseDetails,
+      p_stakes: args.stakes ?? `$${args.holeValue}/hole`,
+      p_scorekeeper_mode: args.scorekeeperMode,
+      p_handicap_percent: percent,
+      p_player_configs: playerConfigs,
+    });
+    if (error) throw error;
+    if (typeof data !== "string") throw new Error(`start_round returned non-string: ${typeof data}`);
+
+    // Match createRound's broadcast notification side-effect.
+    if (autoBroadcast) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("display_name, first_name, last_name")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      const name = profile
+        ? ([profile.first_name, profile.last_name].filter(Boolean).join(" ") || profile.display_name)
+        : "Someone";
+      notifyFriendsOfBroadcast(data, args.course.name, name).catch(() => {});
+    }
+
+    return data;
+  });
+}
+
+/**
+ * PR #30 commit 3 (D4-A): flips a `status='setup'` round to
+ * `'active'`. Idempotent on the server (the RPC's UPDATE only
+ * matches rows where the caller is the creator AND the round is
+ * still in setup). Called from CrybabyActiveRound's mount-success
+ * effect; fire-and-forget — failure is silent and the next feed
+ * visit's sweeper will eventually cancel any orphaned setup round.
+ */
+export async function activateRound(roundId: string): Promise<PersistResult<void>> {
+  return runPersist(async () => {
+    const { error } = await supabase.rpc("activate_round", { p_round_id: roundId });
+    if (error) throw error;
+  });
+}
+
+/**
+ * PR #30 commit 3 (D4-A): client-side sweeper. Cancels up to 50
+ * of the calling user's `status='setup'` rounds older than 30
+ * minutes. Returns the count cancelled. Called from CrybabyFeed
+ * mount, fire-and-forget, once per visit (StrictMode-guarded).
+ */
+export async function cleanupStuckSetupRounds(): Promise<PersistResult<number>> {
+  return runPersist(async () => {
+    const { data, error } = await supabase.rpc("cleanup_stuck_setup_rounds");
+    if (error) throw error;
+    return typeof data === "number" ? data : 0;
+  });
+}
+
 // Create a round in the database and return its ID.
 // `stakes` is optional — when omitted, we compute a default "$X/hole"
 // from holeValue. Scorecard rounds (PR #19) pass "Scorecard" here so
 // the rounds row doesn't falsely advertise a dollar amount.
+//
+// @deprecated PR #30 commit 3 (D4-A): use `startRound` instead.
+// `createRound` runs two non-transactional inserts (rounds insert
+// → round_players insert) which can produce orphan rounds if the
+// second insert fails. `startRound` calls the `start_round` RPC,
+// which runs both inserts inside a single transaction. This
+// function is kept for one PR cycle so any in-flight callers
+// don't break; targeted for removal in the next cleanup PR.
 export async function createRound({ gameType, course, courseDetails, stakes, holeValue, players, mechanics, mechanicSettings, privacy, scorekeeperMode, flipConfig, handicapPercent }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
@@ -889,30 +1090,38 @@ export async function loadMyRounds(limit = 10) {
   return created || [];
 }
 
-// Load the current user's active round (if any) — includes rounds they're a player in
+// Load the current user's active round (if any) — includes rounds they're a player in.
+//
+// PR #23 D4-B: SELECT includes `course_details` so the stuck-round
+// detector can inspect `game_state.currentHole`.
+//
+// PR #30 D4-A: SELECT also includes `status` and the WHERE clause
+// widens to `status IN ('active', 'setup')` so setup-stuck rounds
+// surface to the StuckRoundBanner alongside legacy active-stuck
+// rounds. The 5-min setup-stuck predicate (in stuckRound.ts)
+// catches anything whose mount-success activate never fired.
 export async function loadActiveRound() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  // PR #23 D4-B: SELECT now includes `course_details` so the client-side
-  // stuck-round detector can inspect `game_state.currentHole` to tell
-  // an abandoned-mid-setup round (null currentHole, hours old) from a
-  // legit in-progress one. Needed for the StuckRoundBanner recovery UI.
-  const ROUND_COLS = "id, course, game_type, stakes, created_at, course_details";
+  const ROUND_COLS = "id, course, game_type, stakes, created_at, course_details, status";
 
   // Check rounds created by this user first
   const { data: created } = await supabase
     .from("rounds")
     .select(ROUND_COLS)
     .eq("created_by", user.id)
-    .eq("status", "active")
+    .in("status", ["active", "setup"])
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
   if (created) return created;
 
-  // Also check rounds where this user is listed as a player
+  // Also check rounds where this user is listed as a player.
+  // Setup-state rounds shouldn't have non-creator players yet
+  // (the round just got created), but the IN filter is harmless
+  // for the player path either way.
   const { data: playerRows } = await supabase
     .from("round_players")
     .select("round_id")
@@ -925,7 +1134,7 @@ export async function loadActiveRound() {
     .from("rounds")
     .select(ROUND_COLS)
     .in("id", roundIds)
-    .eq("status", "active")
+    .in("status", ["active", "setup"])
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();

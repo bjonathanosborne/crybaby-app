@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { loadFeed, createPost, addComment, toggleReaction, loadProfile, loadBroadcastRounds, followRound, declineRound, loadFollowedRoundEvents, loadActiveRound, cancelRound } from "@/lib/db";
+import { loadFeed, createPost, addComment, toggleReaction, loadProfile, loadBroadcastRounds, followRound, declineRound, loadFollowedRoundEvents, loadActiveRound, cancelRound, cleanupStuckSetupRounds } from "@/lib/db";
 import StuckRoundBanner from "@/components/round/StuckRoundBanner";
 import CaptureTile from "@/components/feed/CaptureTile";
 import { mergeCaptureEvents } from "@/components/round/events/captureEventTypes";
@@ -438,6 +438,10 @@ export default function CrybabyFeed() {
   // PR #23 D4-B: drives the "Abandoning…" state on StuckRoundBanner
   // while cancelRound() is in-flight so the user can't double-tap.
   const [abandoningRound, setAbandoningRound] = useState(false);
+  // PR #30 commit 3 (D4-A): client-side sweeper latch. Fires
+  // cleanupStuckSetupRounds once per feed mount (StrictMode-guarded
+  // via ref so dev-mode double-mount doesn't double-fire).
+  const sweepFiredRef = useRef(false);
 
   const refreshFeed = async () => {
     if (!user) return;
@@ -491,6 +495,20 @@ export default function CrybabyFeed() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
+  }, [user?.id]);
+
+  // PR #30 commit 3 (D4-A): client-side sweeper. Once per feed
+  // mount (per signed-in user), fire cleanup_stuck_setup_rounds.
+  // The RPC cancels up to 50 of the user's status='setup' rounds
+  // older than 30 minutes — catches any rounds the user abandoned
+  // mid-setup before reaching CrybabyActiveRound's mount-success
+  // activate. Fire-and-forget; the result count is ignored.
+  // StrictMode-guarded via sweepFiredRef so dev-mode double-mount
+  // doesn't double-fire.
+  useEffect(() => {
+    if (!user || sweepFiredRef.current) return;
+    sweepFiredRef.current = true;
+    void cleanupStuckSetupRounds();
   }, [user?.id]);
 
   const handlePost = async (text) => {

@@ -171,7 +171,11 @@ describe("C4B — setup wizard flip-config panel", () => {
     expect(src).toMatch(/flipConfigReady\s*=\s*flipBetIsValid\s*&&\s*flipWindowIsChosen/);
   });
 
-  it("passes flipConfig through createRound when the scorekeeper picked Flip", async () => {
+  it("passes flipConfig through the round-create call when the scorekeeper picked Flip", async () => {
+    // PR #30 D4-A: wizard now calls `startRound` (atomic RPC path).
+    // The flipConfig arg flows through the same shape; this test
+    // tolerates either function name so the assertion stays robust
+    // if/when createRound is fully removed in a follow-up.
     const fs = await import("fs");
     const path = await import("path");
     const src = fs.readFileSync(
@@ -179,26 +183,27 @@ describe("C4B — setup wizard flip-config panel", () => {
       "utf-8",
     );
     expect(src).toMatch(/selectedFormat\s*===\s*"flip"[\s\S]*?\{\s*baseBet:\s*flipBaseBet,\s*carryOverWindow:\s*flipCarryWindow\s*\}/);
-    // PR #17 commit 2 added `handicapPercent` after `flipConfig`, so the
-    // match tolerates trailing args — just assert flipConfig is present
-    // somewhere inside the createRound call object.
-    expect(src).toMatch(/createRound\(\{[\s\S]*?flipConfig,[\s\S]*?\}\)/);
+    // The wizard's create-round call object must include flipConfig.
+    // Accepts startRound (current) or createRound (legacy).
+    expect(src).toMatch(/(startRound|createRound)\(\{[\s\S]*?flipConfig,[\s\S]*?\}\)/);
   });
 });
 
-describe("C4B — createRound seeds game_state.flipConfig + empty flipState", () => {
-  it("db.ts createRound accepts flipConfig and writes it into course_details.game_state", async () => {
+describe("C4B — round creation seeds game_state.flipConfig + empty flipState", () => {
+  it("db.ts startRound accepts flipConfig and writes it into course_details.game_state", async () => {
+    // PR #30 D4-A: startRound is the canonical path. Its courseDetails
+    // builder mirrors the deprecated createRound's flipConfig handling.
     const fs = await import("fs");
     const path = await import("path");
     const src = fs.readFileSync(
       path.resolve(__dirname, "../../src/lib/db.ts"),
       "utf-8",
     );
-    // createRound's destructured args include flipConfig.
-    expect(src).toMatch(/export async function createRound\(\{[^}]*flipConfig/);
-    // course_details payload conditionally includes flipConfig + empty FlipState.
+    // startRound's StartRoundArgs interface includes flipConfig
+    expect(src).toMatch(/flipConfig\?:\s*\{\s*baseBet:\s*number;\s*carryOverWindow:/);
+    // courseDetails payload conditionally includes flipConfig + empty FlipState
     expect(src).toMatch(
-      /\.\.\.\(flipConfig\s*&&\s*\{\s*game_state:\s*\{\s*flipConfig,\s*flipState:\s*\{\s*teamsByHole:\s*\{\}/,
+      /\.\.\.\(args\.flipConfig\s*&&\s*\{\s*game_state:\s*\{\s*flipConfig:\s*args\.flipConfig,\s*flipState:\s*\{\s*teamsByHole:\s*\{\}/,
     );
   });
 });

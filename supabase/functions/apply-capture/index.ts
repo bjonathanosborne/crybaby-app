@@ -365,6 +365,12 @@ serve(async (req) => {
       birdieMultiplier: typeof mechanicSettings.birdieMultiplier === "number" ? mechanicSettings.birdieMultiplier : 2,
       pops: Array.isArray(courseDetails.mechanics) && (courseDetails.mechanics as string[]).includes("pops"),
       noPopsParThree: true,
+      // PR #30 commit 2: carryOverEnabled mirrors the wizard's
+      // mechanics-array source of truth — carry-over is on iff the
+      // string "carry_overs" appears in course_details.mechanics.
+      // Replays of legacy rounds (mechanics array missing or no
+      // carry_overs entry) default to off.
+      carryOverEnabled: Array.isArray(courseDetails.mechanics) && (courseDetails.mechanics as string[]).includes("carry_overs"),
       carryOverCap: String(mechanicSettings.carryOverCap ?? "∞"),
       handicapPercent: resolvedEnginePercent,
       presses: Array.isArray(courseDetails.mechanics) && (courseDetails.mechanics as string[]).includes("presses"),
