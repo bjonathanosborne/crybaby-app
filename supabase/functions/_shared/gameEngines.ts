@@ -388,7 +388,10 @@ function getDOCTeams(holeNumber: number, players: Player[]): TeamInfo | null {
   if (holeNumber <= 10) {
     return {
       teamA: { name: 'Others 1', players: [driverA, riderB ], color: '#F59E0B' },
-      teamB: { name: 'Others 2', players: [driverB, riderA ], color: '#EC4899' },
+      // Teal (#14B8A6), not pink — keeps the Others palette distinct
+      // from Drivers (green/purple) and Carts (blue/red), and reads
+      // well against amber on the cream background.
+      teamB: { name: 'Others 2', players: [driverB, riderA ], color: '#14B8A6' },
     };
   }
 
