@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import crybabyLogo from "@/assets/crybaby-logo.png";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { loadRound, updatePlayerScores, completeRound, cancelRound, createPost, saveAICommentary, insertSettlements, createRoundEvent, toggleBroadcast, saveGameState, activateRound, RoundLoadError } from "@/lib/db";
 import { toast } from "@/hooks/use-toast";
@@ -2819,24 +2818,13 @@ export default function CrybabActiveRound() {
       )}
 
       {/* Top Bar.
-          Two-row header. Row 1 puts the wordmark on the left and
-          the BROADCAST + sync dot + ✕ cluster on the right, top-
-          aligned at the same Y so the eye reads them as a single
-          band. Row 2 hangs LEADERBOARD beneath the logo, flush to
-          the same left edge.
-
-          The crybaby-logo.png is a 2000x2000 asset whose actual
-          wordmark only occupies rows 662-1275 (~30% of the height)
-          and is also inset ~7% from the left. At small header
-          sizes that baked-in transparent padding made the
-          wordmark look indented, undersized, and vertically
-          offset from the BROADCAST pill on the right. We render
-          the image inside a clipping wrapper and apply negative
-          margins to crop the transparent padding so the visible
-          wordmark sits flush against the wrapper's edges. The
-          wrapper's reported height (the visible wordmark height)
-          then matches the BROADCAST pill height for a clean
-          top-aligned baseline. */}
+          Header uses the rebranded "Crybaby Golf" Pacifico-script
+          wordmark — same one shown on the splash screen, the auth
+          page, and the onboarding flow. The earlier PNG-based logo
+          was a legacy asset (2000x2000 with 70% transparent
+          padding); kept showing up indented/undersized because it
+          predated the rebrand. Switching to the text-based mark
+          also kills the crop-wrapper hack entirely. */}
       <div style={{
         padding: "12px 20px 10px",
         background: "#FAF5EC",
@@ -2847,31 +2835,19 @@ export default function CrybabActiveRound() {
           display: "flex", justifyContent: "space-between", alignItems: "center",
           gap: 12,
         }}>
-          {/* Logo wrapper. The PNG renders at height 144 but the
-              wrapper clips to the visible wordmark content box: ~44px
-              tall. Negative margins absorb the transparent padding
-              rows/cols baked into the asset (wordmark sits in rows
-              662-1275 of a 2000px-tall image, inset ~7% from the
-              left). Scaled the agent's first-pass values up ~1.4x
-              so the wordmark feels like the dominant identity
-              element, not a tiny chip. */}
+          {/* Wordmark. Pacifico script in dark-green with a subtle
+              gold textShadow — matches src/components/SplashScreen.tsx
+              and src/pages/AuthPage.tsx. */}
           <div style={{
-            height: 44,
-            overflow: "hidden",
-            display: "flex",
-            alignItems: "flex-start",
+            fontFamily: "'Pacifico', cursive",
+            fontSize: 32,
+            fontWeight: 400,
+            color: "#2D5016",
+            lineHeight: 1,
+            textShadow: "0 1px 8px rgba(212, 175, 55, 0.35)",
+            whiteSpace: "nowrap",
           }}>
-            <img
-              src={crybabyLogo}
-              alt="Crybaby"
-              style={{
-                height: 144,
-                display: "block",
-                marginTop: -48,
-                marginLeft: -10,
-                marginBottom: -52,
-              }}
-            />
+            Crybaby Golf
           </div>
 
           {/* Right cluster: BROADCAST + sync dot + ✕.
