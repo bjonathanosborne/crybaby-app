@@ -1254,6 +1254,35 @@ export default function CrybabActiveRound() {
     }
   }, [currentHole, round]);
 
+  // Pre-populate par for any unscored player when the user lands on a
+  // new hole. Pars are by far the most common gross score, so making
+  // par the default means a hole full of pars submits with zero taps,
+  // and any deviation is one or two taps on +/- away. Existing scores
+  // (e.g. when navigating back to a previously-scored hole, or when
+  // the round was restored from saved state) are never overwritten —
+  // we only fill the gaps.
+  useEffect(() => {
+    if (!round) return;
+    const holePar = round.course.pars[currentHole - 1];
+    if (typeof holePar !== "number") return;
+    const existing = scores[currentHole] || {};
+    const missing = round.players.filter(p => existing[p.id] == null);
+    if (missing.length === 0) return;
+    setScores(prev => {
+      const next = { ...(prev[currentHole] || {}) };
+      for (const p of missing) {
+        if (next[p.id] == null) next[p.id] = holePar;
+      }
+      return { ...prev, [currentHole]: next };
+    });
+    // We intentionally depend only on currentHole + round identity.
+    // `scores` would re-fire this effect after every score-change
+    // setState, which would no-op via the missing.length guard but
+    // adds re-render churn; the guard above + the hole-change-only
+    // dep list are the right shape.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentHole, round?.id]);
+
   // User-triggered retry: clears the error flag + bumps the nonce, which is
   // an explicit dep of the completion effect. Defined before the effect so
   // it can be captured in the toast's ToastAction closure.
