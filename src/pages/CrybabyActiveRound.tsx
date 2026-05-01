@@ -2825,33 +2825,27 @@ export default function CrybabActiveRound() {
         position: "sticky", top: 0, zIndex: 10,
         borderBottom: "1px solid #F3F4F6",
       }}>
+        {/* Top row: logo on the left, primary action pills on the
+            right (BROADCAST + sync dot + cancel). LEADERBOARD moves
+            to its own row below so the top reads as "what is this
+            round, and is it being shared?" without competing with
+            the standings toggle. */}
         <div style={{
           display: "flex", justifyContent: "space-between", alignItems: "center",
         }}>
-          {/* Logo block. Sized for a single-row header now that the
-              course/game-mode subtitle is gone (PR #44). Height tuned
-              so the wordmark sits at roughly the same visual weight
-              as the action pills on the right — no negative margins,
-              no stacked text. */}
           <img
             src={crybabyLogo}
             alt="Crybaby"
             style={{ height: 56, display: "block" }}
           />
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {/* Header action pills — text only, no emoji.
-                Two action pills + cancel:
-                  LIVE       — opens the event feed panel; the panel
-                               itself contains the BROADCAST on/off
-                               toggle (merged concept). Pill color
-                               reflects broadcast state at a glance:
-                               green = currently broadcasting,
-                               red = not broadcasting.
-                  LEADERBOARD — toggles the standings panel (red when
-                                hidden, dark when open).
-                  ✕          — cancel round.
-                The 8px sync dot keeps its meaning: green = all writes
-                flushed, amber = pending writes queued. */}
+            {/* BROADCAST pill — opens the live event feed panel; the
+                panel itself contains the BROADCAST on/off toggle.
+                Pill color reflects broadcast state at a glance:
+                green = currently broadcasting, red = not. The white
+                pulsing dot in the corner signals "events available."
+                The 8px sync dot below the pill keeps its meaning:
+                green = all writes flushed, amber = pending writes. */}
             <button
               onClick={() => setShowLiveFeed(true)}
               style={{
@@ -2865,7 +2859,7 @@ export default function CrybabActiveRound() {
                 ? "Broadcasting to friends — tap to open the live feed and toggle"
                 : "Tap to open the live feed (broadcasting OFF — toggle inside)"}
             >
-              LIVE
+              BROADCAST
               <div style={{
                 position: "absolute", top: 3, right: 3, width: 6, height: 6,
                 borderRadius: 3, background: "#fff",
@@ -2879,30 +2873,36 @@ export default function CrybabActiveRound() {
               }}
               title={pendingSync > 0 ? "Pending writes" : "All writes synced"}
             />
-              <button
-                onClick={() => setShowLeaderboard(!showLeaderboard)}
-                style={{
-                  padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer",
-                  fontFamily: FONT, fontSize: 11, fontWeight: 800, letterSpacing: "0.06em",
-                  background: showLeaderboard ? "#1E130A" : "#DC2626",
-                  color: "#fff",
-                }}
-                title={showLeaderboard ? "Hide standings" : "Show standings"}
-              >
-                LEADERBOARD
-              </button>
-              <button
-                onClick={() => setShowCancelConfirm(true)}
-                style={{
-                  padding: "6px 10px", borderRadius: 8, border: "none", cursor: "pointer",
-                  fontFamily: FONT, fontSize: 12, fontWeight: 800,
-                  background: "#FEF2F2", color: "#DC2626",
-                }}
-                title="Cancel Round"
-              >
-                ✕
-              </button>
+            <button
+              onClick={() => setShowCancelConfirm(true)}
+              style={{
+                padding: "6px 10px", borderRadius: 8, border: "none", cursor: "pointer",
+                fontFamily: FONT, fontSize: 12, fontWeight: 800,
+                background: "#FEF2F2", color: "#DC2626",
+              }}
+              title="Cancel Round"
+            >
+              ✕
+            </button>
           </div>
+        </div>
+
+        {/* Second row: LEADERBOARD pill. Aligned right so it sits
+            visually under the BROADCAST/✕ cluster. Same pill shape,
+            same color language (red = panel hidden, dark = open). */}
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 6 }}>
+          <button
+            onClick={() => setShowLeaderboard(!showLeaderboard)}
+            style={{
+              padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer",
+              fontFamily: FONT, fontSize: 11, fontWeight: 800, letterSpacing: "0.06em",
+              background: showLeaderboard ? "#1E130A" : "#DC2626",
+              color: "#fff",
+            }}
+            title={showLeaderboard ? "Hide standings" : "Show standings"}
+          >
+            LEADERBOARD
+          </button>
         </div>
 
         <HoleHeader
