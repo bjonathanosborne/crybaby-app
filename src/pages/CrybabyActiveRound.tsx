@@ -1556,8 +1556,14 @@ export default function CrybabActiveRound() {
     };
   }
 
+  // Flip resolves teams per hole: flipState.teamsByHole[currentHole]
+  // is the source of truth post C4/C5; flipTeams is the legacy
+  // single-team shape kept for backward compat with rounds that
+  // pre-date the per-hole reflip feature. Prefer the current-hole
+  // entry so avatars + leaderboard reflect THIS hole's pairing,
+  // not whatever the last round-start flip locked in.
   const teams = round.gameMode === 'flip'
-    ? flipTeams
+    ? (flipState?.teamsByHole?.[currentHole] ?? flipTeams)
     : round.gameMode === 'wolf'
     ? (wolfPartner || isLoneWolf ? buildWolfTeams() : null)
     : supportsTeams(round.gameMode) ? getTeamsForHole(round.gameMode, currentHole, players) : null;
