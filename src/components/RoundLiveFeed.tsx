@@ -57,6 +57,17 @@ interface RoundLiveFeedProps {
   hideMoney?: boolean;
   /** Player ids currently holding an open hammer — drives the badge in standings. */
   openHammerPlayerIds?: string[];
+  /**
+   * Broadcast state for the round + a toggle handler. Rendered as an
+   * on/off pill in this panel's header so the scorekeeper can flip
+   * round-level visibility without leaving the feed view (BROADCAST
+   * + FEED merged into a single concept; see PR description).
+   * Both must be passed together to render the toggle; if either is
+   * absent (e.g. the panel is opened from a context that doesn't own
+   * broadcast state) the toggle is hidden.
+   */
+  isBroadcast?: boolean;
+  onToggleBroadcast?: () => void;
 }
 
 export default function RoundLiveFeed({
@@ -72,6 +83,8 @@ export default function RoundLiveFeed({
   gameLabel = "Money",
   hideMoney = false,
   openHammerPlayerIds = [],
+  isBroadcast,
+  onToggleBroadcast,
 }: RoundLiveFeedProps) {
   const { user } = useAuth();
   const [events, setEvents] = useState<any[]>([]);
@@ -157,7 +170,7 @@ export default function RoundLiveFeed({
     >
       {/* Header */}
       <div
-        className="flex items-center justify-between px-5 border-b border-border"
+        className="flex items-center justify-between px-5 border-b border-border gap-3"
         style={{ paddingTop: "max(14px, env(safe-area-inset-top))", paddingBottom: 14 }}
       >
         <div className="flex items-center gap-3">
@@ -166,12 +179,39 @@ export default function RoundLiveFeed({
             LIVE FEED
           </span>
         </div>
-        <button
-          onClick={onClose}
-          className="text-xs font-semibold text-muted-foreground px-3 py-1.5 rounded-lg bg-secondary hover:bg-muted transition-colors"
-        >
-          Close
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Broadcast toggle — only shown when the parent passes both
+              the current broadcast state AND a toggle handler. Letting
+              the scorekeeper turn friend-visibility on/off from the
+              same panel that shows the events keeps the two concepts
+              co-located: "what's happening" and "who can see it." */}
+          {typeof isBroadcast === "boolean" && onToggleBroadcast && (
+            <button
+              onClick={onToggleBroadcast}
+              style={{
+                padding: "6px 12px",
+                borderRadius: 8,
+                border: "none",
+                cursor: "pointer",
+                fontFamily: "'Lato', sans-serif",
+                fontSize: 11,
+                fontWeight: 800,
+                letterSpacing: "0.06em",
+                background: isBroadcast ? "#2D5016" : "#DC2626",
+                color: "#fff",
+              }}
+              title={isBroadcast ? "Broadcasting to friends — tap to stop" : "Tap to broadcast this round to friends"}
+            >
+              {isBroadcast ? "BROADCAST ON" : "BROADCAST OFF"}
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className="text-xs font-semibold text-muted-foreground px-3 py-1.5 rounded-lg bg-secondary hover:bg-muted transition-colors"
+          >
+            Close
+          </button>
+        </div>
       </div>
 
       {/* Feed */}
