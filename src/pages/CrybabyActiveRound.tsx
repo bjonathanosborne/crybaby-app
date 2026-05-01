@@ -235,9 +235,16 @@ function TeamBanner({ teams, holeValue, hammerDepth }) {
 }
 
 function ScoreInput({ player, par, score, strokes, onScoreChange, teamColor }) {
-  const netScore = score !== null ? score - strokes : null;
-  const diff = netScore !== null ? netScore - par : null;
-  const diffColor = diff === null ? "#A8957B" : diff < 0 ? "#2D5016" : diff > 0 ? "#DC2626" : "#1E130A";
+  // PR #39 follow-up: treat a null score as "par-by-default" everywhere
+  // in this component. The displayed value, the diff math, and the
+  // colored chrome all use `effectiveScore` instead of `score`, so a
+  // foursome of pars submits with zero taps and there's no state race
+  // to worry about. The earlier auto-fill useEffect approach didn't
+  // reliably land on iOS PWAs (state-restore order vs. effect timing).
+  const effectiveScore = score !== null ? score : par;
+  const netScore = effectiveScore - strokes;
+  const diff = netScore - par;
+  const diffColor = diff < 0 ? "#2D5016" : diff > 0 ? "#DC2626" : "#1E130A";
   // teamColor (when present) overrides the static per-player color so
   // teammates share the same circle color for the current hole's team
   // configuration. In DOC this rotates every 5 holes (Drivers/Others/
@@ -267,15 +274,15 @@ function ScoreInput({ player, par, score, strokes, onScoreChange, teamColor }) {
             </span>
           )}
         </div>
-        {netScore !== null && score !== netScore && (
+        {strokes > 0 && (
           <div style={{ fontFamily: MONO, fontSize: 11, color: "#A8957B", marginTop: 1 }}>
-            gross {score} → net {netScore}
+            gross {effectiveScore} → net {netScore}
           </div>
         )}
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <button
-          onClick={() => onScoreChange(player.id, Math.max(1, (score || par) - 1))}
+          onClick={() => onScoreChange(player.id, Math.max(1, effectiveScore - 1))}
           style={{
             width: 40, height: 40, borderRadius: 12, border: "none",
             background: "#EDE7D9", cursor: "pointer",
@@ -285,16 +292,22 @@ function ScoreInput({ player, par, score, strokes, onScoreChange, teamColor }) {
         >−</button>
         <div style={{
           width: 48, height: 48, borderRadius: 14,
-          background: score !== null ? (diff < 0 ? "#EEF5E5" : diff > 0 ? "#FEF2F2" : "#FAF5EC") : "#FAF5EC",
+          background: diff < 0 ? "#EEF5E5" : diff > 0 ? "#FEF2F2" : "#FAF5EC",
           display: "flex", alignItems: "center", justifyContent: "center",
           fontFamily: MONO, fontSize: 22, fontWeight: 800, color: diffColor,
-          border: score !== null ? `2px solid ${diffColor}20` : "2px solid #DDD0BB",
+          border: `2px solid ${diffColor}20`,
           transition: "all 0.2s ease",
+          // Subtle dashed border when the score is still the
+          // par-default (user hasn't touched +/-) so they can tell at
+          // a glance which players they've actually adjusted away from
+          // par vs. which are still defaulted.
+          borderStyle: score !== null ? "solid" : "dashed",
+          opacity: score !== null ? 1 : 0.7,
         }}>
-          {score !== null ? score : "–"}
+          {effectiveScore}
         </div>
         <button
-          onClick={() => onScoreChange(player.id, (score || par) + 1)}
+          onClick={() => onScoreChange(player.id, effectiveScore + 1)}
           style={{
             width: 40, height: 40, borderRadius: 12, border: "none",
             background: "#EDE7D9", cursor: "pointer",
@@ -1254,34 +1267,13 @@ export default function CrybabActiveRound() {
     }
   }, [currentHole, round]);
 
-  // Pre-populate par for any unscored player when the user lands on a
-  // new hole. Pars are by far the most common gross score, so making
-  // par the default means a hole full of pars submits with zero taps,
-  // and any deviation is one or two taps on +/- away. Existing scores
-  // (e.g. when navigating back to a previously-scored hole, or when
-  // the round was restored from saved state) are never overwritten —
-  // we only fill the gaps.
-  useEffect(() => {
-    if (!round) return;
-    const holePar = round.course.pars[currentHole - 1];
-    if (typeof holePar !== "number") return;
-    const existing = scores[currentHole] || {};
-    const missing = round.players.filter(p => existing[p.id] == null);
-    if (missing.length === 0) return;
-    setScores(prev => {
-      const next = { ...(prev[currentHole] || {}) };
-      for (const p of missing) {
-        if (next[p.id] == null) next[p.id] = holePar;
-      }
-      return { ...prev, [currentHole]: next };
-    });
-    // We intentionally depend only on currentHole + round identity.
-    // `scores` would re-fire this effect after every score-change
-    // setState, which would no-op via the missing.length guard but
-    // adds re-render churn; the guard above + the hole-change-only
-    // dep list are the right shape.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentHole, round?.id]);
+  // PR #39 originally pre-populated scores with par via a useEffect
+  // on hole change. That approach didn't reliably land on iOS PWAs
+  // due to state-restore-vs-effect timing. Replaced with a pure
+  // render-level fallback (see ScoreInput's effectiveScore + the
+  // component-scope effectiveScores map). The submit handler commits
+  // par to state so persistence still writes the hole's scores to
+  // round_players.hole_scores.
 
   // User-triggered retry: clears the error flag + bumps the nonce, which is
   // an explicit dep of the completion effect. Defined before the effect so
@@ -1580,7 +1572,17 @@ export default function CrybabActiveRound() {
   }
 
   const currentScores = scores[currentHole] || {};
-  const allScored = players.every(p => currentScores[p.id] != null);
+  // Par-default model: a null/missing score is treated as "par for
+  // this hole" everywhere downstream. allScored is therefore always
+  // true (the user can submit a foursome of pars without touching
+  // anything). The submit handler fills in par for any still-null
+  // scores before persistence — see handleSubmitHole below.
+  const allScored = true;
+  const effectiveScores: Record<string, number> = {};
+  for (const p of players) {
+    const v = currentScores[p.id];
+    effectiveScores[p.id] = (typeof v === "number" && Number.isFinite(v)) ? v : par;
+  }
   const effectiveHoleValue = round.holeValue * Math.pow(2, hammerDepth) + carryOver;
 
   const currentCrybaby = Object.entries(totals).sort((a, b) => a[1] - b[1])[0] || [null, 0];
@@ -1663,6 +1665,12 @@ export default function CrybabActiveRound() {
 
   const submitHole = () => {
     if (!allScored) return;
+    // Par-default model: commit any par-by-default scores to state so
+    // advanceHole's persistence layer (which reads `scores[hole]`) sees
+    // them and writes them to round_players.hole_scores. calculate-
+    // HoleResult uses effectiveScores from closure so it doesn't have
+    // to wait for this setState to flush.
+    setScores(prev => ({ ...prev, [currentHole]: { ...effectiveScores } }));
     const result = calculateHoleResult();
     setShowResult(result);
   };
@@ -1674,7 +1682,12 @@ export default function CrybabActiveRound() {
   // near the historical position.
 
   const calculateHoleResult = () => {
-    const cs = scores[currentHole];
+    // Par-default model: any player whose +/- the user didn't touch
+    // is scored at par. effectiveScores is computed at the component
+    // scope (see top of derived state). This ensures the engine sees
+    // a fully-populated map for every game mode + branch below
+    // without each one re-implementing the null→par fallback.
+    const cs = effectiveScores;
     const gameMode = round.gameMode;
 
     // C6: Flip crybaby sub-game (holes 16-18 when a crybaby exists).
