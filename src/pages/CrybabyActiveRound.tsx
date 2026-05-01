@@ -2837,15 +2837,21 @@ export default function CrybabActiveRound() {
         }}>
           {/* Wordmark. Pacifico script in dark-green with a subtle
               gold textShadow — matches src/components/SplashScreen.tsx
-              and src/pages/AuthPage.tsx. */}
+              and src/pages/AuthPage.tsx. lineHeight 1.1 (vs 1.0)
+              gives Pacifico's descenders ('y', 'f') room and shifts
+              the visual mass of the text into the optical center of
+              the row, so a sibling pill on align-items:center reads
+              as truly even. */}
           <div style={{
             fontFamily: "'Pacifico', cursive",
             fontSize: 32,
             fontWeight: 400,
             color: "#2D5016",
-            lineHeight: 1,
+            lineHeight: 1.1,
             textShadow: "0 1px 8px rgba(212, 175, 55, 0.35)",
             whiteSpace: "nowrap",
+            display: "flex",
+            alignItems: "center",
           }}>
             Crybaby Golf
           </div>
@@ -2861,8 +2867,8 @@ export default function CrybabActiveRound() {
             <button
               onClick={() => setShowLiveFeed(true)}
               style={{
-                padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer",
-                fontFamily: FONT, fontSize: 11, fontWeight: 800, letterSpacing: "0.06em",
+                padding: "10px 16px", borderRadius: 10, border: "none", cursor: "pointer",
+                fontFamily: FONT, fontSize: 12, fontWeight: 800, letterSpacing: "0.06em",
                 background: isBroadcast ? "#2D5016" : "#DC2626",
                 color: "#fff",
                 position: "relative",
@@ -2873,7 +2879,7 @@ export default function CrybabActiveRound() {
             >
               BROADCAST
               <div style={{
-                position: "absolute", top: 3, right: 3, width: 6, height: 6,
+                position: "absolute", top: 4, right: 4, width: 6, height: 6,
                 borderRadius: 3, background: "#fff",
                 animation: "pulse 2s infinite",
               }} />
@@ -2888,8 +2894,8 @@ export default function CrybabActiveRound() {
             <button
               onClick={() => setShowCancelConfirm(true)}
               style={{
-                padding: "6px 10px", borderRadius: 8, border: "none", cursor: "pointer",
-                fontFamily: FONT, fontSize: 12, fontWeight: 800,
+                padding: "8px 12px", borderRadius: 10, border: "none", cursor: "pointer",
+                fontFamily: FONT, fontSize: 14, fontWeight: 800,
                 background: "#FEF2F2", color: "#DC2626",
               }}
               title="Cancel Round"
@@ -2899,17 +2905,16 @@ export default function CrybabActiveRound() {
           </div>
         </div>
 
-        {/* LEADERBOARD pill — flush left under the wordmark.
-            Neutral palette (gray when hidden, black when open) so it
-            doesn't compete with the BROADCAST red/green or the
-            destructive ✕ red. The marginTop gives the wordmark room
-            to breathe instead of feeling crammed. */}
-        <div style={{ marginTop: 14 }}>
+        {/* LEADERBOARD pill — flush left, well below the wordmark
+            so it has its own visual layer. Neutral palette (gray
+            when hidden, black when open) so it doesn't compete with
+            the BROADCAST red/green or the destructive ✕ red. */}
+        <div style={{ marginTop: 22 }}>
           <button
             onClick={() => setShowLeaderboard(!showLeaderboard)}
             style={{
-              padding: "7px 14px", borderRadius: 8, border: "none", cursor: "pointer",
-              fontFamily: FONT, fontSize: 11, fontWeight: 800, letterSpacing: "0.06em",
+              padding: "9px 16px", borderRadius: 10, border: "none", cursor: "pointer",
+              fontFamily: FONT, fontSize: 12, fontWeight: 800, letterSpacing: "0.06em",
               background: showLeaderboard ? "#1E130A" : "#DDD0BB",
               color: showLeaderboard ? "#fff" : "#1E130A",
             }}
