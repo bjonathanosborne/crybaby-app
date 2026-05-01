@@ -2820,26 +2820,24 @@ export default function CrybabActiveRound() {
 
       {/* Top Bar */}
       <div style={{
-        padding: "50px 20px 0",
+        padding: "14px 20px 8px",
         background: "#FAF5EC",
         position: "sticky", top: 0, zIndex: 10,
         borderBottom: "1px solid #F3F4F6",
       }}>
         <div style={{
-          display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8,
+          display: "flex", justifyContent: "space-between", alignItems: "center",
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            {/* Logo: now that the course/game-mode subtitle is gone,
-                the negative top/bottom margins were squishing the
-                wordmark. Restored to natural padding. */}
-            <img src={crybabyLogo} alt="Crybaby" style={{ height: 88, marginLeft: -10 }} />
-            {/* Course + game-mode text removed — it crowded the
-                action pills on small screens. Course still surfaces
-                in the round-complete screen, the feed, and the
-                spectator view. The phase pill (DRIVERS / OTHERS /
-                CARTS) under the hole header keeps DOC context per
-                hole. */}
-          </div>
+          {/* Logo block. Sized for a single-row header now that the
+              course/game-mode subtitle is gone (PR #44). Height tuned
+              so the wordmark sits at roughly the same visual weight
+              as the action pills on the right — no negative margins,
+              no stacked text. */}
+          <img
+            src={crybabyLogo}
+            alt="Crybaby"
+            style={{ height: 56, display: "block" }}
+          />
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {/* Header action pills — text only, no emoji.
                 Two action pills + cancel:
