@@ -456,7 +456,14 @@ export async function loadRound(
       .select("*")
       .eq("round_id", roundId)
       .abortSignal(controller.signal)
-      .order("created_at");
+      // Stable ordering tiebreaker. PR #30's atomic start_round RPC
+      // inserts all round_players rows in one transaction, so they
+      // share a created_at timestamp; without the .order("id") tiebreaker
+      // the rows come back in arbitrary order. Callers that match
+      // playerConfig by user_id / guest_name don't strictly need this,
+      // but it keeps repeated reads consistent for any positional code.
+      .order("created_at")
+      .order("id");
 
     if (timedOut) throwTimeout();
     if (playersError) throw classifyRoundLoadError(playersError, roundId);
@@ -1553,7 +1560,9 @@ export interface RoundDetailBundle {
 export async function loadRoundDetail(roundId: string): Promise<RoundDetailBundle> {
   const [roundRes, playersRes, settleRes, eventRes] = await Promise.all([
     supabase.from("rounds").select("*").eq("id", roundId).maybeSingle(),
-    supabase.from("round_players").select("*").eq("round_id", roundId).order("created_at"),
+    // Stable ordering tiebreaker — see loadRound for context (PR #30 D4-A
+    // atomic insert assigns identical created_at to every row).
+    supabase.from("round_players").select("*").eq("round_id", roundId).order("created_at").order("id"),
     supabase.from("round_settlements").select("user_id, guest_name, amount, base_amount, crybaby_amount, is_manual_adjustment, notes").eq("round_id", roundId),
     supabase.from("round_events").select("id, hole_number, event_type, event_data, created_at").eq("round_id", roundId).order("created_at"),
   ]);

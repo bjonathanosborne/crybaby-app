@@ -13,6 +13,7 @@ import {
   shouldShowHandicapPercentLine,
 } from "@/lib/handicap";
 import { getStrokesOnHole } from "@/lib/gameEngines";
+import { findPlayerConfig } from "@/lib/playerConfigMatch";
 
 // ============================================================
 // RoundDetailPage — /round/:id/summary
@@ -101,10 +102,12 @@ export default function RoundDetailPage(): JSX.Element {
     const lowestHcp = Math.min(...hcpValues);
     const rounded = (h: number) => h; // strokes calc in getStrokesOnHole handles rounding
 
-    // Map by array index (playerConfig[i] aligns with bundle.players[i]
-    // at round-creation time per db.ts createRound ordering).
+    // PR #35: user_id-keyed lookup (was positional). D4-A's atomic
+    // start_round writes all round_players with identical
+    // created_at, so the read-back order can drift from the
+    // playerConfig array order. See src/lib/playerConfigMatch.ts.
     return bundle.players.map((p, i) => {
-      const pc = playerConfigs[i];
+      const pc = findPlayerConfig(p, playerConfigs, i);
       const hcp = rounded(pc.handicap as number);
       const grossScores = normaliseHoleScores(p.hole_scores).slice(0, holes);
       const gross = sum(grossScores);

@@ -23,6 +23,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import EditHammerModal from "@/components/capture/hammer/EditHammerModal";
 import FinishRoundConfirm from "@/components/round/FinishRoundConfirm";
 import { resolvePlayerCartPosition } from "@/lib/cartPosition";
+import { findPlayerConfig } from "@/lib/playerConfigMatch";
 import FlipReel from "@/components/flip/FlipReel";
 import FlipTeamsBadge from "@/components/flip/FlipTeamsBadge";
 import CrybabyTransition from "@/components/flip/CrybabyTransition";
@@ -929,8 +930,10 @@ export default function CrybabActiveRound() {
 
   // Build capture Player[] from DB rows (name from playerConfig if available).
   const capturePlayers = dbRound
-    ? dbPlayers.map(p => {
-        const cfg = dbRound.course_details?.playerConfig?.[dbPlayers.indexOf(p)] || {};
+    ? dbPlayers.map((p, i) => {
+        // PR #35: user_id-keyed lookup. See main player construction
+        // below for the full rationale.
+        const cfg = findPlayerConfig(p, dbRound.course_details?.playerConfig, i);
         return {
           id: p.id,
           name: p.guest_name || cfg.name || "Player",
@@ -1096,7 +1099,13 @@ export default function CrybabActiveRound() {
     holeValue: dbRound.course_details?.holeValue ?? 5,
     players: dbPlayers.map((p, i) => {
       const profile = p.user_id ? playerProfiles[p.user_id] : null;
-      const config = dbRound.course_details?.playerConfig?.[i] || {};
+      // PR #35: match playerConfig by user_id (not array index).
+      // D4-A's atomic start_round inserts all round_players with the
+      // same created_at, so .order("created_at") returns rows in
+      // arbitrary order — breaking positional alignment with
+      // playerConfig and producing the on-course "Michael popping,
+      // Jonathan not" symptom from the 2026-04-30 Westlake DOC round.
+      const config = findPlayerConfig(p, dbRound.course_details?.playerConfig, i);
       // PR #23 D2: normalise cart + position via resolvePlayerCartPosition.
       // Handles three input shapes cleanly:
       //   - new (post-commit-2): { cart: "A"|"B", position: "driver"|"rider" }
