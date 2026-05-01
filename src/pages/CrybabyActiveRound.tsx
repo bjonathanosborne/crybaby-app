@@ -2829,7 +2829,10 @@ export default function CrybabActiveRound() {
           display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8,
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <img src={crybabyLogo} alt="Crybaby" style={{ height: 100, marginLeft: -16, marginTop: -24, marginBottom: -24 }} />
+            {/* Logo: now that the course/game-mode subtitle is gone,
+                the negative top/bottom margins were squishing the
+                wordmark. Restored to natural padding. */}
+            <img src={crybabyLogo} alt="Crybaby" style={{ height: 88, marginLeft: -10 }} />
             {/* Course + game-mode text removed — it crowded the
                 action pills on small screens. Course still surfaces
                 in the round-complete screen, the feed, and the
