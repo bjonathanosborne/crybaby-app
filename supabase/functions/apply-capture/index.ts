@@ -42,6 +42,7 @@ import type {
   LegacyHammerEntry,
 } from "../_shared/hammerTypes.ts";
 import { feedPublishDecision } from "../_shared/feedPublishDecision.ts";
+import { findPlayerConfig } from "../_shared/playerConfigMatch.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -234,7 +235,14 @@ serve(async (req) => {
       .from("round_players")
       .select("*")
       .eq("round_id", roundId)
-      .order("created_at");
+      // Stable ordering. PR #30's atomic start_round assigns identical
+      // created_at timestamps to all four rows; without an id tiebreaker
+      // the rows come back in non-deterministic order, which used to
+      // crash the array-index alignment between rps[i] and playerConfig[i].
+      // findPlayerConfig below makes that alignment unnecessary, but
+      // the tiebreaker also keeps replay output stable run-to-run.
+      .order("created_at")
+      .order("id");
     if (rpsErr || !rpsData) {
       return new Response(JSON.stringify({ error: "Failed to load players" }), {
         status: 500,
@@ -378,7 +386,13 @@ serve(async (req) => {
     };
 
     const players: Player[] = rps.map((rp, i) => {
-      const cfg = playerConfigs[i] || {};
+      // Match by user_id / guest_name first, fall back to positional.
+      // Necessary because D4-A's atomic round creation produces
+      // round_players rows with identical created_at timestamps, so
+      // the array order coming back from the DB is non-deterministic.
+      // Positional indexing here was the root cause of Jonathan's
+      // 2026-04-30 Westlake DOC round showing wrong handicaps on hole 1.
+      const cfg = findPlayerConfig(rp, playerConfigs, i);
       return {
         id: rp.id,
         name: rp.guest_name || (cfg.name as string) || `Player ${i + 1}`,

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { loadFeed, createPost, addComment, toggleReaction, loadProfile, loadBroadcastRounds, followRound, declineRound, loadFollowedRoundEvents, loadActiveRound, cancelRound, cleanupStuckSetupRounds } from "@/lib/db";
+import { findPlayerConfig } from "@/lib/playerConfigMatch";
 import StuckRoundBanner from "@/components/round/StuckRoundBanner";
 import CaptureTile from "@/components/feed/CaptureTile";
 import { mergeCaptureEvents } from "@/components/round/events/captureEventTypes";
@@ -639,11 +640,14 @@ export default function CrybabyFeed() {
             : merged.filter(m => m.appliedData?.feed_published_at != null);
 
           // Build a player-id → display name map for the merged tiles.
+          // Use findPlayerConfig (matches by user_id / guest_name) instead of
+          // positional indexing because PR #30's atomic start_round RPC inserts
+          // round_players with identical created_at timestamps, so the array
+          // order coming back from supabase is non-deterministic.
           const playerNames = {};
-          (round.round_players || []).forEach(rp => {
-            playerNames[rp.id] = rp.guest_name
-              || round.course_details?.playerConfig?.[(round.round_players || []).indexOf(rp)]?.name
-              || "Player";
+          (round.round_players || []).forEach((rp, i) => {
+            const cfg = findPlayerConfig(rp, round.course_details?.playerConfig, i);
+            playerNames[rp.id] = rp.guest_name || cfg?.name || "Player";
           });
 
           if (visibleCaptures.length === 0 && nonCapture.length === 0) return null;

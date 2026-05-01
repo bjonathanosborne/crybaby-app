@@ -14,6 +14,7 @@ import {
   resolveHandicapPercent,
   HANDICAP_PERCENT_DEFAULT,
 } from "@/lib/handicap";
+import { findPlayerConfig } from "@/lib/playerConfigMatch";
 
 const FONT = "'DM Sans', system-ui, sans-serif";
 const MONO = "'JetBrains Mono', monospace";
@@ -89,18 +90,26 @@ export default function RoundEditScores() {
     })();
   }, [roundId]);
 
-  // Build derived player/settings objects from DB data
+  // Build derived player/settings objects from DB data.
+  //
+  // PR #35: pull each player's config via findPlayerConfig
+  // (user_id-keyed). Pre-fix this used playerConfig[i] which
+  // misaligned when round_players came back in non-positional
+  // order — see src/lib/playerConfigMatch.ts for the rationale.
   const derivedPlayers = useMemo(() => {
     if (!dbRound || !dbPlayers.length) return [];
-    return dbPlayers.map((p, i) => ({
-      id: p.id,
-      userId: p.user_id || null,
-      name: p.guest_name || dbRound.course_details?.playerConfig?.[i]?.name || `Player ${i + 1}`,
-      handicap: dbRound.course_details?.playerConfig?.[i]?.handicap ?? 12,
-      cart: dbRound.course_details?.playerConfig?.[i]?.cart || (i < 2 ? "A" : "B"),
-      position: dbRound.course_details?.playerConfig?.[i]?.position || (i % 2 === 0 ? "driver" : "rider"),
-      color: PLAYER_COLORS[i % PLAYER_COLORS.length],
-    }));
+    return dbPlayers.map((p, i) => {
+      const cfg = findPlayerConfig(p, dbRound.course_details?.playerConfig, i);
+      return {
+        id: p.id,
+        userId: p.user_id || null,
+        name: p.guest_name || cfg.name || `Player ${i + 1}`,
+        handicap: cfg.handicap ?? 12,
+        cart: cfg.cart || (i < 2 ? "A" : "B"),
+        position: cfg.position || (i % 2 === 0 ? "driver" : "rider"),
+        color: PLAYER_COLORS[i % PLAYER_COLORS.length],
+      };
+    });
   }, [dbRound, dbPlayers]);
 
   const settings = useMemo(() => {
