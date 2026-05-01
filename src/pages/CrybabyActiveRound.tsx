@@ -234,10 +234,15 @@ function TeamBanner({ teams, holeValue, hammerDepth }) {
   );
 }
 
-function ScoreInput({ player, par, score, strokes, onScoreChange }) {
+function ScoreInput({ player, par, score, strokes, onScoreChange, teamColor }) {
   const netScore = score !== null ? score - strokes : null;
   const diff = netScore !== null ? netScore - par : null;
   const diffColor = diff === null ? "#A8957B" : diff < 0 ? "#2D5016" : diff > 0 ? "#DC2626" : "#1E130A";
+  // teamColor (when present) overrides the static per-player color so
+  // teammates share the same circle color for the current hole's team
+  // configuration. In DOC this rotates every 5 holes (Drivers/Others/
+  // Carts), so the avatar visually follows the team rotation.
+  const avatarColor = teamColor || player.color;
   return (
     <div style={{
       display: "flex", alignItems: "center", gap: 12, padding: "12px 16px",
@@ -245,9 +250,10 @@ function ScoreInput({ player, par, score, strokes, onScoreChange }) {
       boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
     }}>
       <div style={{
-        width: 36, height: 36, borderRadius: 18, background: player.color,
+        width: 36, height: 36, borderRadius: 18, background: avatarColor,
         display: "flex", alignItems: "center", justifyContent: "center",
         color: "#fff", fontSize: 14, fontWeight: 700, fontFamily: FONT, flexShrink: 0,
+        transition: "background 0.3s ease",
       }}>{player.name[0]}</div>
       <div style={{ flex: 1 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -307,7 +313,7 @@ function ScoreInput({ player, par, score, strokes, onScoreChange }) {
  * asc by total strokes (lowest best) and shows a plain integer
  * count per player. strokesByPlayer is required in "strokes" mode.
  */
-function Leaderboard({ players, totals, currentCrybaby, mode = "money", strokesByPlayer = {} }) {
+function Leaderboard({ players, totals, currentCrybaby, mode = "money", strokesByPlayer = {}, teamColorByPlayerId = {} }) {
   const sorted = mode === "strokes"
     ? [...players].sort((a, b) => (strokesByPlayer[a.id] || 0) - (strokesByPlayer[b.id] || 0))
     : [...players].sort((a, b) => (totals[b.id] || 0) - (totals[a.id] || 0));
@@ -345,9 +351,11 @@ function Leaderboard({ players, totals, currentCrybaby, mode = "money", strokesB
               width: 18, textAlign: "center",
             }}>{i + 1}</span>
             <div style={{
-              width: 28, height: 28, borderRadius: 14, background: player.color,
+              width: 28, height: 28, borderRadius: 14,
+              background: teamColorByPlayerId[player.id] || player.color,
               display: "flex", alignItems: "center", justifyContent: "center",
               color: "#fff", fontSize: 11, fontWeight: 700, fontFamily: FONT,
+              transition: "background 0.3s ease",
             }}>{player.name[0]}</div>
             <div style={{ flex: 1 }}>
               <span style={{ fontFamily: FONT, fontSize: 13, fontWeight: 600, color: "#1E130A" }}>{player.name}</span>
@@ -1524,6 +1532,17 @@ export default function CrybabActiveRound() {
     : round.gameMode === 'wolf'
     ? (wolfPartner || isLoneWolf ? buildWolfTeams() : null)
     : supportsTeams(round.gameMode) ? getTeamsForHole(round.gameMode, currentHole, players) : null;
+
+  // Map each player.id → the color of their team for the current hole.
+  // Drives the avatar circles in ScoreInput + Leaderboard so teammates
+  // share a color at a glance. Empty when the game isn't team-based,
+  // or during DOC's Crybaby phase (16-18) where teams=null and the
+  // avatars fall back to player.color.
+  const teamColorByPlayerId: Record<string, string> = {};
+  if (teams) {
+    for (const p of teams.teamA.players) teamColorByPlayerId[p.id] = teams.teamA.color;
+    for (const p of teams.teamB.players) teamColorByPlayerId[p.id] = teams.teamB.color;
+  }
 
   const currentScores = scores[currentHole] || {};
   const allScored = players.every(p => currentScores[p.id] != null);
@@ -2827,6 +2846,7 @@ export default function CrybabActiveRound() {
             totals={totals}
             currentCrybaby={crybabyCandidateId}
             mode={hasMoneyMode ? "money" : "strokes"}
+            teamColorByPlayerId={teamColorByPlayerId}
             strokesByPlayer={(() => {
               const out: Record<string, number> = {};
               for (const p of players) out[p.id] = 0;
@@ -2895,6 +2915,7 @@ export default function CrybabActiveRound() {
               score={currentScores[player.id] ?? null}
               strokes={strokes}
               onScoreChange={handleScoreChange}
+              teamColor={teamColorByPlayerId[player.id]}
             />
           );
         })}
