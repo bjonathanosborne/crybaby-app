@@ -2826,7 +2826,7 @@ export default function CrybabActiveRound() {
           predated the rebrand. Switching to the text-based mark
           also kills the crop-wrapper hack entirely. */}
       <div style={{
-        padding: "12px 20px 10px",
+        padding: "16px 20px 16px",
         background: "#FAF5EC",
         position: "sticky", top: 0, zIndex: 10,
         borderBottom: "1px solid #F3F4F6",
@@ -2899,17 +2899,19 @@ export default function CrybabActiveRound() {
           </div>
         </div>
 
-        {/* LEADERBOARD pill — flush left under the wordmark, tight
-            vertical gap so it reads as a sub-element of the logo
-            rather than a stranded button. */}
-        <div style={{ marginTop: 8 }}>
+        {/* LEADERBOARD pill — flush left under the wordmark.
+            Neutral palette (gray when hidden, black when open) so it
+            doesn't compete with the BROADCAST red/green or the
+            destructive ✕ red. The marginTop gives the wordmark room
+            to breathe instead of feeling crammed. */}
+        <div style={{ marginTop: 14 }}>
           <button
             onClick={() => setShowLeaderboard(!showLeaderboard)}
             style={{
-              padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer",
+              padding: "7px 14px", borderRadius: 8, border: "none", cursor: "pointer",
               fontFamily: FONT, fontSize: 11, fontWeight: 800, letterSpacing: "0.06em",
-              background: showLeaderboard ? "#1E130A" : "#DC2626",
-              color: "#fff",
+              background: showLeaderboard ? "#1E130A" : "#DDD0BB",
+              color: showLeaderboard ? "#fff" : "#1E130A",
             }}
             title={showLeaderboard ? "Hide standings" : "Show standings"}
           >
@@ -2917,12 +2919,16 @@ export default function CrybabActiveRound() {
           </button>
         </div>
 
-        <HoleHeader
-          holeNumber={currentHole}
-          par={par}
-          handicap={holeHandicap}
-          phase={phase}
-        />
+        {/* Hole header. marginTop adds breathing room between the
+            action band above and the per-hole context below. */}
+        <div style={{ marginTop: 12 }}>
+          <HoleHeader
+            holeNumber={currentHole}
+            par={par}
+            handicap={holeHandicap}
+            phase={phase}
+          />
+        </div>
       </div>
 
       {/* Leaderboard (collapsible). PR #19: Scorecard mode swaps the
