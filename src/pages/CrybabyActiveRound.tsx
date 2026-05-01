@@ -2818,34 +2818,54 @@ export default function CrybabActiveRound() {
         </div>
       )}
 
-      {/* Top Bar */}
+      {/* Top Bar.
+          Two-column header. Left column stacks the logo over the
+          LEADERBOARD pill; right column stacks BROADCAST + ✕ over
+          (nothing — ✕ is on the same row as BROADCAST). The flex
+          row uses `alignItems: flex-start` so both columns hang
+          from the top edge instead of vertically centering each
+          column at different heights. */}
       <div style={{
-        padding: "14px 20px 8px",
+        padding: "14px 20px 10px",
         background: "#FAF5EC",
         position: "sticky", top: 0, zIndex: 10,
         borderBottom: "1px solid #F3F4F6",
       }}>
-        {/* Top row: logo on the left, primary action pills on the
-            right (BROADCAST + sync dot + cancel). LEADERBOARD moves
-            to its own row below so the top reads as "what is this
-            round, and is it being shared?" without competing with
-            the standings toggle. */}
         <div style={{
-          display: "flex", justifyContent: "space-between", alignItems: "center",
+          display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+          gap: 12,
         }}>
-          <img
-            src={crybabyLogo}
-            alt="Crybaby"
-            style={{ height: 56, display: "block" }}
-          />
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {/* BROADCAST pill — opens the live event feed panel; the
-                panel itself contains the BROADCAST on/off toggle.
-                Pill color reflects broadcast state at a glance:
-                green = currently broadcasting, red = not. The white
-                pulsing dot in the corner signals "events available."
-                The 8px sync dot below the pill keeps its meaning:
-                green = all writes flushed, amber = pending writes. */}
+          {/* Left column: logo + LEADERBOARD beneath it. Logo is
+              rendered at its natural script weight at a size that
+              reads as a real wordmark, not a tiny chip. */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 8 }}>
+            <img
+              src={crybabyLogo}
+              alt="Crybaby"
+              style={{ height: 80, display: "block" }}
+            />
+            <button
+              onClick={() => setShowLeaderboard(!showLeaderboard)}
+              style={{
+                padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer",
+                fontFamily: FONT, fontSize: 11, fontWeight: 800, letterSpacing: "0.06em",
+                background: showLeaderboard ? "#1E130A" : "#DC2626",
+                color: "#fff",
+              }}
+              title={showLeaderboard ? "Hide standings" : "Show standings"}
+            >
+              LEADERBOARD
+            </button>
+          </div>
+
+          {/* Right column: BROADCAST + sync dot + ✕.
+              BROADCAST opens the live feed panel; the broadcast
+              on/off toggle lives inside that panel. Pill color
+              reflects share state at a glance — green = broadcasting,
+              red = off. The 6px white pulsing dot in the corner
+              signals "events available." The 8px sync dot
+              (green/amber) reports write-flush state. */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, paddingTop: 4 }}>
             <button
               onClick={() => setShowLiveFeed(true)}
               style={{
@@ -2885,24 +2905,6 @@ export default function CrybabActiveRound() {
               ✕
             </button>
           </div>
-        </div>
-
-        {/* Second row: LEADERBOARD pill. Aligned right so it sits
-            visually under the BROADCAST/✕ cluster. Same pill shape,
-            same color language (red = panel hidden, dark = open). */}
-        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 6 }}>
-          <button
-            onClick={() => setShowLeaderboard(!showLeaderboard)}
-            style={{
-              padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer",
-              fontFamily: FONT, fontSize: 11, fontWeight: 800, letterSpacing: "0.06em",
-              background: showLeaderboard ? "#1E130A" : "#DC2626",
-              color: "#fff",
-            }}
-            title={showLeaderboard ? "Hide standings" : "Show standings"}
-          >
-            LEADERBOARD
-          </button>
         </div>
 
         <HoleHeader
