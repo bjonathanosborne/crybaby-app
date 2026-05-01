@@ -2773,13 +2773,13 @@ export default function CrybabActiveRound() {
               }}
               style={{
                 padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer",
-                fontFamily: FONT, fontSize: 12, fontWeight: 700,
+                fontFamily: FONT, fontSize: 11, fontWeight: 700, letterSpacing: "0.04em",
                 background: isBroadcast ? "#2D501620" : "#EDE7D9",
                 color: isBroadcast ? "#2D5016" : "#A8957B",
               }}
-              title={isBroadcast ? "Broadcasting to friends" : "Broadcast this round"}
+              title={isBroadcast ? "Broadcasting to friends — tap to stop" : "Tap to broadcast this round to your friends' feeds"}
             >
-              {isBroadcast ? "📡 Live" : "📡"}
+              {isBroadcast ? "📡 ON" : "📡 OFF"}
             </button>
             <div style={{
               width: 8, height: 8, borderRadius: 4,
@@ -2789,13 +2789,14 @@ export default function CrybabActiveRound() {
                 onClick={() => setShowLiveFeed(true)}
                 style={{
                   padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer",
-                  fontFamily: FONT, fontSize: 12, fontWeight: 700,
+                  fontFamily: FONT, fontSize: 11, fontWeight: 700, letterSpacing: "0.04em",
                   background: "#FEF2F2",
                   color: "#DC2626",
                   position: "relative",
                 }}
+                title="Live event feed — hammers, big swings, score updates"
               >
-                📡
+                🔔 FEED
                 <div style={{
                   position: "absolute", top: 2, right: 2, width: 6, height: 6,
                   borderRadius: 3, background: "#DC2626",
