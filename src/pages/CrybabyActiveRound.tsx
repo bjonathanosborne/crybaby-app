@@ -2808,9 +2808,12 @@ export default function CrybabActiveRound() {
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <img src={crybabyLogo} alt="Crybaby" style={{ height: 100, marginLeft: -16, marginTop: -24, marginBottom: -24 }} />
-            <span style={{ fontSize: 12, fontWeight: 600, color: "#A8957B" }}>
-              {course.name} · {round.gameName}
-            </span>
+            {/* Course + game-mode text removed — it crowded the
+                action pills on small screens. Course still surfaces
+                in the round-complete screen, the feed, and the
+                spectator view. The phase pill (DRIVERS / OTHERS /
+                CARTS) under the hole header keeps DOC context per
+                hole. */}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {/* Header action pills — text only, no emoji.
