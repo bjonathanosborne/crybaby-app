@@ -1888,6 +1888,54 @@ export async function loadRoundEvents(roundId: string) {
   return data || [];
 }
 
+/**
+ * Load all comments for a batch of feed events. Joins display_name +
+ * avatar_url from profiles so the renderer doesn't need a second
+ * round-trip per author. Sorted ascending by created_at to mirror
+ * how chat threads read.
+ */
+export async function loadEventComments(eventIds: string[]) {
+  if (!eventIds.length) return [];
+  const { data, error } = await supabase
+    .from("round_event_comments")
+    .select("id, event_id, user_id, content, created_at")
+    .in("event_id", eventIds)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  const rows = data || [];
+  if (rows.length === 0) return [];
+  const userIds = [...new Set(rows.map(r => r.user_id))];
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("user_id, display_name, first_name, last_name, avatar_url")
+    .in("user_id", userIds);
+  const profileMap: Record<string, any> = {};
+  (profiles || []).forEach(p => { profileMap[p.user_id] = p; });
+  return rows.map(r => ({ ...r, profile: profileMap[r.user_id] || null }));
+}
+
+/**
+ * Add a comment to a feed event. RLS gates the insert to
+ * participants + creator + followers; throws on validation or auth
+ * failure. Trims whitespace + enforces a 500-char ceiling client-side
+ * to match the DB CHECK constraint and surface a friendly error
+ * before the round-trip.
+ */
+export async function addEventComment(eventId: string, content: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+  const trimmed = (content ?? "").trim();
+  if (trimmed.length === 0) throw new Error("Comment cannot be empty");
+  if (trimmed.length > 500) throw new Error("Comment must be 500 characters or fewer");
+  const { data, error } = await supabase
+    .from("round_event_comments")
+    .insert({ event_id: eventId, user_id: user.id, content: trimmed })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 export async function loadEventReactions(eventIds: string[]) {
   if (!eventIds.length) return [];
   const { data, error } = await supabase

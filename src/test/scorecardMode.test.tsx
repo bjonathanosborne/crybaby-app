@@ -124,8 +124,13 @@ describe("CrybabySetupWizard — scorecard config gating (source-level)", () => 
     expect(src).toMatch(/selectedFormat !== "scorecard"[\s\S]{0,400}Game Mechanics/);
   });
 
-  it("Estimated Max Exposure card is suppressed for scorecard", () => {
-    expect(src).toMatch(/Estimated exposure[\s\S]*?selectedFormat !== "scorecard"/);
+  it("Estimated Max Exposure card is no longer rendered (removed entirely)", () => {
+    // The card was a worst-case scare figure (holeValue * holes *
+    // multiplier) that didn't reflect realistic outcomes. Removed from
+    // the wizard for ALL formats, not just scorecard. This test pins
+    // the absence so it can't be reintroduced without an explicit
+    // change to this assertion.
+    expect(src).not.toMatch(/Estimated Max Exposure/);
   });
 
   it("Review screen omits Hole Value + Mechanics rows for scorecard", () => {

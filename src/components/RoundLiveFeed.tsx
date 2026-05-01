@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { loadRoundEvents, loadEventReactions, toggleEventReaction } from "@/lib/db";
+import { loadRoundEvents, loadEventReactions, toggleEventReaction, loadEventComments, addEventComment } from "@/lib/db";
 import { formatDistanceToNow, parseISO } from "date-fns";
 import { CrybIcon } from "@/components/icons/CrybIcons";
 import CaptureAppliedCard from "@/components/round/events/CaptureAppliedCard";
@@ -89,9 +89,15 @@ export default function RoundLiveFeed({
   const { user } = useAuth();
   const [events, setEvents] = useState<any[]>([]);
   const [reactions, setReactions] = useState<Record<string, any[]>>({});
+  const [comments, setComments] = useState<Record<string, any[]>>({});
   const [loading, setLoading] = useState(true);
   const feedRef = useRef<HTMLDivElement>(null);
   const [activeReactionEvent, setActiveReactionEvent] = useState<string | null>(null);
+  // Per-event drafts so the user can compose comments on multiple
+  // events without losing text when switching between them. Keyed
+  // by event id; cleared on successful submit.
+  const [commentDraft, setCommentDraft] = useState<Record<string, string>>({});
+  const [posting, setPosting] = useState<Record<string, boolean>>({});
 
   // Phase 3: split the event stream into capture-merged events + everything else.
   // Capture cards are rendered first (most eyeball-grabbing), then legacy event
@@ -105,13 +111,23 @@ export default function RoundLiveFeed({
       const evts = await loadRoundEvents(roundId);
       setEvents(evts);
       if (evts.length) {
-        const rxns = await loadEventReactions(evts.map((e: any) => e.id));
-        const grouped: Record<string, any[]> = {};
+        const eventIds = evts.map((e: any) => e.id);
+        const [rxns, cmts] = await Promise.all([
+          loadEventReactions(eventIds),
+          loadEventComments(eventIds),
+        ]);
+        const groupedRxns: Record<string, any[]> = {};
         rxns.forEach((r: any) => {
-          if (!grouped[r.event_id]) grouped[r.event_id] = [];
-          grouped[r.event_id].push(r);
+          if (!groupedRxns[r.event_id]) groupedRxns[r.event_id] = [];
+          groupedRxns[r.event_id].push(r);
         });
-        setReactions(grouped);
+        setReactions(groupedRxns);
+        const groupedCmts: Record<string, any[]> = {};
+        cmts.forEach((c: any) => {
+          if (!groupedCmts[c.event_id]) groupedCmts[c.event_id] = [];
+          groupedCmts[c.event_id].push(c);
+        });
+        setComments(groupedCmts);
       }
     } catch (e) {
       console.error("Failed to load round events", e);
@@ -137,6 +153,11 @@ export default function RoundLiveFeed({
         { event: "*", schema: "public", table: "round_event_reactions" },
         () => refresh()
       )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "round_event_comments" },
+        () => refresh()
+      )
       .subscribe();
 
     return () => {
@@ -160,6 +181,27 @@ export default function RoundLiveFeed({
       console.error("Failed to toggle reaction", e);
     }
   };
+
+  const handlePostComment = async (eventId: string) => {
+    const text = (commentDraft[eventId] ?? "").trim();
+    if (!text || posting[eventId]) return;
+    setPosting(p => ({ ...p, [eventId]: true }));
+    try {
+      await addEventComment(eventId, text);
+      setCommentDraft(d => ({ ...d, [eventId]: "" }));
+      await refresh();
+    } catch (e) {
+      console.error("Failed to post comment", e);
+    } finally {
+      setPosting(p => ({ ...p, [eventId]: false }));
+    }
+  };
+
+  function commentAuthorName(profile: any): string {
+    if (!profile) return "Someone";
+    const full = [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim();
+    return full || profile.display_name || "Someone";
+  }
 
   if (!isOpen) return null;
 
@@ -405,6 +447,54 @@ export default function RoundLiveFeed({
                       </button>
                     )}
                   </div>
+
+                  {/* Comments thread + composer.
+                      Available to anyone who can see the event (RLS
+                      gates: participants + creator + followers). The
+                      composer accepts plain text including emojis —
+                      iOS keyboard's emoji panel works inline; no
+                      separate emoji picker needed. */}
+                  {(comments[evt.id]?.length || 0) > 0 && (
+                    <div className="mt-2 ml-12 flex flex-col gap-1.5">
+                      {comments[evt.id].map((c: any) => (
+                        <div
+                          key={c.id}
+                          className="text-xs leading-snug bg-secondary rounded-lg px-3 py-1.5"
+                        >
+                          <span className="font-semibold text-foreground">
+                            {commentAuthorName(c.profile)}
+                          </span>
+                          <span className="text-muted-foreground"> · </span>
+                          <span className="text-foreground whitespace-pre-wrap">{c.content}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {user && (
+                    <div className="mt-2 ml-12 flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={commentDraft[evt.id] ?? ""}
+                        onChange={(e) => setCommentDraft(d => ({ ...d, [evt.id]: e.target.value }))}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            handlePostComment(evt.id);
+                          }
+                        }}
+                        placeholder="Comment or 🔥…"
+                        maxLength={500}
+                        className="flex-1 text-xs bg-secondary border border-border rounded-full px-3 py-1.5 outline-none focus:border-primary"
+                      />
+                      <button
+                        onClick={() => handlePostComment(evt.id)}
+                        disabled={!((commentDraft[evt.id] ?? "").trim()) || !!posting[evt.id]}
+                        className="text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full bg-primary text-primary-foreground disabled:bg-muted disabled:text-muted-foreground transition-colors"
+                      >
+                        {posting[evt.id] ? "…" : "Post"}
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })}

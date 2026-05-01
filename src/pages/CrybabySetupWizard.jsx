@@ -1503,12 +1503,8 @@ export default function CrybabSetupWizard() {
                   }}>${v}</button>
                 ))}
               </div>
-              <div style={{
-                marginTop: 14, textAlign: "center",
-                fontFamily: mono, fontSize: 12, color: "#A8957B",
-              }}>
-                Max exposure: ~${holeValue * (format?.defaultHoles || 18) * 3}
-              </div>
+              {/* Max-exposure subtitle removed — see review-screen
+                  comment for the full rationale. */}
             </div>
             </>
             )}
@@ -1602,23 +1598,11 @@ export default function CrybabSetupWizard() {
             )}
             <ReviewSection icon={<Eye size={18} strokeWidth={2} />} label="Visibility" value={privacy.charAt(0).toUpperCase() + privacy.slice(1)} />
 
-            {/* Estimated exposure — hidden for Scorecard (no money). */}
-            {selectedFormat !== "scorecard" && (
-            <div style={{
-              marginTop: 8, background: "#FEF3C7", borderRadius: 14, padding: "16px 18px",
-              textAlign: "center",
-            }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#92400E", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>
-                Estimated Max Exposure
-              </div>
-              <div style={{ fontFamily: mono, fontSize: 32, fontWeight: 800, color: "#92400E" }}>
-                ${holeValue * (format?.defaultHoles || 18) * (enabledMechanics.has("hammer") ? 4 : 2)}
-              </div>
-              <div style={{ fontSize: 12, color: "#B45309", marginTop: 4 }}>
-                {enabledMechanics.has("hammer") ? "With hammers, things can escalate." : "Steady game. No hammers."}
-              </div>
-            </div>
-            )}
+            {/* Worst-case-stake summary card removed (was a yellow
+                alarm computed as holeValue × holes × multiplier).
+                Number didn't reflect realistic outcomes; the hole
+                value, hammer toggle, and per-hole settings remain
+                visible above for anyone who wants to estimate. */}
 
             {/* Rules summary */}
             {enabledMechanics.size > 0 && (
