@@ -308,6 +308,40 @@ export default function RoundLiveFeed({
                         )}
                         {data.message || evt.event_type}
                       </p>
+
+                      {/* Team rosters for team_win / hammer_fold events.
+                          Renders the winning team's players colored by
+                          team color so you can see "Drivers: Jonathan
+                          + Michael" instead of just "Drivers takes
+                          hole 1". Falls back gracefully on legacy
+                          events that pre-date this enrichment. */}
+                      {Array.isArray(data.winningTeamPlayers) && data.winningTeamPlayers.length > 0 && (
+                        <p className="text-xs font-semibold mt-1 leading-snug" style={{ color: data.winningTeamColor || color }}>
+                          {data.winningTeamPlayers.join(" + ")}
+                        </p>
+                      )}
+
+                      {/* Hammer events: show throwing team → accepting
+                          team with rosters in parentheses so the chain
+                          of action is obvious. */}
+                      {evt.event_type === "hammer" && data.throwingTeam && data.acceptingTeam && (
+                        <p className="text-xs mt-1 leading-snug">
+                          <span className="font-semibold" style={{ color: data.throwingTeam.color }}>
+                            {data.throwingTeam.name}
+                          </span>
+                          {Array.isArray(data.throwingTeam.players) && data.throwingTeam.players.length > 0 && (
+                            <span className="text-muted-foreground"> ({data.throwingTeam.players.join(" + ")})</span>
+                          )}
+                          <span className="text-muted-foreground"> → </span>
+                          <span className="font-semibold" style={{ color: data.acceptingTeam.color }}>
+                            {data.acceptingTeam.name}
+                          </span>
+                          {Array.isArray(data.acceptingTeam.players) && data.acceptingTeam.players.length > 0 && (
+                            <span className="text-muted-foreground"> ({data.acceptingTeam.players.join(" + ")})</span>
+                          )}
+                        </p>
+                      )}
+
                       {data.quip && (
                         <p className="text-xs text-muted-foreground mt-1 italic leading-relaxed">
                           💬 "{data.quip}"

@@ -1616,6 +1616,7 @@ export default function CrybabActiveRound() {
 
     if (roundId && teams) {
       const acceptingTeam = lastHammerBy === "A" ? teams.teamB : teams.teamA;
+      const throwingTeam = lastHammerBy === "A" ? teams.teamA : teams.teamB;
       createRoundEvent({
         roundId,
         holeNumber: currentHole,
@@ -1624,6 +1625,11 @@ export default function CrybabActiveRound() {
           message: `${acceptingTeam.name} accepted the hammer!`,
           quip: getQuip("hammer_accepted"),
           amount: round.holeValue * Math.pow(2, hammerDepth + 1) + carryOver,
+          // Team snapshots so the live feed can render rosters next
+          // to the team names — see CrybabyActiveRound's team_win
+          // handler for the same shape.
+          throwingTeam: { name: throwingTeam.name, color: throwingTeam.color, players: throwingTeam.players.map(p => p.name) },
+          acceptingTeam: { name: acceptingTeam.name, color: acceptingTeam.color, players: acceptingTeam.players.map(p => p.name) },
         },
       }).catch(err => console.error("Failed to emit hammer event:", err));
     }
@@ -2022,6 +2028,19 @@ export default function CrybabActiveRound() {
         const holeScores = scores[currentHole] || {};
         const eventType = showResult.push ? "push" : showResult.folded ? "hammer_fold" : "team_win";
 
+        // Snapshot the current hole's team rosters so the live feed
+        // can render "Drivers (Jonathan + Michael)" instead of the
+        // bare "Drivers takes Hole 1". Skips when teams isn't set
+        // (skins / custom / wolf-pre-pick) — the renderer falls back
+        // to the existing message-only shape.
+        const teamSnapshot = teams ? {
+          teamA: { name: teams.teamA.name, color: teams.teamA.color, players: teams.teamA.players.map(p => p.name) },
+          teamB: { name: teams.teamB.name, color: teams.teamB.color, players: teams.teamB.players.map(p => p.name) },
+        } : null;
+        const winningTeam = teamSnapshot
+          ? (teamSnapshot.teamA.name === showResult.winnerName ? teamSnapshot.teamA : teamSnapshot.teamB)
+          : null;
+
         createRoundEvent({
           roundId,
           holeNumber: currentHole,
@@ -2036,6 +2055,9 @@ export default function CrybabActiveRound() {
             amount: showResult.push ? 0 : showResult.amount,
             quip: showResult.quip,
             winnerName: showResult.winnerName,
+            teams: teamSnapshot,
+            winningTeamPlayers: winningTeam?.players ?? null,
+            winningTeamColor: winningTeam?.color ?? null,
           },
         }).catch(err => console.error("Failed to emit round event:", err));
 
