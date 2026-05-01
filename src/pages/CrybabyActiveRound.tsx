@@ -2800,29 +2800,38 @@ export default function CrybabActiveRound() {
             </span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {/* Header action pills.
-                User-facing rule: every button is a plain text label,
-                no emoji icons. State is conveyed by background color
-                only — solid green = on / live, solid red = off /
-                inactive, dark = panel currently open.
-                The 8px sync dot (between BROADCAST and FEED) keeps
-                its meaning unchanged: green = all writes flushed,
-                amber = pending writes queued. */}
+            {/* Header action pills — text only, no emoji.
+                Two action pills + cancel:
+                  LIVE       — opens the event feed panel; the panel
+                               itself contains the BROADCAST on/off
+                               toggle (merged concept). Pill color
+                               reflects broadcast state at a glance:
+                               green = currently broadcasting,
+                               red = not broadcasting.
+                  LEADERBOARD — toggles the standings panel (red when
+                                hidden, dark when open).
+                  ✕          — cancel round.
+                The 8px sync dot keeps its meaning: green = all writes
+                flushed, amber = pending writes queued. */}
             <button
-              onClick={async () => {
-                const next = !isBroadcast;
-                setIsBroadcast(next);
-                try { await toggleBroadcast(roundId, next); } catch (e) { console.error(e); setIsBroadcast(!next); }
-              }}
+              onClick={() => setShowLiveFeed(true)}
               style={{
                 padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer",
                 fontFamily: FONT, fontSize: 11, fontWeight: 800, letterSpacing: "0.06em",
                 background: isBroadcast ? "#2D5016" : "#DC2626",
                 color: "#fff",
+                position: "relative",
               }}
-              title={isBroadcast ? "Broadcasting to friends — tap to stop" : "Tap to broadcast this round to your friends' feeds"}
+              title={isBroadcast
+                ? "Broadcasting to friends — tap to open the live feed and toggle"
+                : "Tap to open the live feed (broadcasting OFF — toggle inside)"}
             >
-              {isBroadcast ? "BROADCAST ON" : "BROADCAST OFF"}
+              LIVE
+              <div style={{
+                position: "absolute", top: 3, right: 3, width: 6, height: 6,
+                borderRadius: 3, background: "#fff",
+                animation: "pulse 2s infinite",
+              }} />
             </button>
             <div
               style={{
@@ -2831,24 +2840,6 @@ export default function CrybabActiveRound() {
               }}
               title={pendingSync > 0 ? "Pending writes" : "All writes synced"}
             />
-              <button
-                onClick={() => setShowLiveFeed(true)}
-                style={{
-                  padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer",
-                  fontFamily: FONT, fontSize: 11, fontWeight: 800, letterSpacing: "0.06em",
-                  background: "#2D5016",
-                  color: "#fff",
-                  position: "relative",
-                }}
-                title="Live event feed — hammers, big swings, score updates"
-              >
-                FEED
-                <div style={{
-                  position: "absolute", top: 3, right: 3, width: 6, height: 6,
-                  borderRadius: 3, background: "#fff",
-                  animation: "pulse 2s infinite",
-                }} />
-              </button>
               <button
                 onClick={() => setShowLeaderboard(!showLeaderboard)}
                 style={{
@@ -2859,7 +2850,7 @@ export default function CrybabActiveRound() {
                 }}
                 title={showLeaderboard ? "Hide standings" : "Show standings"}
               >
-                STATS
+                LEADERBOARD
               </button>
               <button
                 onClick={() => setShowCancelConfirm(true)}
@@ -3199,6 +3190,12 @@ export default function CrybabActiveRound() {
           roundId={roundId}
           isOpen={showLiveFeed}
           onClose={() => setShowLiveFeed(false)}
+          isBroadcast={isBroadcast}
+          onToggleBroadcast={async () => {
+            const next = !isBroadcast;
+            setIsBroadcast(next);
+            try { await toggleBroadcast(roundId, next); } catch (e) { console.error(e); setIsBroadcast(!next); }
+          }}
         />
       )}
     </div>
