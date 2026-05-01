@@ -2800,6 +2800,14 @@ export default function CrybabActiveRound() {
             </span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {/* Header action pills.
+                User-facing rule: every button is a plain text label,
+                no emoji icons. State is conveyed by background color
+                only — solid green = on / live, solid red = off /
+                inactive, dark = panel currently open.
+                The 8px sync dot (between BROADCAST and FEED) keeps
+                its meaning unchanged: green = all writes flushed,
+                amber = pending writes queued. */}
             <button
               onClick={async () => {
                 const next = !isBroadcast;
@@ -2808,33 +2816,36 @@ export default function CrybabActiveRound() {
               }}
               style={{
                 padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer",
-                fontFamily: FONT, fontSize: 11, fontWeight: 700, letterSpacing: "0.04em",
-                background: isBroadcast ? "#2D501620" : "#EDE7D9",
-                color: isBroadcast ? "#2D5016" : "#A8957B",
+                fontFamily: FONT, fontSize: 11, fontWeight: 800, letterSpacing: "0.06em",
+                background: isBroadcast ? "#2D5016" : "#DC2626",
+                color: "#fff",
               }}
               title={isBroadcast ? "Broadcasting to friends — tap to stop" : "Tap to broadcast this round to your friends' feeds"}
             >
-              {isBroadcast ? "📡 ON" : "📡 OFF"}
+              {isBroadcast ? "BROADCAST ON" : "BROADCAST OFF"}
             </button>
-            <div style={{
-              width: 8, height: 8, borderRadius: 4,
-              background: pendingSync > 0 ? "#F59E0B" : "#2D5016",
-            }} />
+            <div
+              style={{
+                width: 8, height: 8, borderRadius: 4,
+                background: pendingSync > 0 ? "#F59E0B" : "#2D5016",
+              }}
+              title={pendingSync > 0 ? "Pending writes" : "All writes synced"}
+            />
               <button
                 onClick={() => setShowLiveFeed(true)}
                 style={{
                   padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer",
-                  fontFamily: FONT, fontSize: 11, fontWeight: 700, letterSpacing: "0.04em",
-                  background: "#FEF2F2",
-                  color: "#DC2626",
+                  fontFamily: FONT, fontSize: 11, fontWeight: 800, letterSpacing: "0.06em",
+                  background: "#2D5016",
+                  color: "#fff",
                   position: "relative",
                 }}
                 title="Live event feed — hammers, big swings, score updates"
               >
-                🔔 FEED
+                FEED
                 <div style={{
-                  position: "absolute", top: 2, right: 2, width: 6, height: 6,
-                  borderRadius: 3, background: "#DC2626",
+                  position: "absolute", top: 3, right: 3, width: 6, height: 6,
+                  borderRadius: 3, background: "#fff",
                   animation: "pulse 2s infinite",
                 }} />
               </button>
@@ -2842,18 +2853,19 @@ export default function CrybabActiveRound() {
                 onClick={() => setShowLeaderboard(!showLeaderboard)}
                 style={{
                   padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer",
-                  fontFamily: FONT, fontSize: 12, fontWeight: 700,
-                  background: showLeaderboard ? "#1E130A" : "#EDE7D9",
-                  color: showLeaderboard ? "#fff" : "#8B7355",
+                  fontFamily: FONT, fontSize: 11, fontWeight: 800, letterSpacing: "0.06em",
+                  background: showLeaderboard ? "#1E130A" : "#DC2626",
+                  color: "#fff",
                 }}
+                title={showLeaderboard ? "Hide standings" : "Show standings"}
               >
-                📊
+                STATS
               </button>
               <button
                 onClick={() => setShowCancelConfirm(true)}
                 style={{
                   padding: "6px 10px", borderRadius: 8, border: "none", cursor: "pointer",
-                  fontFamily: FONT, fontSize: 12, fontWeight: 700,
+                  fontFamily: FONT, fontSize: 12, fontWeight: 800,
                   background: "#FEF2F2", color: "#DC2626",
                 }}
                 title="Cancel Round"
