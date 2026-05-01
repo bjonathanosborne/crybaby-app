@@ -2819,53 +2819,69 @@ export default function CrybabActiveRound() {
       )}
 
       {/* Top Bar.
-          Two-column header. Left column stacks the logo over the
-          LEADERBOARD pill; right column stacks BROADCAST + ✕ over
-          (nothing — ✕ is on the same row as BROADCAST). The flex
-          row uses `alignItems: flex-start` so both columns hang
-          from the top edge instead of vertically centering each
-          column at different heights. */}
+          Two-row header. Row 1 puts the wordmark on the left and
+          the BROADCAST + sync dot + ✕ cluster on the right, top-
+          aligned at the same Y so the eye reads them as a single
+          band. Row 2 hangs LEADERBOARD beneath the logo, flush to
+          the same left edge.
+
+          The crybaby-logo.png is a 2000x2000 asset whose actual
+          wordmark only occupies rows 662-1275 (~30% of the height)
+          and is also inset ~7% from the left. At small header
+          sizes that baked-in transparent padding made the
+          wordmark look indented, undersized, and vertically
+          offset from the BROADCAST pill on the right. We render
+          the image inside a clipping wrapper and apply negative
+          margins to crop the transparent padding so the visible
+          wordmark sits flush against the wrapper's edges. The
+          wrapper's reported height (the visible wordmark height)
+          then matches the BROADCAST pill height for a clean
+          top-aligned baseline. */}
       <div style={{
-        padding: "14px 20px 10px",
+        padding: "12px 20px 10px",
         background: "#FAF5EC",
         position: "sticky", top: 0, zIndex: 10,
         borderBottom: "1px solid #F3F4F6",
       }}>
         <div style={{
-          display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+          display: "flex", justifyContent: "space-between", alignItems: "center",
           gap: 12,
         }}>
-          {/* Left column: logo + LEADERBOARD beneath it. Logo is
-              rendered at its natural script weight at a size that
-              reads as a real wordmark, not a tiny chip. */}
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 8 }}>
+          {/* Logo wrapper. The PNG renders at height 144 but the
+              wrapper clips to the visible wordmark content box: ~44px
+              tall. Negative margins absorb the transparent padding
+              rows/cols baked into the asset (wordmark sits in rows
+              662-1275 of a 2000px-tall image, inset ~7% from the
+              left). Scaled the agent's first-pass values up ~1.4x
+              so the wordmark feels like the dominant identity
+              element, not a tiny chip. */}
+          <div style={{
+            height: 44,
+            overflow: "hidden",
+            display: "flex",
+            alignItems: "flex-start",
+          }}>
             <img
               src={crybabyLogo}
               alt="Crybaby"
-              style={{ height: 80, display: "block" }}
-            />
-            <button
-              onClick={() => setShowLeaderboard(!showLeaderboard)}
               style={{
-                padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer",
-                fontFamily: FONT, fontSize: 11, fontWeight: 800, letterSpacing: "0.06em",
-                background: showLeaderboard ? "#1E130A" : "#DC2626",
-                color: "#fff",
+                height: 144,
+                display: "block",
+                marginTop: -48,
+                marginLeft: -10,
+                marginBottom: -52,
               }}
-              title={showLeaderboard ? "Hide standings" : "Show standings"}
-            >
-              LEADERBOARD
-            </button>
+            />
           </div>
 
-          {/* Right column: BROADCAST + sync dot + ✕.
+          {/* Right cluster: BROADCAST + sync dot + ✕.
               BROADCAST opens the live feed panel; the broadcast
               on/off toggle lives inside that panel. Pill color
               reflects share state at a glance — green = broadcasting,
               red = off. The 6px white pulsing dot in the corner
               signals "events available." The 8px sync dot
               (green/amber) reports write-flush state. */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, paddingTop: 4 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <button
               onClick={() => setShowLiveFeed(true)}
               style={{
@@ -2905,6 +2921,24 @@ export default function CrybabActiveRound() {
               ✕
             </button>
           </div>
+        </div>
+
+        {/* LEADERBOARD pill — flush left under the wordmark, tight
+            vertical gap so it reads as a sub-element of the logo
+            rather than a stranded button. */}
+        <div style={{ marginTop: 8 }}>
+          <button
+            onClick={() => setShowLeaderboard(!showLeaderboard)}
+            style={{
+              padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer",
+              fontFamily: FONT, fontSize: 11, fontWeight: 800, letterSpacing: "0.06em",
+              background: showLeaderboard ? "#1E130A" : "#DC2626",
+              color: "#fff",
+            }}
+            title={showLeaderboard ? "Hide standings" : "Show standings"}
+          >
+            LEADERBOARD
+          </button>
         </div>
 
         <HoleHeader
