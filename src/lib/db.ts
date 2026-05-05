@@ -1123,7 +1123,7 @@ export async function loadActiveRound() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const ROUND_COLS = "id, course, game_type, stakes, created_at, course_details, status";
+  const ROUND_COLS = "id, course, game_type, stakes, created_at, course_details, status, created_by";
 
   // Check rounds created by this user first
   const { data: created } = await supabase
@@ -1135,7 +1135,12 @@ export async function loadActiveRound() {
     .limit(1)
     .maybeSingle();
 
-  if (created) return created;
+  // PR #55 commit 2: tag the result with `is_scorekeeper` so callers
+  // (CrybabyFeed's Resume button, etc.) route appropriately. Pre-PR-55
+  // a non-scorekeeper participant tapped Resume and got dropped onto
+  // the scorekeeper UI (CrybabyActiveRound) — the round-setup screen
+  // for the wizard, not a read-only feed view.
+  if (created) return { ...created, is_scorekeeper: true };
 
   // Also check rounds where this user is listed as a player.
   // Setup-state rounds shouldn't have non-creator players yet
@@ -1158,7 +1163,11 @@ export async function loadActiveRound() {
     .limit(1)
     .maybeSingle();
 
-  return asPlayer || null;
+  if (!asPlayer) return null;
+  // Player path means user is NOT the scorekeeper (the creator-path
+  // query above would have caught that case). Tag explicitly so
+  // callers don't have to compare created_by themselves.
+  return { ...asPlayer, is_scorekeeper: asPlayer.created_by === user.id };
 }
 
 // Load settlements for a user (for ledger)

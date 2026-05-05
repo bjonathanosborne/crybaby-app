@@ -20,6 +20,13 @@ const FONT = "'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
 export interface FlipTeamsBadgeProps {
   holeNumber: number;
   teams: TeamInfo | null | undefined;
+  /**
+   * PR #55 commit 3: per-player stake for this hole. Used to show
+   * the 3v2 asymmetric stakes inline ("$4 3-man / $6 2-man") so the
+   * user sees who owes what without consulting the spec. Optional —
+   * if omitted, stakes line is hidden (legacy behavior).
+   */
+  baseBet?: number;
   /** data-testid prefix for addressable tests. */
   testIdPrefix?: string;
 }
@@ -27,12 +34,24 @@ export interface FlipTeamsBadgeProps {
 export default function FlipTeamsBadge({
   holeNumber,
   teams,
+  baseBet,
   testIdPrefix = "flip-teams-badge",
 }: FlipTeamsBadgeProps): JSX.Element | null {
   if (!teams) return null;
 
   const teamAStr = teams.teamA.players.map(p => p.name).join(", ");
   const teamBStr = teams.teamB.players.map(p => p.name).join(", ");
+  // The 3-man side risks $B per player; 2-man side risks $1.5B
+  // (canonical Flip 3v2 ratio). Identify which side is which by
+  // player count rather than name so resolveCartPosition / future
+  // labelling changes don't break the display.
+  const threeManSide = teams.teamA.players.length === 3 ? teams.teamA
+    : teams.teamB.players.length === 3 ? teams.teamB
+    : null;
+  const twoManSide = teams.teamA.players.length === 2 ? teams.teamA
+    : teams.teamB.players.length === 2 ? teams.teamB
+    : null;
+  const showStakes = typeof baseBet === "number" && threeManSide && twoManSide;
 
   return (
     <div
@@ -79,6 +98,20 @@ export default function FlipTeamsBadge({
             {teamBStr}
           </span>
         </div>
+        {showStakes && (
+          <div
+            data-testid={`${testIdPrefix}-stakes`}
+            style={{
+              fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+              fontSize: 11,
+              color: "#8B7355",
+              marginTop: 4,
+              letterSpacing: "0.02em",
+            }}
+          >
+            ${baseBet} 3-man <span style={{ color: "#CEC0AA" }}>·</span> ${(baseBet * 3) / 2} 2-man
+          </div>
+        )}
       </div>
     </div>
   );

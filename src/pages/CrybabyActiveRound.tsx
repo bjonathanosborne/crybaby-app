@@ -39,6 +39,16 @@ import {
   calculateWolfHoleResult, calculateFoldResult as calcFoldResult,
   initWolfState, getWolfForHole, initNassauState,
   isRoundComplete,
+  // PR #55 commit 1: import the canonical Flip-base-game payout fn so
+  // the live calculateHoleResult uses the same engine the replay path
+  // (replayRound + apply-capture) does. Pre-PR-55 the live page fell
+  // through to DOC team math, which silently picked up DOC-specific
+  // rules (PR #31 birdie-forced-push) that don't apply to Flip.
+  // appendPushToWindow + claimRollingCarryWindow drive the rolling-
+  // window state transitions in advanceHole.
+  calculateFlipHoleResult, initRollingCarryWindow,
+  appendPushToWindow, claimRollingCarryWindow,
+  type RollingCarryWindow,
 } from "@/lib/gameEngines";
 
 // ============================================================
@@ -176,9 +186,17 @@ function HoleHeader({ holeNumber, par, handicap, yardage, phase }) {
   );
 }
 
-function TeamBanner({ teams, holeValue, hammerDepth }) {
+function TeamBanner({ teams, holeValue, hammerDepth, isFlip }) {
   if (!teams) return null;
   const effectiveValue = holeValue * Math.pow(2, hammerDepth);
+  // PR #55 commit 3: Flip's 3v2 split has asymmetric stakes — the
+  // 3-man team risks $B per player; the 2-man team risks $1.5B per
+  // player (so each side's collective risk is the same $3B). Show
+  // both stakes inline so the user sees who-owes-what at a glance
+  // instead of a single ambiguous "$X per hole." Non-Flip rounds
+  // keep the single-figure display.
+  const flipThreeMan = isFlip ? effectiveValue : null;
+  const flipTwoMan = isFlip ? effectiveValue * 1.5 : null;
   return (
     <div style={{
       display: "flex", gap: 8, padding: "12px 20px",
@@ -200,13 +218,28 @@ function TeamBanner({ teams, holeValue, hammerDepth }) {
         minWidth: 56,
       }}>
         <div style={{ fontFamily: FONT, fontSize: 10, color: "#A8957B", fontWeight: 600 }}>HOLE</div>
-        <div style={{
-          fontFamily: MONO, fontSize: hammerDepth >= 3 ? 16 : 18, fontWeight: 800,
-          color: hammerDepth >= 3 ? "#7F1D1D" : hammerDepth >= 2 ? "#DC2626" : hammerDepth >= 1 ? "#F59E0B" : "#1E130A",
-          transition: "all 0.3s ease",
-        }}>
-          ${effectiveValue}
-        </div>
+        {isFlip && flipThreeMan !== null && flipTwoMan !== null ? (
+          <>
+            <div style={{
+              fontFamily: MONO, fontSize: hammerDepth >= 3 ? 12 : 14, fontWeight: 800,
+              color: hammerDepth >= 3 ? "#7F1D1D" : hammerDepth >= 2 ? "#DC2626" : hammerDepth >= 1 ? "#F59E0B" : "#1E130A",
+              transition: "all 0.3s ease",
+              lineHeight: 1.15,
+              textAlign: "center",
+            }}>
+              <div>${flipThreeMan} 3-man</div>
+              <div>${flipTwoMan} 2-man</div>
+            </div>
+          </>
+        ) : (
+          <div style={{
+            fontFamily: MONO, fontSize: hammerDepth >= 3 ? 16 : 18, fontWeight: 800,
+            color: hammerDepth >= 3 ? "#7F1D1D" : hammerDepth >= 2 ? "#DC2626" : hammerDepth >= 1 ? "#F59E0B" : "#1E130A",
+            transition: "all 0.3s ease",
+          }}>
+            ${effectiveValue}
+          </div>
+        )}
         {hammerDepth > 0 && (
           <div style={{
             fontSize: 9, fontWeight: 700,
@@ -825,6 +858,13 @@ export default function CrybabActiveRound() {
   // so other call sites (lines ~1476, ~1598) read the current hole's teams
   // without a structural change. New code should read flipState directly.
   const { flipState, setFlipState, flipConfig, setFlipConfig } = rs;
+  // PR #55 commit 1: rollingCarryWindow is the source of truth for
+  // Flip's push-pot accumulation (per-hole window with "all" / N-hole
+  // forfeit semantics). useAdvanceHole already mutates it in the right
+  // shape; calculateHoleResult now reads it so the per-hole settlement
+  // card surfaces the correct money figure on push (when the pot is
+  // claimed) and on a decided hole (when claimed + paid out).
+  const { rollingCarryWindow, setRollingCarryWindow } = rs;
   // C5: Flip crybaby-phase state. Set by the CrybabyTransition "Begin"
   // handler at hole 15 → 16 handoff. Null during holes 1-15 + non-Flip.
   const { crybabyState, setCrybabyState } = rs;
@@ -929,6 +969,23 @@ export default function CrybabActiveRound() {
   // the crybaby-hammer initiator gate. null when the current user isn't
   // a player on this round (spectator / admin viewing someone else's round).
   const currentUserPlayerId = dbPlayers.find(p => p.user_id === currentUser?.id)?.id ?? null;
+
+  // PR #55 commit 2: spectator-route guard. If the current user is a
+  // participant but NOT the scorekeeper, send them to the read-only
+  // spectator view instead of the scorekeeper UI. Pre-PR-55 a non-
+  // scorekeeper participant who tapped Resume on the feed got dropped
+  // here and saw the team-locking / re-flip page (which mutates round
+  // state). This is belt-and-suspenders — CrybabyFeed's Resume button
+  // already routes to /watch for non-scorekeepers, but a deep link or
+  // a stale tab could still land here.
+  useEffect(() => {
+    if (loading) return;
+    if (!currentUser) return;
+    if (currentUserPlayerId === null) return; // not a participant; admins/spectators allowed
+    if (isScorekeeper) return;
+    const id = searchParams.get("id");
+    if (id) navigate(`/watch?id=${id}`, { replace: true });
+  }, [loading, currentUser, currentUserPlayerId, isScorekeeper, searchParams, navigate]);
   const roundIsActiveStatus = dbRound?.status === "active";
   // PR #27 commit 2: needsFinalPhoto derivation removed. With the
   // post-completion CTA gone, the dbRound.needs_final_photo column
@@ -1205,6 +1262,9 @@ export default function CrybabActiveRound() {
         // confirmations. Absent on non-Flip rounds.
         if (saved.flipConfig) setFlipConfig(saved.flipConfig as FlipConfigType);
         if (saved.flipState) setFlipState(saved.flipState as import('@/lib/gameEngines').FlipState);
+        // PR #55 commit 1: hydrate the rolling-window so push-pot state
+        // survives a resume mid-round (was silently dropped before).
+        if (saved.rollingCarryWindow) setRollingCarryWindow(saved.rollingCarryWindow as RollingCarryWindow);
         // C5: hydrate crybaby state if the round resumed past hole 15.
         if (saved.crybabyState) setCrybabyState(saved.crybabyState as CrybabyStateType);
 
@@ -1771,7 +1831,67 @@ export default function CrybabActiveRound() {
       return calculateWolfHoleResult(players, cs, par, round.holeValue, wolfId, wolfPartner, isLoneWolf, round.settings, lowestHandicap, holeHandicap);
     }
 
-    // Team-based games (DOC, Flip) — use inline team logic
+    // PR #55 commit 1: Flip base game (holes 1-15) AND the all-square
+    // fall-through case (holes 16-18 when no crybaby was designated, so
+    // play continues as a base-game extension). Mirrors the replay path
+    // at supabase/functions/_shared/gameEngines.ts:1577-1608.
+    //
+    // Pre-PR-55, all Flip holes fell through to the DOC team math
+    // below, which silently picked up DOC-only rules — including
+    // PR #31's birdie-forced-push — and produced wrong settlements
+    // (symmetric flat stakes instead of 3v2 asymmetric, scalar
+    // carry-over instead of the rolling window). The branch must come
+    // BEFORE the team-based DOC catch-all so DOC math never sees a
+    // Flip hole.
+    if (gameMode === 'flip' && teams) {
+      const baseBet = flipConfig?.baseBet ?? round.holeValue;
+      const effectiveBet = baseBet * Math.pow(2, hammerDepth);
+      const flipNetScores: Record<string, number> = {};
+      players.forEach(p => {
+        const strokes = settings.pops
+          ? getStrokesOnHole(p.handicap, lowestHandicap, holeHandicap, settings.handicapPercent)
+          : 0;
+        flipNetScores[p.id] = (cs[p.id] ?? par) - strokes;
+      });
+      const flipTeamABest = Math.min(...teams.teamA.players.map(p => flipNetScores[p.id]));
+      const flipTeamBBest = Math.min(...teams.teamB.players.map(p => flipNetScores[p.id]));
+      // Window may be null on the first hole of a round (state init lag);
+      // initialise on the fly so the engine call always sees a valid
+      // window. carryOverWindow comes from flipConfig (set in setup wizard).
+      const flipWindow: RollingCarryWindow = rollingCarryWindow
+        ?? initRollingCarryWindow(flipConfig?.carryOverWindow ?? "all");
+      const flipResult = calculateFlipHoleResult({
+        teams,
+        teamABest: flipTeamABest,
+        teamBBest: flipTeamBBest,
+        effectiveBet,
+        window: flipWindow,
+        holeNumber: currentHole,
+      });
+      return {
+        push: flipResult.push,
+        winnerName: flipResult.winningSide === null
+          ? null
+          : flipResult.winningSide === 'A' ? teams.teamA.name : teams.teamB.name,
+        amount: flipResult.potFromBet + flipResult.potFromCarry,
+        // Flip uses the rolling window — the scalar carryOver field is
+        // unused. advanceHole reads rollingCarryWindow off useRoundState
+        // and writes the next-hole window via setRollingCarryWindow.
+        carryOver: 0,
+        playerResults: flipResult.perPlayer,
+        quip: flipResult.push
+          ? flipResult.forfeitedThisHole > 0
+            ? `Push. $${flipResult.forfeitedThisHole} fell into the ether.`
+            : "Push. Pot carries to next hole."
+          : `${flipResult.winningSide === 'A' ? teams.teamA.name : teams.teamB.name} takes the hole.`,
+        winnerIds: flipResult.winningSide === null
+          ? []
+          : (flipResult.winningSide === 'A' ? teams.teamA : teams.teamB).players.map(p => p.id),
+      };
+    }
+
+    // Team-based games (DOC) — use inline team logic. Flip is handled
+    // above via calculateFlipHoleResult; this block is DOC-only now.
     if (!teams) {
       // DOC crybaby phase (holes 16–18) has no team structure — fall back to
       // individual skins scoring so the hole can always be completed
@@ -1997,6 +2117,28 @@ export default function CrybabActiveRound() {
       setShowResult(null);
       setPendingSync(ps => ps + 1);
 
+      // PR #55 commit 1: Flip rolling-window transition. Mirrors
+      // useAdvanceHole.ts:130-141. On a push the hole's full ante pot
+      // (baseBet × player count) gets appended to the window — older
+      // entries may get evicted (forfeited) per the window's size
+      // setting. On a decided hole the window is drained ("claimed")
+      // and paid out; calculateHoleResult already credited the carry
+      // total to the winners so we just clear here. Only runs in Flip
+      // base-game holes (1-15) plus all-square Flip 16-18 follow-ups.
+      let nextRollingCarryWindow: RollingCarryWindow | null = rollingCarryWindow;
+      if (round.gameMode === 'flip' && teams) {
+        const baseWindow = rollingCarryWindow
+          ?? initRollingCarryWindow(flipConfig?.carryOverWindow ?? "all");
+        if (showResult.push) {
+          const baseBet = flipConfig?.baseBet ?? round.holeValue;
+          const potThisHole = baseBet * players.length;
+          nextRollingCarryWindow = appendPushToWindow(baseWindow, currentHole, potThisHole);
+        } else {
+          nextRollingCarryWindow = claimRollingCarryWindow(baseWindow).cleared;
+        }
+        setRollingCarryWindow(nextRollingCarryWindow);
+      }
+
       // Persist scores + money totals to DB after every hole — guards against app kill / backgrounding
       if (roundId) {
         players.forEach(p => {
@@ -2010,9 +2152,20 @@ export default function CrybabActiveRound() {
 
         // Save game state checkpoint so the round can be resumed if the app is killed.
         // If offline, mark lastSaveFailed so the UI shows a warning badge.
+        // PR #55 commit 1: also persist flipState + flipConfig +
+        // rollingCarryWindow so resume-mid-round restores the full
+        // Flip context (was previously dropped on save → restore).
         const nextHole = currentHole < 18 ? currentHole + 1 : 18;
         const newCarryOver = showResult.carryOver || 0;
-        saveGameState(roundId, { currentHole: nextHole, carryOver: newCarryOver, totals: newTotals, hammerHistory: newHammerHistory })
+        saveGameState(roundId, {
+          currentHole: nextHole,
+          carryOver: newCarryOver,
+          totals: newTotals,
+          hammerHistory: newHammerHistory,
+          flipState,
+          flipConfig: flipConfig ?? undefined,
+          rollingCarryWindow: nextRollingCarryWindow ?? undefined,
+        })
           .then(() => setLastSaveFailed(false))
           .catch(err => {
             console.error("Failed to save game state:", err);
@@ -2539,6 +2692,7 @@ export default function CrybabActiveRound() {
           <FlipTeamsBadge
             holeNumber={currentHole}
             teams={flipState.teamsByHole[currentHole] ?? flipTeams ?? null}
+            baseBet={flipConfig?.baseBet ?? round.holeValue}
           />
           {isScorekeeper && currentHole >= 2 && (() => {
             // Teams-stay-after-push rule: if the prior hole was a push
@@ -2992,7 +3146,14 @@ export default function CrybabActiveRound() {
       )}
 
       {/* Team Banner */}
-      {teams && <TeamBanner teams={teams} holeValue={round.holeValue} hammerDepth={hammerDepth} />}
+      {teams && (
+        <TeamBanner
+          teams={teams}
+          holeValue={flipConfig?.baseBet ?? round.holeValue}
+          hammerDepth={hammerDepth}
+          isFlip={round.gameMode === 'flip' && currentHole <= 15}
+        />
+      )}
 
       {/* Carry-over notice */}
       {carryOver > 0 && (

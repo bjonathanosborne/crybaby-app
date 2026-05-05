@@ -267,7 +267,12 @@ describe("CrybabyFeed — StuckRoundBanner wiring (source-level)", () => {
     const src = fs.readFileSync(path.resolve(__dirname, "../../src/pages/CrybabyFeed.jsx"), "utf-8");
     expect(src).toMatch(/<StuckRoundBanner[\s\S]*?round=\{activeRound\}/);
     expect(src).toMatch(/onAbandon=\{async \(\) => \{[\s\S]*?await cancelRound\(activeRound\.id\);[\s\S]*?setActiveRound\(null\);/);
-    expect(src).toMatch(/onResume=\{\(\) => navigate\(`\/round\?id=\$\{activeRound\.id\}`\)/);
+    // PR #55 commit 2: onResume now branches on activeRound.is_scorekeeper
+    // — scorekeepers go to /round, non-scorekeepers go to /watch.
+    // Pin both routes so a regression that flattens the branch is caught.
+    expect(src).toMatch(/activeRound\.is_scorekeeper/);
+    expect(src).toMatch(/`\/round\?id=\$\{activeRound\.id\}`/);
+    expect(src).toMatch(/`\/watch\?id=\$\{activeRound\.id\}`/);
   });
 
   it("declares abandoningRound state to disable buttons during the cancel flight", async () => {

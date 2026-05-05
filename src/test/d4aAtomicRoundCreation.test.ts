@@ -288,7 +288,11 @@ describe("isRoundStuck — extended predicate (PR #30 D4-A)", () => {
 
 describe("loadActiveRound — widened to include status='setup' (PR #30 D4-A)", () => {
   it("SELECT includes 'status' column", () => {
-    expect(DB).toMatch(/const\s+ROUND_COLS\s*=\s*"id, course, game_type, stakes, created_at, course_details, status"/);
+    // PR #55 commit 2 added `created_by` to surface is_scorekeeper to
+    // callers without a follow-up roundtrip. Test now pins both
+    // columns being present rather than exact-matching the column list.
+    expect(DB).toMatch(/const\s+ROUND_COLS\s*=\s*"[^"]*\bstatus\b[^"]*"/);
+    expect(DB).toMatch(/const\s+ROUND_COLS\s*=\s*"[^"]*\bcreated_by\b[^"]*"/);
   });
 
   it("WHERE clause uses status IN ('active', 'setup') instead of status='active'", () => {
