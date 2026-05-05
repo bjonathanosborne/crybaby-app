@@ -584,7 +584,16 @@ export default function CrybabyFeed() {
         <StuckRoundBanner
           round={activeRound}
           abandoning={abandoningRound}
-          onResume={() => navigate(`/round?id=${activeRound.id}`)}
+          // PR #55 commit 2: route non-scorekeepers to the spectator
+          // view instead of the scorekeeper UI. loadActiveRound now
+          // tags the round with is_scorekeeper; pre-PR-55 every
+          // participant got routed to /round which mounts the
+          // scorekeeper-only setup/scoring screen.
+          onResume={() => navigate(
+            activeRound.is_scorekeeper
+              ? `/round?id=${activeRound.id}`
+              : `/watch?id=${activeRound.id}`
+          )}
           onAbandon={async () => {
             setAbandoningRound(true);
             try {

@@ -301,3 +301,135 @@ parallel stranded helper:
 - `src/test/jonathanDOCPopMath.test.ts` — canonical regression suite
 - `src/lib/handicap.ts` — PR-#33 marker comment in place of the
   deleted helper
+
+---
+
+## 2026-04-29 — Replay-equivalence tests must exercise both paths
+
+### What happened
+
+PR #16 (2026-03-15) shipped `calculateFlipHoleResult` in
+`supabase/functions/_shared/gameEngines.ts` as the canonical
+Flip-base-game payout function. It encoded the 3v2 asymmetric
+stakes (3-man risks $B per player, 2-man risks $1.5B per player)
+and the rolling-window carry-over. The replay path
+(`replayRound` → `apply-capture` edge function) was wired through
+it correctly. The test suite passed.
+
+But the **live** path in `src/pages/CrybabyActiveRound.tsx`'s
+`calculateHoleResult` was never wired to call it. Live Flip holes
+fell through to the DOC team-based math at the bottom of the
+function. The bug sat dormant for six weeks because nobody ran a
+real Flip round.
+
+**2026-04-29:** Jonathan ran the first on-course Flip round.
+Three settlement-affecting symptoms surfaced at once:
+
+1. A hole that should have been won via best-ball (2-man team had
+   a gross birdie + pop = net eagle) was scored as a **push**.
+   Root cause: DOC's birdie-forced-push rule (PR #31) — fires when
+   one team has a gross birdie crossed with the other team having
+   a net birdie via pop — kicked in. That rule is DOC-specific,
+   but live Flip was running through DOC's math.
+2. Decided holes paid **symmetric flat stakes** (each player ±$B)
+   instead of Flip's 3v2 asymmetric (3-man ±$B, 2-man ±$1.5B).
+3. Push pots accumulated in DOC's **scalar `carryOver`** field
+   instead of Flip's rolling window. The window state was never
+   updated on live holes.
+
+PR #55 fixed all three by adding a Flip branch to live
+`calculateHoleResult` that mirrors the replay path — same engine
+call (`calculateFlipHoleResult`), same translation to `HoleResult`,
+identical quip strings. Plus rolling-window state transitions in
+`advanceHole` and resume hydration of the saved window.
+
+The fix was small. The fact that it took six weeks of silent
+divergence + an on-course settlement bug to surface is the
+problem worth documenting.
+
+### Lesson
+
+**Replay-equivalence tests that only exercise one engine path
+are not equivalence tests.**
+
+PR #16's existing test file (`flipReplayEquivalence.test.ts`)
+asserted the replay output matched expected money values for a
+mix of pushes and decided holes. That kept the replay path
+correct. It did NOT compare the replay output against what the
+LIVE path would produce for the same fixture. The two paths
+could (and did) diverge silently.
+
+The structural pattern: anywhere two implementations of the
+same logic exist — engine module vs. apply-capture, client UI
+vs. edge function, primary code path vs. fallback — the correct
+regression guard is a test that runs the **same fixture**
+through **both** and asserts deep-equal results. The pattern
+generalises beyond Flip:
+
+- DOC's `calculateTeamHoleResult` (replay) vs. the inline DOC
+  math in `CrybabyActiveRound.tsx`. Both exist; both should
+  produce identical settlements for the same scores. Equivalence
+  test does not yet exist.
+- Skins, Wolf, Nassau, Crybaby phase — same shape. Replay path
+  uses dedicated engine functions; the live page often has its
+  own version inline. Each pair is a candidate for an
+  equivalence test.
+- Future engine forks (when DOC's birdie-forced-push was added
+  in PR #31, an equivalence test would have caught that the rule
+  applied to Flip too — because the live page didn't disambiguate
+  game modes for the team-math fall-through).
+
+### What's in place now
+
+- `src/test/flipLiveReplayEquivalence.test.ts` — runs four
+  fixtures through both `calculateFlipHoleResult` (replay's
+  canonical engine) AND a pure helper that mirrors the live
+  page's translation logic. Asserts deep-equal `HoleResult`
+  shapes including quip strings and rolling-window state.
+  Fixtures: (1) the on-course bug scenario, (2) no-birdies
+  baseline, (3) legitimate push, (4) three consecutive holes
+  with rolling-window math.
+- `src/test/jonathanFlipBestBall.test.ts` — named regression for
+  the on-course failure. Asserts the engine returns
+  `winningSide='A'` (NOT push) and 3v2 asymmetric stakes for the
+  exact scenario Jonathan ran. Plus three source-level guards
+  pinning the live wiring (Flip branch present, advanceHole
+  transitions the window, resume restores the window).
+- The Flip branch in `src/pages/CrybabyActiveRound.tsx` carries
+  a comment explicitly cross-referencing the replay path's
+  location so future maintainers see both paths together.
+
+### What would have caught this earlier
+
+If PR #16 had shipped with the equivalence test alongside the
+replay-only test, the divergence would have been a CI failure
+the moment `calculateHoleResult`'s Flip branch was missing. PR
+#16 reviewers would have seen the failure, asked the obvious
+question ("why is the live path producing different output?"),
+and either added the missing branch or explicitly opted out
+with a comment. Six weeks of latent bug surface, averted.
+
+For future engine work that introduces a parallel replay path,
+the review checklist:
+
+1. Does the live UI also call this engine? (If yes, where? If
+   no, why not?)
+2. Is there a single fixture where both paths produce results we
+   can compare? (If no, the equivalence test isn't possible —
+   note that explicitly in the PR.)
+3. Does the equivalence test compare deep-equal, including
+   cosmetic fields like quip strings? (If only money fields are
+   compared, a future PR adding a divergent quip can mask
+   underlying logic divergence.)
+
+### Related
+
+- PR #16 — original Flip engine ship (root of the divergence)
+- PR #31 — DOC birdie-forced-push (the rule that triggered the
+  on-course symptom on a Flip hole)
+- PR #55 — live-path Flip branch + equivalence test + named
+  regression + this doc
+- `src/test/flipLiveReplayEquivalence.test.ts` — the regression
+  guard PR #16 should have shipped
+- `src/test/jonathanFlipBestBall.test.ts` — named regression for
+  Jonathan's 2026-04-29 round

@@ -1413,8 +1413,23 @@ export default function CrybabSetupWizard() {
                       >${v}</button>
                     ))}
                   </div>
-                  <div style={{ marginTop: 8, textAlign: "center", fontSize: 11, color: "#A8957B" }}>
-                    Even dollars only. On a push, every player antes ${flipBaseBet} into the pot.
+                  {/* PR #55 commit 3: surface the 3v2 asymmetric stakes
+                      derived from the base bet so the user sees the
+                      per-player exposure on a decided hole upfront. The
+                      3-man side risks $B per player; the 2-man side
+                      risks $1.5B per player (collective $3B per side
+                      moves on a decided hole). */}
+                  <div
+                    data-testid="flip-stakes-derived"
+                    style={{
+                      marginTop: 10, textAlign: "center", fontFamily: mono, fontSize: 13,
+                      fontWeight: 700, color: "#1E130A",
+                    }}
+                  >
+                    ${flipBaseBet} 3-man <span style={{ color: "#A8957B" }}>·</span> ${(flipBaseBet * 3) / 2} 2-man
+                  </div>
+                  <div style={{ marginTop: 4, textAlign: "center", fontSize: 11, color: "#A8957B" }}>
+                    Per-player stake on a decided hole. Push: every player antes ${flipBaseBet}.
                   </div>
                   {!flipBetIsValid && (
                     <div data-testid="flip-bet-error" style={{ marginTop: 6, textAlign: "center", fontSize: 11, color: "#DC2626", fontWeight: 600 }}>
