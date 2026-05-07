@@ -2399,7 +2399,31 @@ export default function CrybabActiveRound() {
 
   // Completed round
   if (currentHole >= 18 && holeResults.length >= 18) {
-    const sorted = [...players].sort((a, b) => (totals[b.id] || 0) - (totals[a.id] || 0));
+    // PR #56: Scorecard mode (no-money) gets a stroke-summary
+    // completion screen instead of the money-themed default. Pre-PR-56
+    // every mode rendered the same trophy + +$X + Settlement + "walked
+    // away with +$0... is this round's crybaby" quip, which made no
+    // sense for a no-money round-tracking session. Now:
+    //   - hasMoneyMode (DOC, Flip, Wolf, Skins, Nassau, Custom): old
+    //     money-themed completion screen
+    //   - !hasMoneyMode (Scorecard): stroke totals, vs-par, no
+    //     settlement, no money quip
+    const totalStrokesByPlayer: Record<string, number> = {};
+    let totalParAccumulated = 0;
+    players.forEach(p => { totalStrokesByPlayer[p.id] = 0; });
+    for (let h = 1; h <= 18; h++) {
+      const parThisHole = course.pars?.[h - 1] ?? 4;
+      totalParAccumulated += parThisHole;
+      const holeScores = scores[h] || {};
+      for (const p of players) {
+        const v = holeScores[p.id];
+        const stroke = (typeof v === "number" && Number.isFinite(v)) ? v : parThisHole;
+        totalStrokesByPlayer[p.id] += stroke;
+      }
+    }
+    const sorted = hasMoneyMode
+      ? [...players].sort((a, b) => (totals[b.id] || 0) - (totals[a.id] || 0))
+      : [...players].sort((a, b) => (totalStrokesByPlayer[a.id] || 0) - (totalStrokesByPlayer[b.id] || 0));
     const crybabyPlayer = sorted[sorted.length - 1];
     const winner = sorted[0];
     return (
@@ -2413,12 +2437,22 @@ export default function CrybabActiveRound() {
           <div style={{ fontSize: 14, color: "rgba(255,255,255,0.6)" }}>
             {round.gameName} · {course.name}
           </div>
+          {!hasMoneyMode && (
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginTop: 6, fontFamily: MONO }}>
+              Par {totalParAccumulated} · {players.length} player{players.length !== 1 ? "s" : ""}
+            </div>
+          )}
         </div>
 
         <div style={{ padding: "24px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
           {sorted.map((p, i) => {
             const amount = totals[p.id] || 0;
-            const isCrybab = i === sorted.length - 1 && amount < 0;
+            const strokes = totalStrokesByPlayer[p.id] || 0;
+            const vsPar = strokes - totalParAccumulated;
+            // Crybaby badge only applies to money rounds — in scorecard
+            // mode the lowest stroke total is the WINNER, not the
+            // crybaby; there's no "in the hole" notion without money.
+            const isCrybab = hasMoneyMode && i === sorted.length - 1 && amount < 0;
             return (
               <div key={p.id} style={{
                 display: "flex", alignItems: "center", gap: 14, padding: "16px 18px",
@@ -2434,13 +2468,35 @@ export default function CrybabActiveRound() {
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 16, fontWeight: 700, color: "#1E130A" }}>{p.name}</div>
                   {isCrybab && <div style={{ fontSize: 11, color: "#DC2626", fontWeight: 600 }}>CRYBABY</div>}
+                  {!hasMoneyMode && (
+                    <div style={{ fontSize: 11, color: "#8B7355", fontFamily: MONO, marginTop: 2 }}>
+                      {vsPar === 0 ? "Even" : vsPar > 0 ? `+${vsPar}` : `${vsPar}`} vs par
+                    </div>
+                  )}
                 </div>
-                <span style={{
-                  fontFamily: MONO, fontSize: 22, fontWeight: 800,
-                  color: amount > 0 ? "#2D5016" : amount < 0 ? "#DC2626" : "#A8957B",
-                }}>
-                  {amount >= 0 ? "+" : ""}${amount}
-                </span>
+                {hasMoneyMode ? (
+                  <span style={{
+                    fontFamily: MONO, fontSize: 22, fontWeight: 800,
+                    color: amount > 0 ? "#2D5016" : amount < 0 ? "#DC2626" : "#A8957B",
+                  }}>
+                    {amount >= 0 ? "+" : ""}${amount}
+                  </span>
+                ) : (
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{
+                      fontFamily: MONO, fontSize: 22, fontWeight: 800, color: "#1E130A",
+                      lineHeight: 1,
+                    }}>
+                      {strokes}
+                    </div>
+                    <div style={{
+                      fontFamily: MONO, fontSize: 10, color: "#A8957B",
+                      textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 2,
+                    }}>
+                      strokes
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -2478,7 +2534,10 @@ export default function CrybabActiveRound() {
             </div>
           )}
 
-          {/* Settlement */}
+          {/* Settlement — money modes only. Scorecard rounds have no
+              money to settle; the section + Send Reminders button are
+              hidden entirely. */}
+          {hasMoneyMode && (
           <div style={{
             background: "#FAF5EC", borderRadius: 16, padding: 20, marginTop: 8,
             boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
@@ -2559,8 +2618,12 @@ export default function CrybabActiveRound() {
               Send Reminders 📲
             </button>
           </div>
+          )}
 
-          {/* Recap */}
+          {/* Recap — quip text branches on hasMoneyMode. Money rounds
+              get the existing winner/crybaby/hammer/carry-over quip;
+              scorecard rounds get a stroke-themed line that mentions
+              the leader's score vs par instead of "+$X". */}
           <div style={{
             background: "#EEF5E5", borderRadius: 16, padding: "16px 18px",
             borderLeft: "4px solid #2D5016",
@@ -2569,7 +2632,22 @@ export default function CrybabActiveRound() {
               Round Recap
             </div>
             <div style={{ fontFamily: FONT, fontSize: 14, color: "#1A3009", fontStyle: "italic", lineHeight: 1.5 }}>
-              💬 "{winner.name} walked away with +${totals[winner.id]}. {crybabyPlayer.name} is this round's crybaby at -${Math.abs(totals[crybabyPlayer.id])}. {holeResults.filter(h => h.folded).length > 0 ? `${holeResults.filter(h => h.folded).length} hammer${holeResults.filter(h => h.folded).length > 1 ? 's' : ''} folded — chicken dinner for someone. ` : ""}{carryOver > 0 ? `$${carryOver} left on the table in carry-overs. ` : ""}Another day, another dollar. Or several."
+              {hasMoneyMode ? (
+                <>
+                  💬 "{winner.name} walked away with +${totals[winner.id]}. {crybabyPlayer.name} is this round's crybaby at -${Math.abs(totals[crybabyPlayer.id])}. {holeResults.filter(h => h.folded).length > 0 ? `${holeResults.filter(h => h.folded).length} hammer${holeResults.filter(h => h.folded).length > 1 ? 's' : ''} folded — chicken dinner for someone. ` : ""}{carryOver > 0 ? `$${carryOver} left on the table in carry-overs. ` : ""}Another day, another dollar. Or several."
+                </>
+              ) : (() => {
+                const winnerStrokes = totalStrokesByPlayer[winner.id] || 0;
+                const winnerVsPar = winnerStrokes - totalParAccumulated;
+                const parPhrase = winnerVsPar === 0 ? "even par"
+                  : winnerVsPar > 0 ? `+${winnerVsPar} over par`
+                  : `${winnerVsPar} under par`;
+                return (
+                  <>
+                    💬 "{winner.name} posted {winnerStrokes} ({parPhrase}) to take the card. {players.length > 1 ? "Cards out, drinks up." : "Solo loop in the books."}"
+                  </>
+                );
+              })()}
             </div>
           </div>
 
